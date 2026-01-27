@@ -1,0 +1,7 @@
+pillow
+PyInstaller
+hydrus_api
+joblib
+pick
+numpy
+opencv-python
