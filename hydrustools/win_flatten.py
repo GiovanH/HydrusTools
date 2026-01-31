@@ -1,6 +1,8 @@
 import re
 
-from .gui_util import Increment, ToolWindow, tkwrap, tkwrapc
+from .toolwindow import ToolWindow
+
+from .gui_util import Increment, tkwrap, tkwrapc
 from . import logic
 from .logic import SiblingInfo, TagInfo
 

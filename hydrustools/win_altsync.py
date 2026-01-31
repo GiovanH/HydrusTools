@@ -14,8 +14,11 @@ import numpy as np
 import cv2
 import hydrus_api
 
+from .toolwindow import ToolWindow
+from .tageditorlist import TagEditorList
+
 from . import logic
-from .gui_util import Increment, ScrollableFrame, TagEditorList, ToolWindow, flatList, tkwrap, tkwrapc
+from .gui_util import Increment, ScrollableFrame, flatList, tkwrap, tkwrapc
 
 @functools.lru_cache
 def alternatesOfHash(file_hash):

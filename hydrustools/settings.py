@@ -10,12 +10,17 @@ class HTSettings(IniSettings):
     hydrus_api_key: str = "CHANGEME"
     hydrus_api_url: str = hydrus_api.DEFAULT_API_URL
 
+    gui_last: int = -1
+
     flatten_presearch: str = "<Changeme>"
     flatten_search: str = ""
 
+    note_prequery: str = ""
     note_notename: str = "filename"
     note_pattern: str = ""
     note_partial: bool = False
+
+
 
     def boundTkVar(self, master, name: str, constructor: Type[V] = tk.StringVar) -> V:
         var: V = constructor(master)

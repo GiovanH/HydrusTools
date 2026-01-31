@@ -5,8 +5,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable
 
+from .toolwindow import ToolWindow
+
 from . import logic
-from .gui_util import Increment, ToolWindow, tkwrap
+from .gui_util import Increment, tkwrap, tkwrapc
 
 from .settings import HTSettings
 Settings = HTSettings()
@@ -24,6 +26,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
+        self.textvar_prequery = Settings.boundTkVar(self, 'note_prequery')
         self.textvar_notename = Settings.boundTkVar(self, 'note_notename')
         self.textvar_pattern = Settings.boundTkVar(self, 'note_pattern')
         self.boolvar_partial = Settings.boundTkVar(self, 'note_partial')
@@ -34,25 +37,30 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
     def initwindow(self) -> None:
         self.title("Search Notes")
-        self.geometry("450x160")
+        self.geometry("450x180")
 
         self.columnconfigure(index=0, weight=1)
         self.rowconfigure(index=0, weight=1)
         main_row = Increment()
 
-        with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_form:
+        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (frame_form, cx, cy):
             frame_form.grid(column=0, row=main_row.inc(), sticky="nsew")
             frame_form.columnconfigure(index=1, weight=1)
 
-            tk.Label(frame_form, text="Note title").grid(column=0, row=0, sticky="e")
+            tk.Label(frame_form, text="Search query (to filter further)").grid(column=0, row=cy.inc(), sticky="e")
+            entry_search = ttk.Entry(frame_form, textvariable=self.textvar_prequery)
+            self.interactive_widgets.append(entry_search)
+            entry_search.grid(column=1, row=cy.value, sticky="ew")
+
+            tk.Label(frame_form, text="Note title").grid(column=0, row=cy.inc(), sticky="e")
             entry_search = ttk.Entry(frame_form, textvariable=self.textvar_notename)
             self.interactive_widgets.append(entry_search)
-            entry_search.grid(column=1, row=0, sticky="ew")
+            entry_search.grid(column=1, row=cy.value, sticky="ew")
 
-            tk.Label(frame_form, text="Search pattern").grid(column=0, row=1, sticky="e")
+            tk.Label(frame_form, text="Search pattern").grid(column=0, row=cy.inc(), sticky="e")
             entry_search = ttk.Entry(frame_form, font=('Courier', 10), textvariable=self.textvar_pattern)
             self.interactive_widgets.append(entry_search)
-            entry_search.grid(column=1, row=1, sticky="ew")
+            entry_search.grid(column=1, row=cy.value, sticky="ew")
 
         with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_row:
             frame_row.grid(column=0, row=main_row.inc(), sticky="nsew")
@@ -98,7 +106,10 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
                 *[f'system:has note with name "{notename}"'],
                 *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
             ]] # type: ignore
-            print(tag_query)
+            if self.textvar_prequery.get():
+                tag_query.append(self.textvar_prequery.get())
+
+            self.setStatus(f"Searching for query {tag_query!r}")
             resp = logic.client.search_files(
                 tags=tag_query
             )

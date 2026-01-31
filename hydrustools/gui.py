@@ -1,3 +1,4 @@
+import logging
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -5,17 +6,20 @@ import hydrus_api
 
 from .win_altsync import AltSyncWindow
 
-from .gui_util import Increment, tkwrapc
+from .gui_util import tkwrapc
 
 from . import logic
 from .win_flatten import FlattenWindow
 from .win_regex import RegexSearchWindow
 
+from .settings import HTSettings
+Settings = HTSettings()
 
 class ToolsWindow(tk.Tk):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.interactive_widgets = []
         self.initwindow()
 
@@ -34,7 +38,7 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 raise
 
     def initwindow(self) -> None:
-        self.geometry("250x350")
+        self.geometry("250x480")
         self.title("Tools")
 
         self.columnconfigure(0, weight=1)
@@ -44,6 +48,8 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
             frame_btns.grid(row=1, ipadx=6, ipady=6, pady=6, padx=6, sticky="nsew")
             frame_btns.columnconfigure(0, weight=1)
             frame_btns.columnconfigure(1, weight=0, minsize=0)
+
+            command_list = []
 
             for label, command in [
                 ("Flatten Siblings", FlattenWindow),
@@ -56,10 +62,22 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 ("Tag Deleter", None),
                 ("Tag Search", None),
                 ("Import Downloader Tags In Local Repo", None),
+                ("Extract Tags from Notes", None),
                 ("Mail Rules", None),
+                ("Identify Reordered Character Names", None),
                 ("Make Series from Character Parens", None),
+                ("Detect Tag Siblings from Names", None),
+                ("Detect Tag Parents from Subsets", None),
             ]:
-                btn = ttk.Button(frame_btns, text=label, command=command)
+                command_list.append(command)
+
+                def _launch(label=label, command=command):
+                    self.logger.info(f"Setting last as {label}, {command}")
+                    if command:
+                        Settings.gui_last = command_list.index(command)
+                        command()
+
+                btn = ttk.Button(frame_btns, text=label, command=_launch)
                 btn.grid(row=cy.inc(), column=0, sticky="ew", pady=2)
 
                 if hasattr(command, 'showHelp'):
@@ -69,6 +87,13 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
 
                 if command is None:
                     btn.config(state=tk.DISABLED)
+
+            if Settings.gui_last != -1:
+                command = command_list[Settings.gui_last]
+                self.logger.info(command_list)
+                if command:
+                    self.iconify()
+                    command()
 
 def main():
     try:
