@@ -1,13 +1,8 @@
 import functools
-import io
 from itertools import permutations
 import pprint
-import re
-import threading
-import time
 import tkinter as tk
 from tkinter import ttk
-from typing import Any, Callable
 
 import numpy as np
 
@@ -18,7 +13,7 @@ from .toolwindow import ToolWindow
 from .tageditorlist import TagEditorList
 
 from . import logic
-from .gui_util import Increment, ScrollableFrame, flatList, tkwrap, tkwrapc
+from .gui_util import Increment, flatList, tkwrapc
 
 @functools.lru_cache
 def alternatesOfHash(file_hash):
@@ -84,46 +79,6 @@ Clicking merge will add the specified tags to all images in the set.
         self.tag_editor_list.grid(column=1, row=counter_main_row.value, sticky="nsew")
         self.columnconfigure(index=1, weight=3)
 
-        # with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (frame, cx, cy):
-
-        #     tk.Label(frame, text="Merged tags").grid(column=0, row=cy.inc(), sticky="ew")
-        #     self.listbox_tag_merge = tk.Listbox(frame)
-        #     self.listbox_tag_merge.grid(column=0, row=cy.inc(), sticky="nsew")
-        #     frame.rowconfigure(index=cy.value, weight=1)
-        #     frame.columnconfigure(index=0, weight=1)
-
-        #     def removeTag(event: tk.Event):
-        #         widget = event.widget
-        #         assert isinstance(widget, tk.Listbox)
-        #         selected_index = widget.curselection()
-        #         selected_item = widget.get(selected_index[0])
-        #         widget.delete(selected_index)
-
-        #     self.listbox_tag_merge.bind('<<ListboxSelect>>', removeTag)
-
-        #     def addEnteredTag(event: tk.Event):
-        #         widget: tk.Entry = event.widget # type: ignore
-        #         assert isinstance(widget, tk.Entry)
-
-        #         value = widget.get()
-        #         if value not in self.merged_tag_list:
-        #             self.merged_tag_list.append(value)
-        #             self.listbox_tag_merge.insert(tk.END, value)
-
-        #         widget.delete(0, tk.END)
-
-        #     tk.Label(frame, text="Add tags").grid(column=0, row=cy.inc(), sticky="ew")
-        #     entry_add = ttk.Entry(frame)
-        #     self.interactive_widgets.append(entry_add)
-        #     entry_add.bind("<Return>", addEnteredTag)
-        #     entry_add.grid(column=0, row=cy.inc(), sticky="ew")
-
-        #     # self.listbox_tag_merge.bind('<<ListboxSelect>>', self.loadSelectedId)
-
-        #     vsb = ttk.Scrollbar(frame, orient="vertical", command=self.listbox_tag_merge.yview)
-        #     vsb.grid(column=1, row=cy.value, sticky='ns')
-        #     self.listbox_tag_merge.configure(yscrollcommand=vsb.set)
-
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE)) as (frame, cx, cy):
             # TODO Convert this to a scrollable text area
         # with tkwrapc(ScrollableFrame(self, relief=tk.GROOVE, width=300)) as (frame, cx, cy):
@@ -140,11 +95,6 @@ Clicking merge will add the specified tags to all images in the set.
 
             btn_merge = ttk.Button(frame, text="Merge Selected Tags", command=self.mergeSelectedTags)
             btn_merge.grid(column=1, row=0, sticky="ew")
-            self.interactive_widgets.append(btn_merge)
-
-            # btn_merge = ttk.Button(frame, text="Merge Relationships", command=self.mergeRelationships)
-            # btn_merge.grid(column=2, row=0, sticky="ew")
-            # self.interactive_widgets.append(btn_merge)
 
 
     def loadIdsWithAlternates(self, event=None):

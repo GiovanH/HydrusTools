@@ -1,11 +1,10 @@
-
 from contextlib import contextmanager
 
 import logging
 import tkinter as tk
 from tkinter import ttk
-from typing import Any, Callable, Generator, Literal, NamedTuple, TypedDict
-import tkinter.font as tkFont
+from typing import Any, Generator, NamedTuple
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,14 +16,17 @@ class Increment():
         self.value += 1
         return self.value
 
+
 class CoordFrame(NamedTuple):
     widget: tk.Widget
     counter_x: Increment
     counter_y: Increment
 
+
 @contextmanager
 def tkwrap(w: tk.Widget) -> Generator[tk.Widget, Any, None]:
     yield w
+
 
 @contextmanager
 def tkwrapc(w: tk.Widget) -> Generator[CoordFrame, Any, None]:
@@ -37,6 +39,7 @@ def flatList(lst):
     [1, 2, 3, 4]
     """
     return [item for sublist in lst for item in sublist]
+
 
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, *args, **kwargs):
@@ -62,5 +65,4 @@ class ScrollableFrame(ttk.Frame):
     @property
     def container(self):
         return self.scrollable_frame
-
 

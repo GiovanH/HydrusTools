@@ -1,17 +1,15 @@
 import re
+import tkinter as tk
+from tkinter import messagebox, ttk
 
+from .multicolumnlistbox import MultiColumnListbox
+
+from . import logic
+from .gui_util import Increment, tkwrap, tkwrapc
+from .logic import SiblingInfo, TagInfo
+from .settings import HTSettings
 from .toolwindow import ToolWindow
 
-from .gui_util import Increment, tkwrap, tkwrapc
-from . import logic
-from .logic import SiblingInfo, TagInfo
-
-import tkinter as tk
-from tkinter import messagebox
-
-from tkinter import ttk
-
-from .settings import HTSettings
 Settings = HTSettings()
 
 
@@ -56,7 +54,6 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
 
             entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_presearch)
             entry_search.grid(column=cx.value, row=1, sticky="ew")
-            self.interactive_widgets.append(entry_search)
 
             cx.inc()
             frame_top.columnconfigure(cx.value, weight=2)
@@ -66,56 +63,45 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
 
             entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_search)
             entry_search.grid(column=cx.value, row=1, sticky="ew")
-            self.interactive_widgets.append(entry_search)
             entry_search.bind("<Return>", self.startSearch)
 
             cx.inc()
             btn_search = ttk.Button(frame_top, text="Search", command=self.startSearch)
             btn_search.grid(column=cx.value, row=1, sticky="ew")
-            self.interactive_widgets.append(btn_search)
 
             # frame_top.rowconfigure(index=counter_frame.inc(), weight=1)
 
         # Right
         counter_main_row.inc()
-        self.tree_tags: ttk.Treeview = ttk.Treeview(self, columns=self.table_headings, selectmode=tk.EXTENDED, show="headings")
+        self.tree_tags = MultiColumnListbox(self, headers=self.table_headings)
+
         with tkwrap(self.tree_tags) as tree:
-            assert isinstance(tree, ttk.Treeview)
+            # assert isinstance(tree, ttk.Treeview)
             tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
             self.rowconfigure(counter_main_row.value, weight=1)
-
-            for i, col in enumerate(self.table_headings):
-                tree.heading(i, text=col)
-            tree.column(2, width=4)
-
-            vsb = ttk.Scrollbar(self, orient="vertical", command=tree.yview)
-            vsb.grid(column=1, row=counter_main_row.value, sticky='ns', in_=self)
-            tree.configure(yscrollcommand=vsb.set)
-
-            # TODO: Sorting
 
         with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_bottom:
             frame_bottom.grid(row=counter_main_row.inc(), column=0, columnspan=2, sticky="ew")
             tk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=0, row=0, sticky="sw")
 
             frame_bottom.columnconfigure(0, weight=1)
-        # self.interactive_widgets.append(self.tree_tags)
 
             btn_flatten = ttk.Button(frame_bottom, text="Flatten!", command=self.startFlatten)
             btn_flatten.grid(column=1, row=0, sticky="e")
-            self.interactive_widgets.append(btn_flatten)
 
     def startSearch(self, event=None):
         self.startTask(self.doSearch)
 
     def startFlatten(self, event=None):
-        self.startTask(self.doFlatten)
+        with self.lock():
+            self.after(100, self.doFlatten)
 
     def doSearch(self, event=None):
         search_query: str = self.textvar_search.get()
         self.setStatus(f"Searching {search_query!r}")
 
-        self.tree_tags.delete(*self.tree_tags.get_children())
+        self.tree_tags.delete_all()
+        # self.tree_tags.delete(*self.tree_tags.get_children())
 
         try:
             results: list[TagInfo] = logic.search_tags_re("*", search_query)
@@ -132,18 +118,27 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
 
         for si in sorted(targets, key=lambda si: si.tag):
             row = [si.tag, si.ideal_tag, tag_count.get(si.tag)]
-            self.tree_tags.insert('', tk.END, values=row)
+            # self.tree_tags.insert('', tk.END, values=row)
+            self.tree_tags.insert_item({"values": row})
+
+        self.winfo_toplevel().after(10, self.tree_tags.resize_cols)
 
         self.setStatus(f"Found {len(targets)} siblings")
 
     def doFlatten(self, event=None):
-        selection = [
-            (row['Source Tag'], row['Ideal'])
-            for row in (self.tree_tags.set(child) for child in self.tree_tags.selection())
+        # selection = [
+        #     (row['Source Tag'], row['Ideal'])
+        #     for row in (self.tree_tags.set(child) for child in self.tree_tags.selection())
+        # ]
+        selection: list[tuple[str, str]] = [
+            (d['Source Tag'], d['Ideal'])
+            for d in self.tree_tags.getSelectionDicts()
         ]
 
         if len(selection) == 0:
             return
+
+        self.logger.info(selection)
 
         explaination = '\n'.join(f'{source} -> {ideal}' for (source, ideal) in selection)
         user_confirmed = messagebox.askyesno(
