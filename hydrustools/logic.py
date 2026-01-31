@@ -73,11 +73,11 @@ def chunk(iterable, maxsize):
 
 
 
-def search_tags_re(substr: str, subpattern: str) -> list[TagInfo]:
+def search_tags_re(substr: str, subpattern: str, display_type="storage") -> list[TagInfo]:
     resp = client.search_tags(
         search=substr,
         tag_service_key=local_tags_service_key,
-        tag_display_type="storage"
+        tag_display_type=display_type
     )
     return [
         TagInfo(**item)

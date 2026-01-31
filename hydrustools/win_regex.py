@@ -29,7 +29,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
         self.textvar_prequery = Settings.boundTkVar(self, 'note_prequery')
         self.textvar_notename = Settings.boundTkVar(self, 'note_notename')
         self.textvar_pattern = Settings.boundTkVar(self, 'note_pattern')
-        self.boolvar_partial = Settings.boundTkVar(self, 'note_partial')
+        self.boolvar_partial = Settings.boundTkVar(self, 'note_partial', tk.BooleanVar)
         # tk.BooleanVar(self, value=False)
 
         self.initwindow()
@@ -117,7 +117,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             start_time = time.time()
 
             try:
-                for id_chunk in logic.chunk(file_ids_with_note, 100):
+                for id_chunk in logic.chunk(file_ids_with_note, 1000):
                     resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
                     for metadata in resp['metadata']:
@@ -127,6 +127,8 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
                         checked_file_count += 1
 
                     self.setStatus(f"Searched {checked_file_count} / {len(file_ids_with_note)}, matched {len(matching_ids)}...")
+
+                    if self.abort_threads: return
             except re.error as e:
                 self.setStatus(str(e))
                 return

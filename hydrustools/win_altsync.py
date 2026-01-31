@@ -112,6 +112,7 @@ Clicking merge will add the specified tags to all images in the set.
             if hash not in self.file_ids and not self.allAlternateTagsMatch(hash):
                 self.file_ids.append(hash)
                 self.listbox_ids.insert(tk.END, hash)
+            if self.abort_threads: return
 
         # self.updateFileListbox()
 

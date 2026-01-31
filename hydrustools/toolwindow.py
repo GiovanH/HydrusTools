@@ -1,17 +1,18 @@
 
+from collections import defaultdict
 from contextlib import contextmanager
 
 import logging
 import threading
 import tkinter as tk
 from tkinter import messagebox
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, Iterable
 
 from hydrustools.settings import HTSettings
 
 Settings = HTSettings()
 
-def recursive_widgets(w, key):
+def recursive_widgets(w, key) -> Iterable[tk.Widget]:
     if key in 'state' in w.keys():
         yield w
     for w2 in w.winfo_children():
@@ -26,19 +27,26 @@ class ToolWindow(tk.Tk):
 
         self.textvar_status = tk.StringVar(self, value="Ready")
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.abort_threads = False
 
         self.bind("<F1>", lambda *a: self.showHelp())
 
         self._locked = 0
+        self._lock_states = defaultdict(list)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def on_closing(self):
         Settings.gui_last = -1
+        self.abort_threads = True
         self.destroy()
 
     def setStatus(self, val):
         self.logger.info(val)
-        self.textvar_status.set(val)
+
+        max_old_lines = 2
+        line = str(val)
+        lines = self.textvar_status.get().split('\n')
+        self.textvar_status.set('\n'.join([*lines[-max_old_lines:], line]))
 
     @classmethod
     def showHelp(cls):
@@ -49,11 +57,16 @@ class ToolWindow(tk.Tk):
 
     def enable(self):
         for w in recursive_widgets(self, 'state'):
-            w.configure(state=tk.NORMAL) # type: ignore
+            if not w.widgetName.endswith('label'):
+                state = self._lock_states[w.winfo_name].pop()
+                w.configure(state=state) # type: ignore
 
     def disable(self):
         for w in recursive_widgets(self, 'state'):
-            w.configure(state=tk.DISABLED) # type: ignore
+            if not w.widgetName.endswith('label'):
+                self._lock_states[w.winfo_name].append(w['state'])
+                w.configure(state=tk.DISABLED) # type: ignore
+        # self.logger.info(self._lock_states)
 
     @contextmanager
     def lock(self) -> Generator[None, Any, None]:
@@ -74,7 +87,8 @@ class ToolWindow(tk.Tk):
             else:
                 callback()
 
-        threading.Thread(target=task, daemon=True).start()
+        taskthread = threading.Thread(target=task, daemon=True)
+        taskthread.start()
 
     def startTaskCurry(self, callback) -> Callable[..., None]:
         return lambda *a: self.startTask(callback)

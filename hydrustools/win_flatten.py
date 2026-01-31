@@ -80,14 +80,15 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
             self.rowconfigure(counter_main_row.value, weight=1)
 
-        with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_bottom:
+        with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as frame_bottom:
             frame_bottom.grid(row=counter_main_row.inc(), column=0, columnspan=2, sticky="ew")
-            tk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=0, row=0, sticky="sw")
+
+            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=0, row=0, sticky="nsew")
 
             frame_bottom.columnconfigure(0, weight=1)
 
-            btn_flatten = ttk.Button(frame_bottom, text="Flatten!", command=self.startFlatten)
-            btn_flatten.grid(column=1, row=0, sticky="e")
+            btn_flatten = ttk.Button(frame_bottom, text="Flatten!", command=self.startFlatten, width=40)
+            btn_flatten.grid(column=1, row=0, sticky="nse")
 
     def startSearch(self, event=None):
         self.startTask(self.doSearch)
@@ -104,7 +105,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         # self.tree_tags.delete(*self.tree_tags.get_children())
 
         try:
-            results: list[TagInfo] = logic.search_tags_re("*", search_query)
+            results: list[TagInfo] = logic.search_tags_re(self.textvar_presearch.get() or "*", search_query)
         except re.error as e:  # noqa: F821
             messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_query!r}\n{e}")
             return

@@ -15,6 +15,10 @@ class HTSettings(IniSettings):
     flatten_presearch: str = "<Changeme>"
     flatten_search: str = ""
 
+    tagsearch_presearch: str = "<Changeme>"
+    tagsearch_search: str = ""
+    tagsearch_localonly: bool = True
+
     note_prequery: str = ""
     note_notename: str = "filename"
     note_pattern: str = ""

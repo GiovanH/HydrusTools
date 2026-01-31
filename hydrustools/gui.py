@@ -4,6 +4,8 @@ from tkinter import messagebox, ttk
 
 import hydrus_api
 
+from hydrustools.win_tagsearch import TagSearchWindow
+
 from .win_altsync import AltSyncWindow
 
 from .gui_util import tkwrapc
@@ -42,12 +44,12 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 ("Flatten Siblings", FlattenWindow),
                 ("Note Search", RegexSearchWindow),
                 ("Synchronize Alternates", AltSyncWindow),
+                ("Tag Browser", TagSearchWindow),
                 ("Tag Editor", None),
                 ("Artist Lookup", None),
                 ("Tree Visualizer", None),
                 ("Parent characters to series", None),
-                ("Tag Deleter", None),
-                ("Tag Search", None),
+                # ("Tag Deleter", None),
                 ("Import Downloader Tags In Local Repo", None),
                 ("Extract Tags from Notes", None),
                 ("Mail Rules", None),
