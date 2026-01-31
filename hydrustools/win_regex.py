@@ -47,19 +47,16 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             frame_form.grid(column=0, row=main_row.inc(), sticky="nsew")
             frame_form.columnconfigure(index=1, weight=1)
 
-            tk.Label(frame_form, text="Search query (to filter further)").grid(column=0, row=cy.inc(), sticky="e")
+            tk.Label(frame_form, text="Search query").grid(column=0, row=cy.inc(), sticky="e")
             entry_search = ttk.Entry(frame_form, textvariable=self.textvar_prequery)
-            self.interactive_widgets.append(entry_search)
             entry_search.grid(column=1, row=cy.value, sticky="ew")
 
             tk.Label(frame_form, text="Note title").grid(column=0, row=cy.inc(), sticky="e")
             entry_search = ttk.Entry(frame_form, textvariable=self.textvar_notename)
-            self.interactive_widgets.append(entry_search)
             entry_search.grid(column=1, row=cy.value, sticky="ew")
 
             tk.Label(frame_form, text="Search pattern").grid(column=0, row=cy.inc(), sticky="e")
             entry_search = ttk.Entry(frame_form, font=('Courier', 10), textvariable=self.textvar_pattern)
-            self.interactive_widgets.append(entry_search)
             entry_search.grid(column=1, row=cy.value, sticky="ew")
 
         with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_row:
@@ -69,7 +66,6 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
             tk.Label(frame_row, text="Match partial string").grid(column=0, row=0, sticky="e")
             check_partial = ttk.Checkbutton(frame_row, variable=self.boolvar_partial)
-            self.interactive_widgets.append(check_partial)
             check_partial.grid(column=1, row=0, sticky="w")
 
         with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_row:
@@ -78,7 +74,6 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
             btn_search = ttk.Button(frame_row, text="Search", command=self.startSearch)
             btn_search.grid(column=0, row=0, sticky="ew")
-            self.interactive_widgets.append(btn_search)
 
         with tkwrap(ttk.Frame(self, padding=0)) as frame_status:
             frame_status.grid(column=0, row=main_row.inc(), sticky="ew")

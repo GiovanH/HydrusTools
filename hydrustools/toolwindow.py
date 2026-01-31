@@ -7,6 +7,16 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import Any, Callable, Generator
 
+from hydrustools.settings import HTSettings
+
+Settings = HTSettings()
+
+def recursive_widgets(w, key):
+    if key in 'state' in w.keys():
+        yield w
+    for w2 in w.winfo_children():
+        yield from recursive_widgets(w2, key)
+
 
 class ToolWindow(tk.Tk):
     helpstr = """Change this help string"""
@@ -16,9 +26,15 @@ class ToolWindow(tk.Tk):
 
         self.textvar_status = tk.StringVar(self, value="Ready")
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.interactive_widgets: list[tk.Widget] = []
+
+        self.bind("<F1>", lambda *a: self.showHelp())
 
         self._locked = 0
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        Settings.gui_last = -1
+        self.destroy()
 
     def setStatus(self, val):
         self.logger.info(val)
@@ -32,16 +48,12 @@ class ToolWindow(tk.Tk):
         )
 
     def enable(self):
-        for w in self.interactive_widgets:
+        for w in recursive_widgets(self, 'state'):
             w.configure(state=tk.NORMAL) # type: ignore
 
     def disable(self):
-        for w in self.interactive_widgets:
-            try:
-                w.configure(state=tk.DISABLED) # type: ignore
-            except:
-                print(w)
-                raise
+        for w in recursive_widgets(self, 'state'):
+            w.configure(state=tk.DISABLED) # type: ignore
 
     @contextmanager
     def lock(self) -> Generator[None, Any, None]:

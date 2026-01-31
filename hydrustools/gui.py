@@ -20,22 +20,9 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
         super().__init__(*args_, **kwargs)
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.interactive_widgets = []
         self.initwindow()
 
         self.mainloop()
-
-    def enable(self):
-        for w in self.interactive_widgets:
-            w.config(state=tk.ACTIVE)
-
-    def disable(self):
-        for w in self.interactive_widgets:
-            try:
-                w.config(state=tk.DISABLED)
-            except:
-                print(w)
-                raise
 
     def initwindow(self) -> None:
         self.geometry("250x480")
@@ -83,14 +70,12 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 if hasattr(command, 'showHelp'):
                     btn_help = ttk.Button(frame_btns, text="?", command=command.showHelp, width=2)
                     btn_help.grid(row=cy.value, column=1, pady=2)
-                    self.interactive_widgets.append(btn)
 
                 if command is None:
                     btn.config(state=tk.DISABLED)
 
             if Settings.gui_last != -1:
                 command = command_list[Settings.gui_last]
-                self.logger.info(command_list)
                 if command:
                     self.iconify()
                     command()

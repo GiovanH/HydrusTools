@@ -86,7 +86,6 @@ class TagEditorList(ttk.Frame):
 
             tk.Label(frame, text="Add tags").grid(column=0, row=cy.inc(), sticky="ew")
             entry_add = ttk.Entry(frame)
-            # self.interactive_widgets.append(entry_add)
             entry_add.bind("<Return>", self.addTagFromEntry)
             entry_add.grid(column=0, row=cy.inc(), sticky="ew")
 
