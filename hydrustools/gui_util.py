@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Generator, NamedTuple
 
+import win32clipboard
 
 logging.basicConfig(level=logging.INFO)
 
@@ -66,3 +67,44 @@ class ScrollableFrame(ttk.Frame):
     def container(self):
         return self.scrollable_frame
 
+
+class TextCopyWindow(tk.Tk):
+    helpstr = """Change this help string"""
+
+    def __init__(self, body: str, *args_, **kwargs) -> None:
+        super().__init__(*args_, **kwargs)
+
+        self.body: str = body
+        self.initwindow()
+        self.focus()
+
+        self.mainloop()
+
+    def copy(self):
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardText(self.body) # type: ignore
+        win32clipboard.CloseClipboard()
+
+    def initwindow(self) -> None:
+        self.title("Clipboard")
+        self.geometry("400x250")
+
+        text = tk.Text(self, padx=4, pady=4)
+        text.insert(tk.END, self.body)
+        # text.config(state=tk.DISABLED)
+        text.grid(row=0, column=0, sticky="nsew")
+
+        self.columnconfigure(index=0, weight=1)
+        self.rowconfigure(index=0, weight=1)
+
+        with tkwrapc(ttk.Frame(self, padding=4)) as (frame, cx, cy):
+            frame.grid(row=1)
+
+            btn = ttk.Button(frame, text="Copy", command=self.copy)
+            btn.grid(row=0, column=cx.inc())
+
+            btn = ttk.Button(frame, text="Close", command=self.destroy)
+            btn.grid(row=0, column=cx.inc())
+
+        self.bind("<Escape>", lambda *e: self.destroy())

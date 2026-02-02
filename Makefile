@@ -2,7 +2,7 @@
 project_name=hydrustools
 module_name=${project_name}
 
-.PHONY: test
+.PHONY: dev
 dev: venv
 # 	(cd src && ../${VPYTHON} gui.py)
 	${VPYTHON} ${SRC_ROOT}/launcher.py
@@ -28,7 +28,7 @@ all: lint test exe
 
 .PHONY: watch
 watch:
-	nodemon --watch hydrustools/ -e "py" --exec make dev
+	nodemon --watch ${module_name}/ -e "py" --exec make dev
 
 # Check
 .PHONY: check
@@ -54,7 +54,8 @@ clean:
 		${SRC_ROOT}/__pycache__ ${SRC_ROOT}/*/__pycache__
 
 # Env
-venv: requirements.txt
+venv: venv/pyvenv.cfg
+venv/pyvenv.cfg: requirements.txt
 	python3 -m venv ./venv
 	${VPYTHON} -m pip install -r requirements.txt
 	${VPYTHON} -m pip install pyinstaller vulture mypy

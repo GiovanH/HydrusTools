@@ -6,9 +6,11 @@ import hydrus_api
 
 from hydrustools.win_tagsearch import TagSearchWindow
 
+from . import macro_pages
+
 from .win_altsync import AltSyncWindow
 
-from .gui_util import tkwrapc
+from .gui_util import TextCopyWindow, tkwrapc
 
 from . import logic
 from .win_flatten import FlattenWindow
@@ -48,15 +50,16 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 ("Tag Editor", None),
                 ("Artist Lookup", None),
                 ("Tree Visualizer", None),
-                ("Parent characters to series", None),
-                # ("Tag Deleter", None),
                 ("Import Downloader Tags In Local Repo", None),
                 ("Extract Tags from Notes", None),
-                ("Mail Rules", None),
+                # We really want tag relationships for these...
+                ("Parent characters to series", None),
                 ("Identify Reordered Character Names", None),
                 ("Make Series from Character Parens", None),
                 ("Detect Tag Siblings from Names", None),
                 ("Detect Tag Parents from Subsets", None),
+                ("Mail Rules", None),
+                ("Extract page numbers from filename note", macro_pages.add_page_tags)
             ]:
                 command_list.append(command)
 
@@ -91,6 +94,7 @@ def main():
         messagebox.showerror("Error connecting", message=f"{e}")
         raise
 
+    # TextCopyWindow("Hello\nWorld")
     # RegexSearchWindow()
     # AltSyncWindow()
     ToolsWindow()

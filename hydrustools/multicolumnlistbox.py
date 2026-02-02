@@ -193,11 +193,8 @@ class MultiColumnListbox(tk.Frame):
         self.tree.selection_set(select_these_items)
         # self.tree.selection_set()
 
-    def getSelectionInts(self) -> list[int]:
-        return [
-            int(self.tree.set(child, "ID"))
-            for child in self.tree.selection()
-        ]
+    def getSelectionIDs(self) -> tuple[str, ...]:
+        return self.tree.selection()
 
     def getSelectionDicts(self) -> list[dict]:
         return [

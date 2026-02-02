@@ -5,6 +5,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable
 
+# import PyTaskbar
+
+import hydrus_api
+
 from .toolwindow import ToolWindow
 
 from . import logic
@@ -12,6 +16,12 @@ from .gui_util import Increment, tkwrap, tkwrapc
 
 from .settings import HTSettings
 Settings = HTSettings()
+
+def has_note(notename: str, max_n: int = 4) -> list[str]:
+    return [
+        *[f'system:has note with name "{notename}"'],
+        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
+    ]
 
 class RegexSearchWindow(ToolWindow):
     helpstr = """Search the contents of notes.
@@ -37,7 +47,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
     def initwindow(self) -> None:
         self.title("Search Notes")
-        self.geometry("450x180")
+        self.geometry("450x200")
 
         self.columnconfigure(index=0, weight=1)
         self.rowconfigure(index=0, weight=1)
@@ -59,7 +69,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             entry_search = ttk.Entry(frame_form, font=('Courier', 10), textvariable=self.textvar_pattern)
             entry_search.grid(column=1, row=cy.value, sticky="ew")
 
-        with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as frame_row:
+        with tkwrap(ttk.Frame(self, padding=8)) as frame_row:
             frame_row.grid(column=0, row=main_row.inc(), sticky="nsew")
             frame_row.columnconfigure(index=0, weight=1)
             frame_row.columnconfigure(index=1, weight=1)
@@ -77,8 +87,14 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
         with tkwrap(ttk.Frame(self, padding=0)) as frame_status:
             frame_status.grid(column=0, row=main_row.inc(), sticky="ew")
+            self.pb = ttk.Progressbar(frame_status, orient='vertical',
+                mode='determinate',
+                length=30
+            )
+            self.pb.grid(column=1, row=0, sticky="ns")
+
+            tk.Label(frame_status, textvariable=self.textvar_status).grid(column=0, row=0, sticky="e")
             frame_status.columnconfigure(index=0, weight=1)
-            tk.Label(frame_status, textvariable=self.textvar_status).grid(column=0, row=1, sticky="e")
 
     def startSearch(self, event=None):
         threading.Thread(target=self.doSearch, daemon=True).start()
@@ -94,21 +110,29 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
         with self.lock():
             self.setStatus("Searching")
+            # self.pb.start()
+            self.pb['value'] = 0
+            # progress = PyTaskbar.Progress()
+            # progress.init()
+            # progress.setState('loading')
+
+            tag_query: list[str | list[str]] = [] # type: ignore
 
             # TODO: Option to configure " (n)" suffix
-            max_n = 4
-            tag_query: list[str] = [[
-                *[f'system:has note with name "{notename}"'],
-                *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
-            ]] # type: ignore
+            tag_query.append(has_note(notename))
+
             if self.textvar_prequery.get():
                 tag_query.append(self.textvar_prequery.get())
 
             self.setStatus(f"Searching for query {tag_query!r}")
-            resp = logic.client.search_files(
-                tags=tag_query
-            )
-            file_ids_with_note = resp['file_ids']
+            try:
+                resp = logic.client.search_files(
+                    tags=tag_query # type: ignore
+                )
+                file_ids_with_note = resp['file_ids']
+            except hydrus_api.APIError as e:
+                self.setStatus(str(e))
+                return
 
             self.setStatus(f"Found {len(file_ids_with_note)} files with notename {notename!r}...")
 
@@ -126,6 +150,9 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
                             matching_ids.append(metadata['file_id'])
                         checked_file_count += 1
 
+
+                    self.pb['value'] = 100*checked_file_count/len(file_ids_with_note)
+                    # progress.setProgress(self.pb['value'])
                     self.setStatus(f"Searched {checked_file_count} / {len(file_ids_with_note)}, matched {len(matching_ids)}...")
 
                     if self.abort_threads: return
@@ -136,4 +163,6 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             elapsed = time.time() - start_time
             logic.client.add_popup("Regex search complete", files_label=f"{notename}: {pattern!r}", file_ids=matching_ids)
 
+            # self.pb.stop()
+            # progress.setState('done')
             self.setStatus(f"Matched {len(matching_ids)} / {len(file_ids_with_note)} in {elapsed:.1f} secs, sent to Hydrus.")

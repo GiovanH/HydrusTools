@@ -204,7 +204,7 @@ Clicking merge will add the specified tags to all images in the set.
 
             image_array = np.frombuffer(resp.content, np.uint8)
             image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            cv2.imshow(f'Image {i}', image)
+            cv2.imshow(f'Image {i}', image) # type: ignore
             # cv2.resizeWindow(f'Image {i}', 400, 400)
 
                 # tk.Label(frame, text=hash)\

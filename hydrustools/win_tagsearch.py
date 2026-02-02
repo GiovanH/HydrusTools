@@ -6,7 +6,7 @@ from tkinter import simpledialog
 from .multicolumnlistbox import MultiColumnListbox
 
 from . import logic
-from .gui_util import Increment, tkwrap, tkwrapc
+from .gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
 from .logic import TagInfo
 from .settings import HTSettings
 from .toolwindow import ToolWindow
@@ -17,7 +17,15 @@ HEAD_NAME = "Tag Name"
 HEAD_COUNT = "Count"
 
 class TagSearchWindow(ToolWindow):  # noqa: PLR0904
-    helpstr = """TODO
+    helpstr = """Bulk search and edit tags.
+
+Tag Query searches the tag list, regex refinment filters further.
+
+AND/OR opens search page for all images with the selected tags.
+
+"Map Siblings to Namespace" prompts for a namespace, then gives you an importable clipboard setting that will add the ideal sibling {namespace}:{tag} for each selected {tag}.
+
+"Delete selected tag" removes all occurrences of the selected tags from all images.
     """
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
@@ -102,8 +110,8 @@ class TagSearchWindow(ToolWindow):  # noqa: PLR0904
             # btn_search = ttk.Button(frame_bottom, text="Add Namespace", command=self.addNamespace)
             # btn_search.grid(column=cx.inc(), row=0, sticky="nse")
 
-            btn_search = ttk.Button(frame_bottom, text="Map to siblings with namespace")
-            btn_search.config(state=tk.DISABLED)
+            btn_search = ttk.Button(frame_bottom, text="Map to siblings with namespace", command=self.addNamespace)
+            # btn_search.config(state=tk.DISABLED)
             btn_search.grid(column=cx.inc(), row=0, sticky="nse")
 
             btn_search = ttk.Button(frame_bottom, text="Delete selected tag", command=self.deleteTags)
@@ -197,16 +205,25 @@ class TagSearchWindow(ToolWindow):  # noqa: PLR0904
             for tag in selection
         ]
 
-        explaination = '\n'.join(f'{source} -> {ideal}' for (source, ideal) in pairs)
-        user_confirmed = messagebox.askyesno(
-            title="Confirm",
-            message=f"{explaination}\n\nReplace these tags? This cannot be undone!\n\nSiblings cannot yet be set via the API."
+        clip_import = '\n'.join(
+            f"{source}\n{ideal}"
+            for (source, ideal) in pairs
         )
-        if user_confirmed:
-            with self.lock():
-                for row in pairs:
-                    source_tag, ideal_tag = row
-                    logic.replace_tag(source_tag, [ideal_tag])
+
+        TextCopyWindow(clip_import)
+        # TODO: Use clipboard format for this
+        # Format is:
+
+        # explaination = '\n'.join(f'{source} -> {ideal}' for (source, ideal) in pairs)
+        # user_confirmed = messagebox.askyesno(
+        #     title="Confirm",
+        #     message=f"{explaination}\n\nReplace these tags? This cannot be undone!\n\nSiblings cannot yet be set via the API."
+        # )
+        # if user_confirmed:
+        #     with self.lock():
+        #         for row in pairs:
+        #             source_tag, ideal_tag = row
+        #             logic.replace_tag(source_tag, [ideal_tag])
 
     def deleteTags(self, OR=False):
         selection: list[str] = [
