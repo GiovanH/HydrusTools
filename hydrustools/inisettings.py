@@ -2,6 +2,7 @@ import configparser
 from pathlib import Path
 from typing import Any, get_type_hints
 
+
 class IniSettings:
     """Base class for settings objects backed by persistent INI files.
 
@@ -29,10 +30,10 @@ class IniSettings:
             section: INI section name to use for storing settings
         """
         # Store instance variables without triggering __setattr__
-        object.__setattr__(self, '_ini_file', Path(ini_file or f'{self.__class__.__name__}.ini'))
-        object.__setattr__(self, '_section', section)
-        object.__setattr__(self, '_config', configparser.ConfigParser())
-        object.__setattr__(self, '_initialized', False)
+        object.__setattr__(self, "_ini_file", Path(ini_file or f"{self.__class__.__name__}.ini"))
+        object.__setattr__(self, "_section", section)
+        object.__setattr__(self, "_config", configparser.ConfigParser())
+        object.__setattr__(self, "_initialized", False)
 
         # Load existing INI file if it exists
         if self._ini_file.exists():
@@ -42,7 +43,7 @@ class IniSettings:
         if not self._config.has_section(self._section) and self._section != "DEFAULT":
             self._config.add_section(self._section)
 
-        object.__setattr__(self, '_initialized', True)
+        object.__setattr__(self, "_initialized", True)
 
         # Initialize with defaults for any missing values
         self._init_defaults()
@@ -71,7 +72,7 @@ class IniSettings:
 
             # Get class attributes that have defaults
             for attr, value in cls.__dict__.items():
-                if not attr.startswith('_') and not callable(value):
+                if not attr.startswith("_") and not callable(value):
                     schema[attr] = value
 
         return schema
@@ -89,7 +90,7 @@ class IniSettings:
 
         # Handle boolean specially
         if expected_type is bool:
-            return value.lower() in ('true', '1', 'yes', 'on')
+            return value.lower() in ("true", "1", "yes", "on")
 
         # Handle other basic types
         if expected_type in (int, float, str):
@@ -101,13 +102,13 @@ class IniSettings:
     def _save(self) -> None:
         """Save the current configuration to the INI file."""
         self._ini_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._ini_file, 'w') as f:
+        with open(self._ini_file, "w") as f:
             self._config.write(f)
 
     def __getattribute__(self, name: str) -> Any:
         """Intercept attribute access to load from INI file."""
         # Allow access to private attributes and methods normally
-        if name.startswith('_'):
+        if name.startswith("_"):
             return object.__getattribute__(self, name)
 
         # Check if this is part of the schema
@@ -130,7 +131,7 @@ class IniSettings:
     def __setattr__(self, name: str, value: Any):
         """Intercept attribute writes to save to INI file."""
         # Before initialization, use normal attribute setting
-        if not object.__getattribute__(self, '_initialized'):
+        if not object.__getattribute__(self, "_initialized"):
             object.__setattr__(self, name, value)
             return
 

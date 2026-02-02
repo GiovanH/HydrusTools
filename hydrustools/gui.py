@@ -15,6 +15,7 @@ from .tool.win_tagsearch import TagSearchWindow
 
 Settings = HTSettings()
 
+
 class ToolsWindow(tk.Tk):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
@@ -55,7 +56,7 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 ("Detect Tag Siblings from Names", None),
                 ("Detect Tag Parents from Subsets", None),
                 ("Mail Rules", None),
-                ("Extract page numbers from filename note", macro_pages.add_page_tags)
+                ("Extract page numbers from filename note", macro_pages.add_page_tags),
             ]:
                 command_list.append(command)
 
@@ -68,7 +69,7 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 btn = ttk.Button(frame_btns, text=label, command=_launch)
                 btn.grid(row=cy.inc(), column=0, sticky="ew", pady=2)
 
-                if hasattr(command, 'showHelp'):
+                if hasattr(command, "showHelp"):
                     btn_help = ttk.Button(frame_btns, text="?", command=command.showHelp, width=2)
                     btn_help.grid(row=cy.value, column=1, pady=2)
 
@@ -81,11 +82,15 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                     self.iconify()
                     command()
 
+
 def main():
     try:
         logic.init_client()
     except hydrus_api.ConnectionError as e:
-        messagebox.showerror("Error connecting", message=f"{e}\n\nHydrus is probably not running!\n\nOtherwise, you can edit configuration in the INI file to change your API key or use a different API endpoint.")
+        messagebox.showerror(
+            "Error connecting",
+            message=f"{e}\n\nHydrus is probably not running!\n\nOtherwise, you can edit configuration in the INI file to change your API key or use a different API endpoint.",
+        )
     except Exception as e:
         messagebox.showerror("Error connecting", message=f"{e}")
         raise
@@ -95,6 +100,7 @@ def main():
     # AltSyncWindow()
     ToolsWindow()
     # FlattenWindow()
+
 
 if __name__ == "__main__":
     main()
