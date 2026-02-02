@@ -9,11 +9,11 @@ import numpy as np
 import cv2
 import hydrus_api
 
-from .toolwindow import ToolWindow
-from .tageditorlist import TagEditorList
+from ..component.toolwindow import ToolWindow
+from ..component.tageditorlist import TagEditorList
 
-from . import logic
-from .gui_util import Increment, flatList, tkwrapc
+from .. import logic
+from ..component.gui_util import Increment, flatList, tkwrapc
 
 @functools.lru_cache
 def alternatesOfHash(file_hash):

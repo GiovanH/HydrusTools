@@ -4,19 +4,15 @@ from tkinter import messagebox, ttk
 
 import hydrus_api
 
-from hydrustools.win_tagsearch import TagSearchWindow
-
-from . import macro_pages
-
-from .win_altsync import AltSyncWindow
-
-from .gui_util import TextCopyWindow, tkwrapc
-
 from . import logic
-from .win_flatten import FlattenWindow
-from .win_regex import RegexSearchWindow
-
+from .component.gui_util import TextCopyWindow, tkwrapc
+from .macro import macro_pages
 from .settings import HTSettings
+from .tool.win_altsync import AltSyncWindow
+from .tool.win_flatten import FlattenWindow
+from .tool.win_regex import RegexSearchWindow
+from .tool.win_tagsearch import TagSearchWindow
+
 Settings = HTSettings()
 
 class ToolsWindow(tk.Tk):  # noqa: PLR0904

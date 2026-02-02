@@ -1,14 +1,12 @@
 import logging
 import re
-import threading
 
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
-from .progresswin import ProgressWindow
-from .tagadderwin import TagAction, TagAdderWindow
+from ..component.tagadderwin import TagAction, TagAdderWindow
 
-from . import logic
+from .. import logic
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -20,10 +18,6 @@ def has_note(notename: str, max_n: int = 4) -> list[str]:
     ]
 
 def add_page_tags(tk=True):
-
-    # pw = ProgressWindow("Scan")
-    # taskthread = threading.Thread(target=pw.mainloop, daemon=True)
-
     notename = "filename"
     pattern = r'(\b|[_-])page[^0-9]?(?P<N>\d+)([^\d]|$)'
     matcher = re.search

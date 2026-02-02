@@ -1,9 +1,8 @@
-from dataclasses import dataclass
 import logging
 import pprint
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from dataclasses import dataclass
+from tkinter import messagebox, ttk
 
 from hydrustools import logic
 

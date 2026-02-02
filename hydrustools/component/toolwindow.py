@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import Any, Callable, Generator, Iterable
 
-from hydrustools.settings import HTSettings
+from ..settings import HTSettings
 
 Settings = HTSettings()
 

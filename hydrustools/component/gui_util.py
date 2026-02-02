@@ -1,7 +1,6 @@
-from contextlib import contextmanager
-
 import logging
 import tkinter as tk
+from contextlib import contextmanager
 from tkinter import ttk
 from typing import Any, Generator, NamedTuple
 

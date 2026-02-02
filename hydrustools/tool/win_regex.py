@@ -9,12 +9,12 @@ from typing import Any, Callable
 
 import hydrus_api
 
-from .toolwindow import ToolWindow
+from ..component.toolwindow import ToolWindow
 
-from . import logic
-from .gui_util import Increment, tkwrap, tkwrapc
+from .. import logic
+from ..component.gui_util import Increment, tkwrap, tkwrapc
 
-from .settings import HTSettings
+from ..settings import HTSettings
 Settings = HTSettings()
 
 def has_note(notename: str, max_n: int = 4) -> list[str]:
