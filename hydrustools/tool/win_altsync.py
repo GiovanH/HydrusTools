@@ -1,19 +1,18 @@
 import functools
-from itertools import permutations
 import pprint
 import tkinter as tk
+from itertools import permutations
 from tkinter import ttk
-
-import numpy as np
 
 import cv2
 import hydrus_api
-
-from ..component.toolwindow import ToolWindow
-from ..component.tageditorlist import TagEditorList
+import numpy as np
 
 from .. import logic
 from ..component.gui_util import Increment, flatList, tkwrapc
+from ..component.tageditorlist import TagEditorList
+from ..component.toolwindow import ToolWindow
+
 
 @functools.lru_cache
 def alternatesOfHash(file_hash):

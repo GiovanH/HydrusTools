@@ -6,15 +6,13 @@ from tkinter import ttk
 from typing import Any, Callable
 
 # import PyTaskbar
-
 import hydrus_api
-
-from ..component.toolwindow import ToolWindow
 
 from .. import logic
 from ..component.gui_util import Increment, tkwrap, tkwrapc
-
+from ..component.toolwindow import ToolWindow
 from ..settings import HTSettings
+
 Settings = HTSettings()
 
 def has_note(notename: str, max_n: int = 4) -> list[str]:

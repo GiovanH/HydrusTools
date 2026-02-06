@@ -1,10 +1,9 @@
 
-from collections import defaultdict
-from contextlib import contextmanager
-
 import logging
 import threading
 import tkinter as tk
+from collections import defaultdict
+from contextlib import contextmanager
 from tkinter import messagebox
 from typing import Any, Callable, Generator, Iterable
 

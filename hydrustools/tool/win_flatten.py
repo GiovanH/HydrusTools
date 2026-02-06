@@ -2,13 +2,12 @@ import re
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from .multicolumnlistbox import MultiColumnListbox
-
-from . import logic
-from .gui_util import Increment, tkwrap, tkwrapc
-from .logic import SiblingInfo, TagInfo
-from .settings import HTSettings
-from .toolwindow import ToolWindow
+from .. import logic
+from ..component.gui_util import Increment, tkwrap, tkwrapc
+from ..component.multicolumnlistbox import MultiColumnListbox
+from ..component.toolwindow import ToolWindow
+from ..logic import SiblingInfo, TagInfo
+from ..settings import HTSettings
 
 Settings = HTSettings()
 
@@ -98,16 +97,17 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             self.after(100, self.doFlatten)
 
     def doSearch(self, event=None):
-        search_query: str = self.textvar_search.get()
-        self.setStatus(f"Searching {search_query!r}")
+        search_query: str = self.textvar_presearch.get() or "*"
+        search_refinement: str = self.textvar_search.get()
+        self.setStatus(f"Searching {search_query!r} for {search_refinement!r}")
 
         self.tree_tags.delete_all()
         # self.tree_tags.delete(*self.tree_tags.get_children())
 
         try:
-            results: list[TagInfo] = logic.search_tags_re(self.textvar_presearch.get() or "*", search_query)
+            results: list[TagInfo] = logic.search_tags_re(search_query, search_refinement)
         except re.error as e:  # noqa: F821
-            messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_query!r}\n{e}")
+            messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_refinement!r}\n{e}")
             return
 
         tag_count = {

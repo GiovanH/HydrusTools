@@ -1,7 +1,6 @@
 import logging
 import re
 
-import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
 from ..component.tagadderwin import TagAction, TagAdderWindow
@@ -11,20 +10,42 @@ from .. import logic
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-def has_note(notename: str, max_n: int = 4) -> list[str]:
+def has_note(max_n: int = 4) -> list[str]:
     return [
-        *[f'system:has note with name "{notename}"'],
-        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
+        *[f'system:has note with name "filename"'],
+        *[f'system:has note with name "filename ({n})"' for n in range(1, max_n)],
+        *[f'system:has note with name "filepath"'],
+        *[f'system:has note with name "filepath ({n})"' for n in range(1, max_n)]
     ]
 
-def add_page_tags(tk=True):
-    notename = "filename"
-    pattern = r'(\b|[_-])page[^0-9]?(?P<N>\d+)([^\d]|$)'
-    matcher = re.search
 
+def getFilenameInfo(metadata: dict) -> dict[str, str] | None:
+    name_matcher = re.compile(
+        r'(\b|[_-])page[^0-9]?(?P<N>\d+)([^\d]|$)'
+    )
+
+    for suffix in ['', ' (1)', ' (2)', ' (3)', ' (4)']:
+        body = metadata['notes'].get(f'filename{suffix}', '')
+        match = name_matcher.search(body)
+        if match:
+            return {
+                "body": body,
+                **match.groupdict()
+            }
+
+        body = metadata['notes'].get(f'filepath{suffix}', '')
+        match = name_matcher.search(body)
+        if match:
+            return {
+                "body": body,
+                **match.groupdict()
+            }
+
+
+def add_page_tags(tk=True):
     tag_query: list[str | list[str]] = [] # type: ignore
 
-    tag_query.append(has_note(notename))
+    tag_query.append(has_note())
     tag_query.append("-page:*")
 
     resp = logic.client.search_files(
@@ -36,7 +57,7 @@ def add_page_tags(tk=True):
 
     tag_actions: list[TagAction] = []
 
-    iterator: tqdm.tqdm = (tqdmtk if tk else tqdm.tqdm)
+    # iterator: tqdm.tqdm = (tqdmtk if tk else tqdm.tqdm)
     iterator = tqdmtk(
         [*logic.chunk(file_ids_with_note, 1000)],
         desc="Searching for page names in filenames",
@@ -49,14 +70,13 @@ def add_page_tags(tk=True):
         resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
         for metadata in resp['metadata']:
-            note_body = metadata['notes'].get(notename)
-            match = matcher(pattern, note_body)
-            if match:
-                new_tag = f"page:{match.group('N')}"
+            groupdict = getFilenameInfo(metadata)
+            if groupdict is not None:
+                new_tag = f"page:{groupdict.get('N')}"
 
                 # pw.setStatus(f"Found new tag {new_tag} for file {note_body} matching {match}")
 
-                action = TagAction(metadata['file_id'], note_body, [new_tag])
+                action = TagAction(metadata['file_id'], groupdict['body'], [new_tag])
                 tag_actions.append(action)
 
     # pw.destroy()

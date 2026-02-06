@@ -20,7 +20,9 @@ class TagInfo():
 class SiblingInfo():
     tag: str
     ideal_tag: str
-    siblings: set[str]
+    siblings: frozenset[str]
+    ancestors: frozenset[str]
+    descendants: frozenset[str]
 
 
 def set_api_key(new_api_key):
@@ -111,14 +113,17 @@ def replace_tag(original_tag: str, new_tags: list[str]) -> None:
 def get_sibling_ideal_targets(target_tags: list[str]) -> list[SiblingInfo]:
     resp = client.get_siblings_and_parents(target_tags)
     # pprint.pprint(resp)
+    tags: dict[str, dict[str, str]] = resp["tags"]
     siblings: dict[str, SiblingInfo] = {
         k: SiblingInfo(
             tag=k,
             ideal_tag=v[local_tags_service_key]["ideal_tag"],
             siblings=frozenset(v[local_tags_service_key]["siblings"]),  # type: ignore
+            ancestors=frozenset(v[local_tags_service_key]["ancestors"]),
+            descendants=frozenset(v[local_tags_service_key]["descendants"])
         )
         # k: v[local_tags_service_key]
-        for k, v in resp["tags"].items()
+        for k, v in tags.items()
     }
     # pprint.pprint(siblings)
     targets: list[SiblingInfo] = [v for k, v in siblings.items() if k != v.ideal_tag]

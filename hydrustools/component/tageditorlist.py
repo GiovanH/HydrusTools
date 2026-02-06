@@ -3,7 +3,7 @@ import logging
 import tkinter as tk
 from tkinter import ttk
 
-from hydrustools.gui_util import tkwrapc
+from .gui_util import tkwrapc
 
 logging.basicConfig(level=logging.INFO)
 

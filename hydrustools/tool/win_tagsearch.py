@@ -1,15 +1,13 @@
 import re
 import tkinter as tk
-from tkinter import messagebox, ttk
-from tkinter import simpledialog
-
-from ..component.multicolumnlistbox import MultiColumnListbox
+from tkinter import messagebox, simpledialog, ttk
 
 from .. import logic
 from ..component.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
+from ..component.multicolumnlistbox import MultiColumnListbox
+from ..component.toolwindow import ToolWindow
 from ..logic import TagInfo
 from ..settings import HTSettings
-from ..component.toolwindow import ToolWindow
 
 Settings = HTSettings()
 
