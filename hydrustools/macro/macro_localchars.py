@@ -45,7 +45,7 @@ def find_localchars(tk=True):
             for s in si.siblings
         }
     }
-    pprint.pprint(sibling_info)
+    # pprint.pprint(sibling_info)
 
     for m in matches:
         n = m.groupdict()

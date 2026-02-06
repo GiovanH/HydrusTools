@@ -6,6 +6,8 @@ from tqdm.tk import tqdm as tqdmtk
 
 import hydrus_api
 
+from hydrustools.macro import macro_implicit_parents
+
 from .macro import macro_creatortags
 
 from . import logic
@@ -101,6 +103,7 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
             for label, command in [
                 ("Extract known creators from filename note", macro_creatortags.find_creators),
                 ("Extract page numbers from filename note", macro_pages.add_page_tags),
+                ("Detect parent series of characters", macro_implicit_parents.run),
             ]:
                 def runThread(command=command):
                     taskthread = threading.Thread(target=command, daemon=True)

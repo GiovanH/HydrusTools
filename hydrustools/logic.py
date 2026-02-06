@@ -80,7 +80,7 @@ def chunk(iterable, maxsize):
     yield from iter(lambda: tuple(islice(iter_it, maxsize)), ())
 
 
-def search_tags_re(substr: str, subpattern: str, display_type="storage") -> list[TagInfo]:
+def search_tags_re(substr: str, subpattern: str | None, display_type="storage") -> list[TagInfo]:
     resp = client.search_tags(
         search=substr,
         tag_service_key=local_tags_service_key,
@@ -89,7 +89,7 @@ def search_tags_re(substr: str, subpattern: str, display_type="storage") -> list
     return [
         TagInfo(**item)
         for item in resp["tags"]  # type: ignore
-        if re.match(subpattern, item["value"])
+        if (not subpattern) or re.match(subpattern, item["value"])
     ]
 
 
@@ -117,16 +117,16 @@ def get_sibling_ideal_targets(target_tags: list[str]) -> list[SiblingInfo]:
     siblings: dict[str, SiblingInfo] = {
         k: SiblingInfo(
             tag=k,
-            ideal_tag=v[local_tags_service_key]["ideal_tag"],
+            ideal_tag=v[local_tags_service_key]["ideal_tag"],  # type: ignore
             siblings=frozenset(v[local_tags_service_key]["siblings"]),  # type: ignore
-            ancestors=frozenset(v[local_tags_service_key]["ancestors"]),
-            descendants=frozenset(v[local_tags_service_key]["descendants"])
+            ancestors=frozenset(v[local_tags_service_key]["ancestors"]),  # type: ignore
+            descendants=frozenset(v[local_tags_service_key]["descendants"])  # type: ignore
         )
         # k: v[local_tags_service_key]
         for k, v in tags.items()
     }
     # pprint.pprint(siblings)
-    targets: list[SiblingInfo] = [v for k, v in siblings.items() if k != v.ideal_tag]
+    targets: list[SiblingInfo] = [v for k, v in siblings.items()]
     return targets
 
 

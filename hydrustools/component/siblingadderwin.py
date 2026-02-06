@@ -65,6 +65,7 @@ class SiblingAdderWindow(ToolWindow):
 
             assert isinstance(sf, ScrollableFrame)
             frame: ttk.Frame = sf.container
+
             frame.columnconfigure(0, weight=1)
             frame.columnconfigure(1, weight=1)
 

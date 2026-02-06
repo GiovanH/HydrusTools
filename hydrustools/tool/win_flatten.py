@@ -116,6 +116,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         }
 
         targets: list[SiblingInfo] = logic.get_sibling_ideal_targets([ti.value for ti in results])
+        targets = [t for t in targets if t.tag != t.ideal_tag]
 
         for si in sorted(targets, key=lambda si: si.tag):
             row = [si.tag, si.ideal_tag, tag_count.get(si.tag)]
