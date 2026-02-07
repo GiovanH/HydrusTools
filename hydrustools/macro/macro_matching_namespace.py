@@ -1,10 +1,10 @@
-from collections import Counter
 import logging
 import pprint
-import re
 
-from hydrustools.component.relationshipadderwin import RelationshipAction, RelationshipAdderWindow
-from hydrustools.component.siblingadderwin import SiblingAction, SiblingAdderWindow
+import tqdm
+from tqdm.tk import tqdm as tqdmtk
+
+from ..component.relationshipadderwin import RelationshipAction, RelationshipAdderWindow
 
 from .. import logic
 
@@ -15,12 +15,14 @@ def tiformat(ti: logic.TagInfo):
     return f"{ti.value} ({ti.count})"
 
 def run(tk=True):
+    tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
+
     min_char_count = 10
     first_tag_factor = 10
 
     # max_page_size = 20
 
-    all_tags = logic.search_tags_re(f"*", subpattern=None)
+    all_tags = logic.search_tags_re("*", subpattern=None)
     all_tags_set = {ti.value for ti in all_tags}
     all_tags_map = {ti.value: ti for ti in all_tags}
 
@@ -37,9 +39,11 @@ def run(tk=True):
 
     suggestions: list[RelationshipAction] = []
 
-    for ut in unnamespaced_tags:
+    for ut in tqdm_iterator(unnamespaced_tags):
         if all_relationships[ut] and all_relationships[ut].ideal_tag != ut:
+            # Already pointing to a sibling
             continue
+
         spaced = ut.replace('_', ' ')
         scored = ut.replace(' ', '_')
         for maybe_better in {
@@ -59,9 +63,9 @@ def run(tk=True):
                 pprint.pprint(ra)
                 suggestions.append(ra)
 
-        # if len(suggestions) >= max_page_size:
-        #     break
-
+    if isinstance(tqdm_iterator, tqdmtk):
+        tqdm_iterator.leave = False
+        tqdm_iterator.close()
 
     RelationshipAdderWindow(suggestions)
 

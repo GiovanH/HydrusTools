@@ -1,10 +1,11 @@
 from collections import Counter
 import logging
 import pprint
-import re
+
+import tqdm
+from tqdm.tk import tqdm as tqdmtk
 
 from hydrustools.component.relationshipadderwin import RelationshipAction, RelationshipAdderWindow
-from hydrustools.component.siblingadderwin import SiblingAction, SiblingAdderWindow
 
 from .. import logic
 
@@ -12,6 +13,8 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 def run(tk=True):
+    tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
+
     min_char_count = 10
     first_tag_factor = 10
     namespace_a = "character:"
@@ -61,7 +64,7 @@ def run(tk=True):
 
     suggestions: list[RelationshipAction] = []
 
-    for char in orphans:
+    for char in tqdm_iterator(orphans):
         si = all_relationships.get(char)
         my_counter = Counter()
 
@@ -98,10 +101,10 @@ def run(tk=True):
 
         logger.info(f"Should we suggest adding a parent to {char} from {my_counter}?")
         if len(my_counter.keys()) == 0:
-            logger.info(f"No, empty.")
+            logger.info("No, empty.")
             continue
         if len(my_counter.keys()) == 1:
-            logger.info(f"Yes, only one option")
+            logger.info("Yes, only one option")
             new_tag = [*my_counter.keys()][0]
         if len(my_counter.keys()) >= 2:
             first, second, *etc = [*my_counter.keys()]

@@ -1,14 +1,13 @@
 import logging
-import pprint
 import tkinter as tk
 from dataclasses import dataclass
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
-from hydrustools import logic
-
-from .gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
-from .multicolumnlistbox import MultiColumnListbox
-from .toolwindow import ToolWindow
+from ..component.gui_util import Increment, tkwrap
+from ..component.multicolumnlistbox import MultiColumnListbox
+from ..component.toolwindow import ToolWindow
+from ..settings import HTSettings
+from .gui_util import TextCopyWindow
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,16 +21,6 @@ HEAD_TAG_A = "Source tag"
 HEAD_TAG_B = "New relationship"
 HEAD_TAG_COMMENT = "Note"
 
-import re
-import tkinter as tk
-from tkinter import messagebox, ttk
-
-from .. import logic
-from ..component.gui_util import Increment, tkwrap, tkwrapc
-from ..component.multicolumnlistbox import MultiColumnListbox
-from ..component.toolwindow import ToolWindow
-from ..logic import SiblingInfo, TagInfo
-from ..settings import HTSettings
 
 Settings = HTSettings()
 

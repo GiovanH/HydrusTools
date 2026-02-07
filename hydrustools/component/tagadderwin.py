@@ -6,7 +6,7 @@ from tkinter import messagebox, ttk
 
 from hydrustools import logic
 
-from .gui_util import Increment, tkwrap, tkwrapc
+from .gui_util import Increment, tkwrap
 from .multicolumnlistbox import MultiColumnListbox
 from .toolwindow import ToolWindow
 

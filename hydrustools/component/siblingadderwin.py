@@ -1,14 +1,11 @@
 import itertools
 import logging
-import pprint
 import tkinter as tk
 from dataclasses import dataclass
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
-from hydrustools import logic
 
-from .gui_util import Increment, ScrollableFrame, TextCopyWindow, flatList, tkwrap, tkwrapc
-from .multicolumnlistbox import MultiColumnListbox
+from .gui_util import Increment, ScrollableFrame, TextCopyWindow, tkwrap, tkwrapc
 from .toolwindow import ToolWindow
 
 logging.basicConfig(level=logging.INFO)
