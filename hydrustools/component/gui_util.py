@@ -2,7 +2,7 @@ import logging
 import tkinter as tk
 from contextlib import contextmanager
 from tkinter import ttk
-from typing import Any, Generator, NamedTuple
+from typing import Any, Generator, NamedTuple, Sequence, TypeVar
 
 import win32clipboard
 
@@ -39,6 +39,32 @@ def flatList(lst):
     [1, 2, 3, 4]
     """
     return [item for sublist in lst for item in sublist]
+
+
+V = TypeVar("V", bound=tk.Variable)
+
+def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
+    pb['value'] = 0
+    total = len(seq)
+    for i, item in enumerate(seq):
+        yield item
+        pb['value'] = 100*i/total
+    pb['value'] = 0
+
+
+class NSVar(tk.StringVar):
+    def get(self):
+        """Return value of variable as string."""
+        value = super().get()
+        if value.endswith(":"):
+            value = value.replace(":", "")
+        return value
+
+
+class RegexEntry(ttk.Entry):
+    def __init__(self, container, *args, **kwargs):
+        kwargs['font'] = ('Courier', 10)
+        super().__init__(container, *args, **kwargs)
 
 
 class ScrollableFrame(ttk.Frame):

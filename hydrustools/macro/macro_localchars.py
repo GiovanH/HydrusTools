@@ -2,7 +2,7 @@ import logging
 import pprint
 import re
 
-from hydrustools.component.siblingadderwin import SiblingAction, SiblingAdderWindow
+from ..component.siblingadderwin import SiblingAction, SiblingAdderWindow
 
 from .. import logic
 
@@ -74,11 +74,12 @@ def find_localchars(tk=True):
                 current_sibling = sibling_options.index(si.ideal_tag)
                 # tag = si.ideal_tag
 
-                group = repr(si.ancestors)
+                group = ' '.join(si.ancestors)
 
             action = SiblingAction(tag, sibling_options, current_sibling, group)
 
-            # print(action)
+            logger.info(action)
+
 
             sibling_actions.append(action)
 

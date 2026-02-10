@@ -7,7 +7,10 @@ from tqdm.tk import tqdm as tqdmtk
 
 import hydrus_api
 
-from hydrustools.macro import macro_implicit_parents, macro_matching_namespace
+from hydrustools.tool.win_implicit_parents import ImplicitParentWindow
+
+from .component.toolwindow import ToolWindow
+from .macro import macro_localchars, macro_matching_namespace
 
 from .macro import macro_creatortags
 
@@ -27,12 +30,20 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
     "Tag Management": [
         ("Tag Browser", TagSearchWindow),
         ("Tree Visualizer", None),
-        ("Identify Reordered Character Names", None),
+        ("Identify Reordered Character Names", macro_localchars.find_localchars),
     ],
     "Relationships": [
+        ("Relationship Browser", None),
         ("Flatten Siblings", FlattenWindow),
-        ("Synchronize Alternates", AltSyncWindow),
+        ("Synchronize Alternates (WIP)", AltSyncWindow),
+        ("Find implicit parents", ImplicitParentWindow),
+        # ("Find implicit parents Macro", macro_implicit_parents.run),
+        ("Detect tags' namespaced equivalents", macro_matching_namespace.run),
         ("Make Series from Character Parens", None),
+        # We really want tag relationships for these...
+        ("Parent characters to series", None),
+        ("Detect Tag Siblings from Names", None),
+        # ("Detect Tag Parents from Subsets", None),
     ],
     "Search": [
         ("Note Search", RegexSearchWindow),
@@ -48,24 +59,31 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
     ],
     "Unsorted": [
         # ("Tag Editor", None),
-        # We really want tag relationships for these...
-        ("Parent characters to series", None),
-        ("Detect Tag Siblings from Names", None),
-        ("Detect Tag Parents from Subsets", None),
         ("Mail Rules", None),
         # ("Extract known creators from filename note", macro_creatortags.find_creators),
         # ("Extract page numbers from filename note", macro_pages.add_page_tags),
-        ("Detect parent series of characters", macro_implicit_parents.run),
-        ("Detect tags' namespaced equivalents", macro_matching_namespace.run),
     ],
 }
 
-class ToolsWindow(tk.Tk):  # noqa: PLR0904
+class ToolsListWindow(tk.Tk):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.command_list = []
         self.initwindow()
+
+        if Settings.gui_last != -1:
+            try:
+                command = self.command_list[Settings.gui_last]
+                self.logger.info(f"{command}, {Settings.gui_last} {self.command_list[Settings.gui_last]=}")
+                if command and hasattr(command, "showHelp"):
+                    self.iconify()
+                    command()
+            except IndexError as e:
+                self.logger.error(e)
+                Settings.gui_last = -1
+                pass
 
         self.mainloop()
 
@@ -76,7 +94,7 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
         self.columnconfigure(0, weight=1)
         # self.rowconfigure(1, weight=1)
 
-        command_list = []
+        self.command_list = []
 
         with tkwrapc(ttk.Frame(self)) as (frame_btns, _, cy):
             # frame_btns.grid(row=1, ipadx=6, ipady=6, pady=6, padx=6, sticky="nsew")
@@ -90,20 +108,23 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                 lab.grid(row=cy.inc(), column=0, columnspan=2)
 
                 for label, command in items:
-                    command_list.append(command)
+                    self.command_list.append(command)
 
                     def _launch(label=label, command=command):
                         if command and hasattr(command, "showHelp"):
                             self.logger.info(f"Setting last as {label}, {command}")
-                            Settings.gui_last = command_list.index(command)
+                            Settings.gui_last = self.command_list.index(command)
+                            command()
                         if command:
+                            # taskthread = threading.Thread(target=command, daemon=True)
+                            # taskthread.start()
                             command()
 
                     btn = ttk.Button(frame_btns, text=label, command=_launch)
                     cy.inc()
 
-                    colspan = None
-                    if hasattr(command, "showHelp"):
+                    colspan = 1
+                    if command and hasattr(command, "showHelp"):
                         btn_help = ttk.Button(frame_btns, text="?", command=command.showHelp, width=2)
                         btn_help.grid(row=cy.value, column=1, pady=2)
                     else:
@@ -114,16 +135,6 @@ class ToolsWindow(tk.Tk):  # noqa: PLR0904
                     if command is None:
                         btn.config(state=tk.DISABLED)
 
-                if Settings.gui_last != -1:
-                    try:
-                        command = command_list[Settings.gui_last]
-                        if command and hasattr(command, "showHelp"):
-                            self.iconify()
-                            command()
-                    except IndexError as e:
-                        self.logger.error(e)
-                        Settings.gui_last = -1
-                        pass
 
 def main():
     try:
@@ -137,11 +148,7 @@ def main():
         messagebox.showerror("Error connecting", message=f"{e}")
         raise
 
-    # TextCopyWindow("Hello\nWorld")
-    # RegexSearchWindow()
-    # AltSyncWindow()
-    ToolsWindow()
-    # FlattenWindow()
+    ToolsListWindow()
 
 
 if __name__ == "__main__":

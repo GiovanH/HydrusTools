@@ -2,10 +2,11 @@ from .inisettings import IniSettings
 
 import tkinter as tk
 import hydrus_api
-from typing import TypeVar, Type
+from typing import Literal, TypeAlias, TypeVar, Type, get_type_hints
 
 V = TypeVar("V", bound=tk.Variable)
 
+# htattrs: TypeAlias = Literal[get_type_hints(HTSettings).keys()]
 
 class HTSettings(IniSettings):
     hydrus_api_key: str = "CHANGEME"
@@ -25,7 +26,12 @@ class HTSettings(IniSettings):
     note_pattern: str = ""
     note_partial: bool = False
 
-    def boundTkVar(self, master, name: str, constructor: Type[V] = tk.StringVar) -> V:
+    findimplicitparent_ns_parent: str = "series:"
+    findimplicitparent_ns_child: str = "character:"
+    findimplicitparent_min_count: int = 2
+    findimplicitparent_factor: int = 2
+
+    def boundTkVar(self, master, name, constructor: Type[V] = tk.StringVar) -> V:
         var: V = constructor(master)
 
         var.set(self.__getattribute__(name))

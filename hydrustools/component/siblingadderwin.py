@@ -70,8 +70,8 @@ class SiblingAdderWindow(ToolWindow):
                 label = ttk.Label(frame, text=sa.tag)
                 label.grid(row=cy.inc(), column=0, sticky="e")
 
-                # label = ttk.Label(frame, text=sa.group)
-                # label.grid(row=cy.value, column=2, sticky="e")
+                label = ttk.Label(frame, text=sa.group)
+                label.grid(row=cy.value, column=2, sticky="e")
 
                 om = ttk.OptionMenu(frame, self.values[i], self.values[i].get(), *sa.sibling_options)
                 om.grid(row=cy.value, column=1, sticky="we")

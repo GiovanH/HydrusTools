@@ -15,9 +15,9 @@ Settings = HTSettings()
 class FlattenWindow(ToolWindow):  # noqa: PLR0904
     helpstr = """Flatten tag siblings.
 
-In effect, this finds all images with the source tag directly specified and replaces that with the ideal tag as defined by the sibling relationship.
-
 Select the specific relationships to flatten and click the flatten button to commit changes.
+
+In effect, this finds all images with the source tag directly specified and replaces that with the ideal tag as defined by the sibling relationship.
 
 Presearch searches Hydrus for tags (* will only work if specified in the tag repo settings). Refinement filters that list to only tags matching the given expression. Presearch is fastest!
     """

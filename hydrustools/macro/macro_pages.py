@@ -1,6 +1,7 @@
 import logging
 import re
 
+import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
 from ..component.tagadderwin import TagAction, TagAdderWindow
@@ -57,13 +58,15 @@ def add_page_tags(tk=True):
 
     tag_actions: list[TagAction] = []
 
+    tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
     # iterator: tqdm.tqdm = (tqdmtk if tk else tqdm.tqdm)
-    iterator = tqdmtk(
+    iterable = tqdm_iterator(
         [*logic.chunk(file_ids_with_note, 1000)],
         desc="Searching for page names in filenames",
-        unit="chunk"
+        unit="chunk",
+        leave=False
     )
-    for i, id_chunk in enumerate(iterator):
+    for id_chunk in iterable:
 
         # pw.pb['value'] = 100*i/len(chunk_list)
 
@@ -78,6 +81,10 @@ def add_page_tags(tk=True):
 
                 action = TagAction(metadata['file_id'], groupdict['body'], [new_tag])
                 tag_actions.append(action)
+
+    if isinstance(iterable, tqdmtk):
+        iterable.leave = False
+        iterable.close()
 
     # pw.destroy()
 

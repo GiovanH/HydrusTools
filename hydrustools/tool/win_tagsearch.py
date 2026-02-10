@@ -92,9 +92,15 @@ AND/OR opens search page for all images with the selected tags.
 
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (frame_bottom, cx, cy):
             frame_bottom.grid(row=counter_main_row.inc(), columnspan=2, sticky="ew")
-            frame_bottom.columnconfigure(0, weight=1)
 
-            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(row=cx.inc(), sticky="nsew")
+            self.pb = ttk.Progressbar(frame_bottom, orient='vertical',
+                mode='determinate',
+                length=30
+            )
+            self.pb.grid(column=cx.inc(), row=0, sticky="ns")
+
+            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=cx.inc(), row=0, sticky="nsew")
+            frame_bottom.columnconfigure(cx.value, weight=1)
 
             with tkwrapc(ttk.Frame(frame_bottom)) as (frame, ccx, ccy):
                 frame.grid(column=cx.inc(), row=0, sticky="nse")
@@ -133,6 +139,7 @@ AND/OR opens search page for all images with the selected tags.
             tag.value: tag.count
             for tag in results
         }
+        self.setStatus(f"Found {len(results)} tags. Displaying...")
 
         # targets: list[SiblingInfo] = logic.get_sibling_ideal_targets([ti.value for ti in results])
 
@@ -140,20 +147,22 @@ AND/OR opens search page for all images with the selected tags.
             self.tree_tags.update_tree([
                 {"values": [t.value, t.count]} for t in
                 sorted(results, key=lambda ti: ti.value)
-            ])
+            ], resize=False)
+            self.setStatus(f"Done")
 
         if len(results) > 200:
             self.after(10, _apply)
         else:
             _apply()
+            self.winfo_toplevel().after(10, self.tree_tags.resize_cols)
+            self.setStatus(f"Done")
         # for t in
         #     # self.tree_tags.insert('', tk.END, values=row)
         #     self.tree_tags.insert_item({"values": row})
         #     if self.abort_threads: return
 
-        self.winfo_toplevel().after(10, self.tree_tags.resize_cols)
 
-        self.setStatus(f"Found {len(results)} tags")
+
 
     def openPageAnd(self, event=None):
         return self.openPage(OR=False)
@@ -209,19 +218,6 @@ AND/OR opens search page for all images with the selected tags.
         )
 
         TextCopyWindow(clip_import)
-        # TODO: Use clipboard format for this
-        # Format is:
-
-        # explaination = '\n'.join(f'{source} -> {ideal}' for (source, ideal) in pairs)
-        # user_confirmed = messagebox.askyesno(
-        #     title="Confirm",
-        #     message=f"{explaination}\n\nReplace these tags? This cannot be undone!\n\nSiblings cannot yet be set via the API."
-        # )
-        # if user_confirmed:
-        #     with self.lock():
-        #         for row in pairs:
-        #             source_tag, ideal_tag = row
-        #             logic.replace_tag(source_tag, [ideal_tag])
 
     def deleteTags(self, OR=False):
         selection: list[str] = [

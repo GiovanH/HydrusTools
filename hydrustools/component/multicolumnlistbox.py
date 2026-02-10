@@ -154,6 +154,8 @@ class MultiColumnListbox(tk.Frame):
             self.winfo_toplevel().after(10, self.resize_cols)
 
     def resize_cols(self):
+        self.logger.info("Resizing...")
+
         for col in self.headers:
             self.tree.column(col, width=self.TkFont.measure(col.title()))
 
@@ -169,6 +171,8 @@ class MultiColumnListbox(tk.Frame):
 
         for i in range(0, len(self.headers)):
             self.tree.column(self.headers[i], width=min(int(avgs[i]), 480))
+
+        self.logger.info("Resized")
 
 
     def update_tree(self, itemlist: list[TreeListItemDict], resize=True) -> None:
@@ -200,4 +204,10 @@ class MultiColumnListbox(tk.Frame):
         return [
             self.tree.set(child)
             for child in self.tree.selection()
+        ]
+
+    def getAllDicts(self) -> list[dict]:
+        return [
+            self.tree.set(child)
+            for child in self.tree.get_children()
         ]

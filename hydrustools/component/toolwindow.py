@@ -19,7 +19,7 @@ def recursive_widgets(w, key) -> Iterable[tk.Widget]:
 
 
 class ToolWindow(tk.Tk):
-    helpstr = """Change this help string"""
+    helpstr: str = """Change this help string"""
 
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
