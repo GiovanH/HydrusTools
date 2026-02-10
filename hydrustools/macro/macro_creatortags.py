@@ -36,7 +36,7 @@ def all_creator_patterns(creator_names) -> list[tuple[str, re.Pattern]]:
         try:
             if len(name) > 4 and name not in {'anonymous', 'unknown', 'anon', 'unknown artist'}:
                 creator_patterns.append((name, re.compile(rf'(^|\b|[_+-]){re.escape(name)}(\b|[_+-])')))
-        except:
+        except re.error:
             logger.error(f"Couldn't create search pattern for name {name=!r}")
             continue
 

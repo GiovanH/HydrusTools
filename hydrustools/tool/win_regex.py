@@ -153,7 +153,8 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
                     # progress.setProgress(self.pb['value'])
                     self.setStatus(f"Searched {checked_file_count} / {len(file_ids_with_note)}, matched {len(matching_ids)}...")
 
-                    if self.abort_threads: return
+                    if self.abort_threads:
+                        return
             except re.error as e:
                 self.setStatus(str(e))
                 return

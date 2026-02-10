@@ -1,15 +1,11 @@
 from collections import Counter
-import logging
 import pprint
 from tkinter import ttk
 import tkinter as tk
-from typing import Iterable, Sequence, Sized
 
-import tqdm
-from tqdm.tk import tqdm as tqdmtk
 
-from ..component.gui_util import NSVar, pb_iter, tkwrapc
-from ..component.relationshipadder import RelationshipAction, RelationshipAdderFrame, RelationshipAdderWindow
+from ..component.gui_util import pb_iter, tkwrapc
+from ..component.relationshipadder import RelationshipAction, RelationshipAdderFrame
 from ..component.toolwindow import ToolWindow
 
 from .. import logic
@@ -38,7 +34,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
         self.var_min_count: tk.IntVar = Settings.boundTkVar(self, 'findimplicitparent_min_count', tk.IntVar)
         self.var_tag_factor = Settings.boundTkVar(self, 'findimplicitparent_factor', tk.IntVar)
 
-        self.abort_search = False
+        self.abort_threads = False
 
         self.initwindow()
         self.bind("<Escape>", self.abort)
@@ -47,7 +43,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
         self.mainloop()
 
     def abort(self, event=None):
-        self.abort_search = True
+        self.abort_threads = True
 
     def initwindow(self) -> None:
         self.title("Find Implicit Parents")
@@ -121,7 +117,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
             btn.grid(column=cx.inc(), row=0, sticky="nse")
 
     def doSearch(self):
-        self.abort_search = False
+        self.abort_threads = False
 
         min_char_count = self.var_min_count.get()
         first_tag_factor = self.var_tag_factor.get()
@@ -177,10 +173,10 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
             self.setStatus(f"Filtered {skipped_too_few} tags without at least {min_char_count} occurrences")
 
         self.frame_ra.delete_all()
-        self.setStatus(f"Finding potential parents")
+        self.setStatus("Finding potential parents")
         for char in pb_iter(self.pb, orphans):
-            if self.abort_search:
-                self.abort_search = False
+            if self.abort_threads:
+                self.abort_threads = False
                 break
 
             si = all_relationships.get(char)
@@ -224,7 +220,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
                 self.logger.info("Yes, only one option")
                 new_tags = [*my_counter.keys()]
             if len(my_counter.keys()) >= 2:
-                first, second, *etc = [*my_counter.keys()]
+                first, second, *_ = [*my_counter.keys()]
                 self.logger.info(f"{first} has {my_counter[first]}, {second} has {my_counter[second]}")
                 if my_counter[first] >= my_counter[second] * first_tag_factor:
                     # Actually, if the factor is 1, give options for every tie
@@ -246,7 +242,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
                 self.frame_ra.add_item(ra)
 
         self.winfo_toplevel().after(10, self.frame_ra.tree_tags.resize_cols)
-        self.setStatus(f"Done!")
+        self.setStatus("Done!")
 
 if __name__ == "__main__":
     logic.init_client()

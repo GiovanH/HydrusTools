@@ -135,10 +135,10 @@ AND/OR opens search page for all images with the selected tags.
             messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_refinement!r}\n{e}")
             return
 
-        tag_count = {
-            tag.value: tag.count
-            for tag in results
-        }
+        # tag_count = {
+        #     tag.value: tag.count
+        #     for tag in results
+        # }
         self.setStatus(f"Found {len(results)} tags. Displaying...")
 
         # targets: list[SiblingInfo] = logic.get_sibling_ideal_targets([ti.value for ti in results])
@@ -148,14 +148,14 @@ AND/OR opens search page for all images with the selected tags.
                 {"values": [t.value, t.count]} for t in
                 sorted(results, key=lambda ti: ti.value)
             ], resize=False)
-            self.setStatus(f"Done")
+            self.setStatus("Done")
 
         if len(results) > 200:
             self.after(10, _apply)
         else:
             _apply()
             self.winfo_toplevel().after(10, self.tree_tags.resize_cols)
-            self.setStatus(f"Done")
+            self.setStatus("Done")
         # for t in
         #     # self.tree_tags.insert('', tk.END, values=row)
         #     self.tree_tags.insert_item({"values": row})

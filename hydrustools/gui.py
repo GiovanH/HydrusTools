@@ -1,22 +1,16 @@
 import logging
-import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 from typing import Callable
-from tqdm.tk import tqdm as tqdmtk
 
 import hydrus_api
 
-from hydrustools.tool.win_implicit_parents import ImplicitParentWindow
-
-from .component.toolwindow import ToolWindow
-from .macro import macro_localchars, macro_matching_namespace
-
-from .macro import macro_creatortags
+from .tool.win_implicit_parents import ImplicitParentWindow
+from .tool.win_tagrelationships import TagRelationshipsWindow
 
 from . import logic
-from .component.gui_util import TextCopyWindow, tkwrapc
-from .macro import macro_pages
+from .component.gui_util import tkwrapc
+from .macro import macro_creatortags, macro_localchars, macro_matching_namespace, macro_pages
 from .settings import HTSettings
 from .tool.win_altsync import AltSyncWindow
 from .tool.win_flatten import FlattenWindow
@@ -33,7 +27,7 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
         ("Identify Reordered Character Names", macro_localchars.find_localchars),
     ],
     "Relationships": [
-        ("Relationship Browser", None),
+        # ("Relationship Browser", TagRelationshipsWindow),
         ("Flatten Siblings", FlattenWindow),
         ("Synchronize Alternates (WIP)", AltSyncWindow),
         ("Find implicit parents", ImplicitParentWindow),
@@ -125,7 +119,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
 
                     colspan = 1
                     if command and hasattr(command, "showHelp"):
-                        btn_help = ttk.Button(frame_btns, text="?", command=command.showHelp, width=2)
+                        btn_help = ttk.Button(frame_btns, text="?", command=command.showHelp, width=2) # type: ignore
                         btn_help.grid(row=cy.value, column=1, pady=2)
                     else:
                         colspan = 2

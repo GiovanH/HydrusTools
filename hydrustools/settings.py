@@ -2,11 +2,9 @@ from .inisettings import IniSettings
 
 import tkinter as tk
 import hydrus_api
-from typing import Literal, TypeAlias, TypeVar, Type, get_type_hints
+from typing import TypeVar, Type
 
 V = TypeVar("V", bound=tk.Variable)
-
-# htattrs: TypeAlias = Literal[get_type_hints(HTSettings).keys()]
 
 class HTSettings(IniSettings):
     hydrus_api_key: str = "CHANGEME"
