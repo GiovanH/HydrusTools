@@ -21,7 +21,7 @@ def all_creator_names(min_count=2):
         search="creator:*",
         tag_service_key=logic.local_tags_service_key,
         tag_display_type="display"
-    )['tags'] # type: ignore
+    )['tags']  # type: ignore
     creator_names = [
         tag['value'].replace('creator:', '').replace(' (artist)', '')
         for tag in creator_tags
@@ -56,7 +56,7 @@ def find_creators(tk=True):
     tag_query.append("-creator:*")
 
     file_ids_with_note = logic.client.search_files(
-        tags=tag_query # type: ignore
+        tags=tag_query  # type: ignore
     )['file_ids']
 
     logger.info(f"Found {len(file_ids_with_note)} files matching {tag_query!r}...")

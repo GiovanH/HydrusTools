@@ -4,6 +4,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk
 from typing import Any, Callable, Literal, Required, TypedDict
+from PIL import ImageTk
 
 
 class _TkTreeviewItemDict(TypedDict):
@@ -17,7 +18,7 @@ class _TkTreeviewItemDict(TypedDict):
 class TreeListItemDict(TypedDict, total=False):
     id: str | int
     text: str
-    image: str
+    image: str | ImageTk.PhotoImage
     values: Required[list[Any]]
     tags: str | list[str]
 

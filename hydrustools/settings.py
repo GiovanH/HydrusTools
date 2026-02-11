@@ -29,6 +29,8 @@ class HTSettings(IniSettings):
     findimplicitparent_min_count: int = 2
     findimplicitparent_factor: int = 2
 
+    imagesearch_query: str = ""
+
     def boundTkVar(self, master, name, constructor: Type[V] = tk.StringVar) -> V:
         var: V = constructor(master)
 

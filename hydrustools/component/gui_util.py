@@ -3,6 +3,7 @@ import tkinter as tk
 from contextlib import contextmanager
 from tkinter import ttk
 from typing import Any, Generator, NamedTuple, Sequence, TypeVar
+from typing import TypedDict, Generic, TypeVar, Unpack
 
 import win32clipboard
 
@@ -50,6 +51,23 @@ def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
         yield item
         pb['value'] = 100*i/total
     pb['value'] = 0
+
+
+class TreeviewHeadings():
+    """Maps column headings to row values for ttk.Treeview"""
+
+    def __init__(self, headings: dict[str, str]):
+        """Initialize with list of column headings"""
+        self.headings = [*headings.values()]
+        self._indices = {h: i for i, h in enumerate(headings.keys())}
+
+    def values(self, **kwargs):
+        """Convert keyword args directly to row list"""
+        row = [None] * len(self.headings)
+        for key, value in kwargs.items():
+            if key in self._indices:
+                row[self._indices[key]] = value
+        return row
 
 
 class NSVar(tk.StringVar):

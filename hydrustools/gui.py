@@ -5,6 +5,8 @@ from typing import Callable
 
 import hydrus_api
 
+from .tool.win_imagesearch import ImageSearchWindow
+
 from .tool.win_implicit_parents import ImplicitParentWindow
 from .tool.win_tagrelationships import TagRelationshipsWindow
 
@@ -53,6 +55,7 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
     ],
     "Unsorted": [
         # ("Tag Editor", None),
+        ("Image Search Test", ImageSearchWindow),
         ("Mail Rules", None),
         # ("Extract known creators from filename note", macro_creatortags.find_creators),
         # ("Extract page numbers from filename note", macro_pages.add_page_tags),
