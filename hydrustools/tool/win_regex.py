@@ -11,9 +11,8 @@ import hydrus_api
 from .. import logic
 from ..component.gui_util import Increment, tkwrap, tkwrapc
 from ..component.toolwindow import ToolWindow
-from ..settings import HTSettings
+from ..settings import Settings
 
-Settings = HTSettings()
 
 def has_note(notename: str, max_n: int = 4) -> list[str]:
     return [

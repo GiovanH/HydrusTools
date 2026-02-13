@@ -43,6 +43,7 @@ class HTSettings(IniSettings):
 
         return var
 
+Settings = HTSettings()
 
 if __name__ == "__main__":
     settings = HTSettings()

@@ -7,9 +7,7 @@ from contextlib import contextmanager
 from tkinter import messagebox
 from typing import Any, Callable, Generator, Iterable
 
-from ..settings import HTSettings
-
-Settings = HTSettings()
+from ..settings import Settings
 
 def recursive_widgets(w, key) -> Iterable[tk.Widget]:
     if key in 'state' in w.keys():
@@ -18,7 +16,7 @@ def recursive_widgets(w, key) -> Iterable[tk.Widget]:
         yield from recursive_widgets(w2, key)
 
 
-class ToolWindow(tk.Tk):
+class ToolWindow(tk.Toplevel):
     helpstr: str = """Change this help string"""
 
     def __init__(self, *args_, **kwargs) -> None:
@@ -89,5 +87,5 @@ class ToolWindow(tk.Tk):
         taskthread = threading.Thread(target=task, daemon=True)
         taskthread.start()
 
-    def startTaskCurry(self, callback) -> Callable[..., None]:
-        return lambda *a: self.startTask(callback)
+    def startTaskCurry(self, *args, **kw) -> Callable[..., None]:
+        return lambda *a: self.startTask( *args, **kw)

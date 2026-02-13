@@ -45,6 +45,7 @@ class MultiColumnListbox(tk.Frame):
         vscroll: bool = True,
         hscroll: bool = False,
         nonestr: str = "None",
+        imagesize: tuple[int, int] | None = None,
         *args,
         **kwargs,
     ) -> None:
@@ -53,6 +54,7 @@ class MultiColumnListbox(tk.Frame):
         self.sortable: bool = sortable
         self.headers: list[str] = headers  # This must remain static.
         self.nonestr: str = nonestr
+        self.imagesize = imagesize
 
         self.root_item = ''
 
@@ -93,8 +95,31 @@ class MultiColumnListbox(tk.Frame):
     def setup_widgets(self, vscroll=True, hscroll=True) -> None:
         container: tk.Frame = self
 
-        # Create a treeview with dual scrollbars
-        self.tree: ttk.Treeview = ttk.Treeview(self, columns=self.headers, selectmode=tk.EXTENDED, show="headings")
+        # Create a treeview with dual scrollbars. Enable the tree column
+        # ("#0") so images provided via the `image` insert argument are shown.
+        # Configure a Treeview style with a larger rowheight so tall thumbnails fit.
+        style = ttk.Style(self)
+
+        show = "headings"
+
+        if self.imagesize:
+            style.configure("MCL.Treeview", rowheight=self.imagesize[1])
+            show = "tree headings"
+
+        self.tree: ttk.Treeview = ttk.Treeview(
+            self,
+            columns=self.headers,
+            selectmode=tk.EXTENDED,
+            show=show,
+            style="MCL.Treeview",
+        )
+
+        if self.imagesize:
+            self.logger.info(f"Adding col #0 for image {self.imagesize}")
+            # Configure the tree column for image previews (make width match rowheight)
+            self.tree.column("#0", width=40+self.imagesize[0], anchor="center", stretch=False)
+            self.tree.heading("#0", text="")
+
         self.tree.grid(column=0, row=0, sticky="nsew")
 
         if vscroll:
@@ -200,6 +225,9 @@ class MultiColumnListbox(tk.Frame):
 
     def getSelectionIDs(self) -> tuple[str, ...]:
         return self.tree.selection()
+
+    def getAllIds(self) -> tuple[str, ...]:
+        return self.tree.get_children()
 
     def getSelectionDicts(self) -> list[dict]:
         return [

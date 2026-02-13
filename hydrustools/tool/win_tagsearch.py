@@ -7,9 +7,7 @@ from ..component.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..logic import TagInfo
-from ..settings import HTSettings
-
-Settings = HTSettings()
+from ..settings import Settings
 
 HEAD_NAME = "Tag Name"
 HEAD_COUNT = "Count"

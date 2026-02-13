@@ -4,7 +4,7 @@ import pprint
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
-from ..component.relationshipadder import RelationshipAction, RelationshipAdderWindow
+from ..component.relationship_adder import RelationshipAction, RelationshipAdderWindow
 
 from .. import logic
 

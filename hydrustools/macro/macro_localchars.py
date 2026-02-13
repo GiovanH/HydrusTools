@@ -2,7 +2,7 @@ import logging
 import pprint
 import re
 
-from ..component.siblingadderwin import SiblingAction, SiblingAdderWindow
+from ..component.sibling_adder_window import SiblingAction, SiblingAdderWindow
 
 from .. import logic
 

@@ -1,13 +1,14 @@
 import dataclasses
 import pprint
 import re
+from io import BytesIO
+from PIL import Image
 
+from PIL.ImageFile import ImageFile
 import hydrus_api
 from pick import pick
 
-from .settings import HTSettings
-
-Settings = HTSettings()
+from .settings import Settings
 
 
 @dataclasses.dataclass
@@ -120,7 +121,7 @@ def get_sibling_ideal_targets(target_tags: list[str]) -> list[SiblingInfo]:
             ideal_tag=v[local_tags_service_key]["ideal_tag"],  # type: ignore
             siblings=frozenset(v[local_tags_service_key]["siblings"]),  # type: ignore
             ancestors=frozenset(v[local_tags_service_key]["ancestors"]),  # type: ignore
-            descendants=frozenset(v[local_tags_service_key]["descendants"])  # type: ignore
+            descendants=frozenset(v[local_tags_service_key]["descendants"]),  # type: ignore
         )
         # k: v[local_tags_service_key]
         for k, v in tags.items()
@@ -154,6 +155,22 @@ def search_and_flatten_siblings(target_tags: list[str]) -> None:
     if confirm:
         for si in selected_targets:
             replace_tag(si.tag, [si.ideal_tag])
+
+
+def get_render_scaled(metadata: dict) -> ImageFile:
+    resp = client.get_render(file_id=metadata["file_id"])
+    resp.raise_for_status()
+    image = Image.open(BytesIO(resp.content))
+    return image
+
+
+def get_thumb_scaled(metadata: dict, max_width: int, max_height: int) -> ImageFile:
+    resp = client.get_thumbnail(file_id=metadata["file_id"])
+    resp.raise_for_status()
+    image = Image.open(BytesIO(resp.content))
+    # ratio =min(max_width/image.width, max_height/image.height)
+    image.thumbnail((max_width, max_height))
+    return image
 
 
 if __name__ == "__main__":

@@ -13,13 +13,11 @@ from .tool.win_tagrelationships import TagRelationshipsWindow
 from . import logic
 from .component.gui_util import tkwrapc
 from .macro import macro_creatortags, macro_localchars, macro_matching_namespace, macro_pages
-from .settings import HTSettings
+from .settings import Settings
 from .tool.win_altsync import AltSyncWindow
 from .tool.win_flatten import FlattenWindow
 from .tool.win_regex import RegexSearchWindow
 from .tool.win_tagsearch import TagSearchWindow
-
-Settings = HTSettings()
 
 
 MENU: dict[str, list[tuple[str, Callable | None]]] = {
@@ -29,7 +27,6 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
         ("Identify Reordered Character Names", macro_localchars.find_localchars),
     ],
     "Relationships": [
-        # ("Relationship Browser", TagRelationshipsWindow),
         ("Flatten Siblings", FlattenWindow),
         ("Synchronize Alternates (WIP)", AltSyncWindow),
         ("Find implicit parents", ImplicitParentWindow),
@@ -53,8 +50,9 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
         ("Extract known creators from filename note", macro_creatortags.find_creators),
         ("Extract page numbers from filename note", macro_pages.add_page_tags),
     ],
-    "Unsorted": [
+    "Unsorted and WIP": [
         # ("Tag Editor", None),
+        ("Relationship Browser", TagRelationshipsWindow),
         ("Image Search Test", ImageSearchWindow),
         ("Mail Rules", None),
         # ("Extract known creators from filename note", macro_creatortags.find_creators),

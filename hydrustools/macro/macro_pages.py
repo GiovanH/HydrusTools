@@ -4,7 +4,7 @@ import re
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
-from ..component.tagadderwin import TagAction, TagAdderWindow
+from ..component.tag_adder_window import TagAction, TagAdderWindow
 
 from .. import logic
 

@@ -5,13 +5,12 @@ import tkinter as tk
 
 
 from ..component.gui_util import pb_iter, tkwrapc
-from ..component.relationshipadder import RelationshipAction, RelationshipAdderFrame
+from ..component.relationship_adder import RelationshipAction, RelationshipAdderFrame
 from ..component.toolwindow import ToolWindow
 
 from .. import logic
-from ..settings import HTSettings
+from ..settings import Settings
 
-Settings = HTSettings()
 
 class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
     helpstr = """Find Implicit Parents

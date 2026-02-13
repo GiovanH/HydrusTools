@@ -5,7 +5,7 @@ import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
 from .. import logic
-from ..component.tagadderwin import TagAction, TagAdderWindow
+from ..component.tag_adder_window import TagAction, TagAdderWindow
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

@@ -7,9 +7,7 @@ from ..component.gui_util import Increment, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..logic import SiblingInfo, TagInfo
-from ..settings import HTSettings
-
-Settings = HTSettings()
+from ..settings import Settings
 
 
 class FlattenWindow(ToolWindow):  # noqa: PLR0904

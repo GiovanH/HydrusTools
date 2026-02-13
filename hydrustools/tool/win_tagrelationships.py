@@ -7,9 +7,7 @@ from ..component.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..logic import TagInfo
-from ..settings import HTSettings
-
-Settings = HTSettings()
+from ..settings import Settings
 
 # HEAD_TAG = "Tag"
 HEAD_COUNT = "Count"
@@ -38,7 +36,7 @@ class TagRelationshipsWindow(ToolWindow):  # noqa: PLR0904
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (container, cx, cy):
             container.grid(column=0, row=counter_main_row.inc())
 
-            self.tree: ttk.Treeview = ttk.Treeview(self, columns=self.headers)
+            self.tree: ttk.Treeview = ttk.Treeview(self, columns=self.headers, show="tree headings")
             self.tree.grid(column=0, row=0, sticky="nsew")
 
         # if vscroll:
@@ -52,9 +50,9 @@ class TagRelationshipsWindow(ToolWindow):  # noqa: PLR0904
 
             sortable = False
             for col in self.headers:
-                if sortable:
-                    self.tree.heading(col, text=col.title(), command=lambda c=col: self.sortby(self.tree, c, 0))
-                else:
+                # if sortable:
+                #     self.tree.heading(col, text=col.title(), command=lambda c=col: self.sortby(self.tree, c, 0))
+                # else:
                     self.tree.heading(col, text=col.title())
 
             container.grid_columnconfigure(0, weight=1)

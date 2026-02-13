@@ -1,11 +1,17 @@
+from functools import lru_cache
+from io import BytesIO
 import logging
 import tkinter as tk
 from contextlib import contextmanager
 from tkinter import ttk
 from typing import Any, Generator, NamedTuple, Sequence, TypeVar
 from typing import TypedDict, Generic, TypeVar, Unpack
+from PIL import Image, ImageTk
 
+import requests
 import win32clipboard
+
+from ..settings import Settings
 
 logging.basicConfig(level=logging.INFO)
 
@@ -42,7 +48,7 @@ def flatList(lst):
     return [item for sublist in lst for item in sublist]
 
 
-V = TypeVar("V", bound=tk.Variable)
+V = TypeVar("V")
 
 def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
     pb['value'] = 0
@@ -52,6 +58,10 @@ def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
         pb['value'] = 100*i/total
     pb['value'] = 0
 
+@lru_cache(maxsize=None)
+def resp_to_photoimage(master: tk.Widget, resp: requests.Response) -> ImageTk.PhotoImage:
+    image = Image.open(BytesIO(resp.content))
+    return ImageTk.PhotoImage(image=image, master=master)
 
 class TreeviewHeadings():
     """Maps column headings to row values for ttk.Treeview"""
@@ -77,6 +87,21 @@ class NSVar(tk.StringVar):
         if value.endswith(":"):
             value = value.replace(":", "")
         return value
+
+
+class SearchQueryEntry(ttk.Entry):
+    def __init__(self, master: tk.Widget, textvariable: tk.StringVar, *args, **kwargs):
+        self.textvar_query: tk.StringVar = textvariable
+
+        kwargs['font'] = ('Courier', 10)
+        kwargs['textvariable'] = self.textvar_query
+        super().__init__(master, *args, **kwargs)
+
+    def get_query(self) -> list[str]:
+        tag_query = self.textvar_query.get()
+        if not tag_query:
+            raise ValueError("Empty search query")
+        return tag_query.split(' AND ')
 
 
 class RegexEntry(ttk.Entry):

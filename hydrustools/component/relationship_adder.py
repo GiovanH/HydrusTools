@@ -7,7 +7,7 @@ from tkinter import ttk
 from .gui_util import Increment, tkwrap
 from .multicolumnlistbox import MultiColumnListbox
 from .toolwindow import ToolWindow
-from ..settings import HTSettings
+from ..settings import Settings
 from .gui_util import TextCopyWindow
 
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +22,6 @@ HEAD_TAG_A = "Source tag"
 HEAD_TAG_B = "New relationship"
 HEAD_TAG_COMMENT = "Note"
 
-
-Settings = HTSettings()
 
 class RelationshipAdderFrame(ttk.Frame):
     def __init__(self, master: ToolWindow, pack_buttons=True, *args_, **kwargs) -> None:

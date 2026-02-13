@@ -1,174 +1,114 @@
-from functools import lru_cache, partial
-from io import BytesIO
+import concurrent.futures
 import logging
 import pprint
+import threading
 import tkinter as tk
-from dataclasses import dataclass
 from tkinter import ttk
-from typing import TypedDict
-from PIL import Image, ImageTk
-import cv2
-import hydrus_api
-import numpy as np
 
 import hydrus_api
-import requests
+from PIL import ImageTk
 
 from hydrustools import logic
+from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
+from hydrustools.component.tageditorlist import TagEditorList
 
-from ..component.gui_util import Increment, TreeviewHeadings, tkwrap, tkwrapc
+from ..component.gui_util import (
+    Increment,
+    SearchQueryEntry,
+    TreeviewHeadings,
+    pb_iter,
+    tkwrap,
+    tkwrapc,
+)
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
-from ..settings import HTSettings
+from ..settings import Settings
 
-logging.basicConfig(level=logging.INFO)
+DEBUG_FAST_PICK = True
 
-
-Settings = HTSettings()
-
-ISTH = TreeviewHeadings(
-    {
-        "tags": "Local Tags",
-        "urls": "URLs"
-    }
-)
-
-@lru_cache(maxsize=None)
-def photoimage(master, resp: requests.Response) -> ImageTk.PhotoImage:
-    image = Image.open(BytesIO(resp.content))
-    return ImageTk.PhotoImage(image=image, master=master)
+def debug_get_selection():
+    resp = logic.client.search_files(
+        tags=["meta:sfw", "source:newgrounds"] # type: ignore
+    )
+    matching_files = resp['file_ids']
+    resp = logic.client.get_file_metadata(file_ids=matching_files, include_notes=True)
+    return resp['metadata']
 
 class ImageSearchWindow(ToolWindow):  # noqa: PLR0904
-    helpstr = """Bulk search and edit tags.
-
-Tag Query searches the tag list, regex refinment filters further.
-
-AND/OR opens search page for all images with the selected tags.
-
-"Map Siblings to Namespace" prompts for a namespace, then gives you an importable clipboard setting that will add the ideal sibling {namespace}:{tag} for each selected {tag}.
-
-"Delete selected tag" removes all occurrences of the selected tags from all images.
-    """
+    helpstr = """TODO"""
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
+        self.result: list[dict] | None = None
         self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
-        self.pb: ttk.Progressbar
-        self.tree_tags: MultiColumnListbox
-
-        self.image_cache = []
 
         self.initwindow()
 
-        self.after(10, self.doSearch)
         self.mainloop()
 
-    def initwindow(self) -> None:
-        self.title("Tag Search")
+    def initwindow(self):
+        self.title("Image Search")
         self.geometry("970x570")
 
-        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        # self.columnconfigure(0, weight=1)
 
-        counter_main_row = Increment()
+        ccx = Increment()
 
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (frame_top, cx, _):
-            frame_top.grid(column=0, row=counter_main_row.inc(), sticky="ew", columnspan=2)
+        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
+            col.grid(column=ccx.inc(), row=0, sticky="ns")
 
-            cx.inc()
-            frame_top.columnconfigure(cx.value, weight=1)
+            self.image_list = ImageListFrame(self, width=200)
+            self.image_list.grid(column=cx.inc(), row=cy.inc(), in_=col)
+            col.rowconfigure(cy.value, weight=1)
 
-            tk.Label(frame_top, text="Query:")\
-                .grid(column=cx.value, row=0, sticky="w")
-
-            entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_query)
-            entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
-
-            cx.inc()
-            btn_search = ttk.Button(frame_top, text="Search", command=self.startTaskCurry(self.doSearch))
-            btn_search.grid(column=cx.value, row=1, sticky="ew")
-
-        # Right
-        counter_main_row.inc()
-        self.tree_tags = MultiColumnListbox(self, headers=ISTH.headings)
-
-        with tkwrap(self.tree_tags) as tree:
-            tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
-            self.rowconfigure(counter_main_row.value, weight=1)
-
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (frame_bottom, cx, cy):
-            frame_bottom.grid(row=counter_main_row.inc(), columnspan=2, sticky="ew")
-
-            self.pb = ttk.Progressbar(frame_bottom, orient='vertical',
-                mode='determinate',
-                length=30
+            self.image_list.table.tree.configure(
+                columns=[],
+                show="tree",
+                selectmode=tk.BROWSE
             )
-            self.pb.grid(column=cx.inc(), row=0, sticky="ns")
+            # self.image_list.table.bindSelectionAction("<Button-1>", self.on_image_selected)
+            self.image_list.table.bindSelectionActionUID("<Button-1>", self.on_image_selected)
 
-            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=cx.inc(), row=0, sticky="nsew")
-            frame_bottom.columnconfigure(cx.value, weight=1)
+            btn_open = ttk.Button(col, text="Pick Images", command=self.pick_images)
+            btn_open.grid(column=cx.value, row=cy.inc(), sticky="ew")
 
-            # with tkwrapc(ttk.Frame(frame_bottom)) as (frame, ccx, ccy):
-            #     frame.grid(column=cx.inc(), row=0, sticky="nse")
+        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
+            col.grid(column=ccx.inc(), row=0, sticky="nsew")
+            self.columnconfigure(ccx.value, weight=1)
 
-            #     btn_search = ttk.Button(frame, text="AND search selected", command=self.openPageAnd)
-            #     btn_search.grid(row=ccy.inc(), sticky="nsew")
+            self.tag_editor_list = TagEditorList(col)
+            self.tag_editor_list.grid(column=cx.inc(), row=cy.inc(), sticky="nsew")
+            col.columnconfigure(cx.value, weight=1)
 
-            #     btn_search = ttk.Button(frame, text="OR search selected", command=self.openPageOr)
-            #     btn_search.grid(row=ccy.inc(), sticky="nsew")
+        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
+            col.grid(column=ccx.inc(), row=0, sticky="ns")
 
-            # btn_search = ttk.Button(frame_bottom, text="Add Namespace", command=self.addNamespace)
-            # btn_search.grid(column=cx.inc(), row=0, sticky="nse")
+            btn_open = ttk.Button(col, text="Pick Images", command=self.pick_images)
+            btn_open.grid(column=cx.inc(), row=cy.inc(), sticky="ew")
 
-            # btn_search = ttk.Button(frame_bottom, text="Map to siblings with namespace", command=self.addNamespace)
-            # # btn_search.config(state=tk.DISABLED)
-            # btn_search.grid(column=cx.inc(), row=0, sticky="nse")
+    def pick_images(self, event=None):
+        if DEBUG_FAST_PICK:
+            selection = debug_get_selection()
+        else:
+            instance = ImagePickerWindow()
+            self.wait_window(instance)
+            selection: None | list[dict] = instance.result
+        # selection = ImagePickerWindow.pick()
 
-            # btn_search = ttk.Button(frame_bottom, text="Delete selected tag", command=self.deleteTags)
-            # btn_search.grid(column=cx.inc(), row=0, sticky="nse")
-
-    def doSearch(self, event=None):
-        tag_query: str = self.textvar_query.get()
-        if not tag_query:
-            self.setStatus("Empty search query!")
+        if not selection:
+            self.setStatus("Selection canceled")
             return
+        self.setStatus(f"Selected {len(selection)} images")
+        self.image_list.delete_all()
+        for meta in selection:
+            self.image_list.addItemFromMeta(meta)
+        self.image_list.load_thumbnails()
 
-        self.setStatus(f"Searching for query {tag_query!r}")
-        try:
-            resp = logic.client.search_files(
-                tags=[tag_query] # type: ignore
-            )
-            matching_files = resp['file_ids']
-        except hydrus_api.APIError as e:
-            self.setStatus(str(e))
-            return
+    def on_image_selected(self, image_id):
+        metadata = self.image_list.known_metadata[str(image_id)]
+        self.set_image(metadata)
 
-        self.setStatus(f"Getting metadata for {len(matching_files)} files")
-
-
-        for id_chunk in logic.chunk(matching_files, 20):
-            resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
-
-            for metadata in resp['metadata']:
-                pprint.pprint(metadata)
-
-                self.addItemFromMeta(metadata)
-                # self.after(0, self.addItemFromMeta, metadata)
-
-            self.setStatus(f"Aborting early")
-            break
-
-    def addItemFromMeta(self, metadata: dict):
-        thumb_resp = logic.client.get_thumbnail(metadata['file_id'])
-        thumb_resp.raise_for_status()
-        tkimg = photoimage(self, thumb_resp)
-
-        self.image_cache.append(tkimg)
-
-        new_item = self.tree_tags.insert_item({
-            "image": tkimg,
-            "values": ISTH.values(
-                tags=metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0'),
-                urls=len(metadata['known_urls'])
-            )
-        })
+    def set_image(self, metadata):
+        pprint.pprint(metadata)
+        self.tag_editor_list.setTagList(metadata['tags'][logic.local_tags_service_key]['display_tags'].get(str(hydrus_api.TagStatus.CURRENT.value), []))
