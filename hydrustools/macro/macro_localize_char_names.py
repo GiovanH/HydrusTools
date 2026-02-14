@@ -1,13 +1,16 @@
 import logging
 import pprint
 import re
+import threading
+
+from hydrustools import htlogging
 
 from ..component.sibling_adder_window import SiblingAction, SiblingAdderWindow
 
 from .. import logic
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = htlogging.get_logger(__name__)
+
 
 def find_localchars(tk=True):
     char_parser = re.compile(r'^character:(?P<first>[a-z]+) (?P<last>[a-z]+)(?P<suffix> \([a-z]+\))?$')
@@ -92,6 +95,10 @@ def find_localchars(tk=True):
 
 
     SiblingAdderWindow(sibling_actions)
+
+def start():
+    thread = threading.Thread(target=find_localchars)
+    thread.start()
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from .gui_util import Increment, tkwrap
 from .multicolumnlistbox import MultiColumnListbox
 from .toolwindow import ToolWindow
 
-logging.basicConfig(level=logging.INFO)
+
 
 @dataclass
 class TagAction():

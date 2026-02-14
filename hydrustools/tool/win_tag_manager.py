@@ -12,7 +12,7 @@ from ..settings import Settings
 HEAD_NAME = "Tag Name"
 HEAD_COUNT = "Count"
 
-class TagSearchWindow(ToolWindow):  # noqa: PLR0904
+class TagManagerWin(ToolWindow):  # noqa: PLR0904
     helpstr = """Bulk search and edit tags.
 
 Tag Query searches the tag list, regex refinment filters further.

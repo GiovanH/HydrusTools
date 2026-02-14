@@ -10,7 +10,7 @@ from .toolwindow import ToolWindow
 from ..settings import Settings
 from .gui_util import TextCopyWindow
 
-logging.basicConfig(level=logging.INFO)
+
 
 @dataclass
 class RelationshipAction():

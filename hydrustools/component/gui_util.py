@@ -1,19 +1,13 @@
 from functools import lru_cache
 from io import BytesIO
-import logging
 import tkinter as tk
 from contextlib import contextmanager
 from tkinter import ttk
 from typing import Any, Generator, NamedTuple, Sequence, TypeVar
-from typing import TypedDict, Generic, TypeVar, Unpack
 from PIL import Image, ImageTk
 
 import requests
 import win32clipboard
-
-from ..settings import Settings
-
-logging.basicConfig(level=logging.INFO)
 
 class Increment():
     def __init__(self):
@@ -62,6 +56,41 @@ def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
 def resp_to_photoimage(master: tk.Widget, resp: requests.Response) -> ImageTk.PhotoImage:
     image = Image.open(BytesIO(resp.content))
     return ImageTk.PhotoImage(image=image, master=master)
+
+
+def get_selection_neighbors(widget: ttk.Treeview, prev=1, next=2) -> list[str]:
+    """If an item is selected, return the id of the item's previous and next sibling."""
+    selection = widget.selection()
+    if not selection:
+        return []
+    item = selection[0]
+    parent = widget.parent(item)
+    siblings = list(widget.get_children(parent))
+    try:
+        idx = siblings.index(item)
+    except ValueError:
+        return []
+    neighbors: list[str] = []
+    for i in range(prev):
+        idxo = idx - (i+1)
+        if idxo >= 0:
+            neighbors.append(siblings[idxo])
+    for i in range(next):
+        idxo = idx + 1+i
+        if idxo < len(siblings):
+            neighbors.append(siblings[idxo])
+    return neighbors
+
+def mod_selection(tree, prev, next):
+    neighbors = get_selection_neighbors(tree, prev=prev, next=next)
+    if not neighbors:
+        return
+    next_id = neighbors[0]
+    tree.selection_set(next_id)
+    tree.focus(next_id)
+    tree.see(next_id)
+    tree.event_generate("<<TreeviewSelect>>")
+
 
 class TreeviewHeadings():
     """Maps column headings to row values for ttk.Treeview"""

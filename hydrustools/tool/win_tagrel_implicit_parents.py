@@ -12,7 +12,7 @@ from .. import logic
 from ..settings import Settings
 
 
-class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
+class ImplicitParentFinderWin(ToolWindow):  # noqa: PLR0904
     helpstr = """Find Implicit Parents
 
     Some tags have logical implications that are already captured in the data but aren't added as automatic parent relationships yet. This detects those. It's designed to find characters that are almost always found in a specific series, but it can be used with other namespaces as well.
@@ -32,6 +32,8 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
         self.textvar_ns_child = Settings.boundTkVar(self, 'findimplicitparent_ns_child')
         self.var_min_count: tk.IntVar = Settings.boundTkVar(self, 'findimplicitparent_min_count', tk.IntVar)
         self.var_tag_factor = Settings.boundTkVar(self, 'findimplicitparent_factor', tk.IntVar)
+
+        self.debug_specific = ['voltron', 'my hero', "todoroki"]
 
         self.abort_threads = False
 
@@ -126,7 +128,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
         self.pb['value'] = 0
 
         self.pb['value'] += 25
-        self.setStatus(f"Looking up all tags in namespace {namespace_a!r}")
+        self.setStatus(f"Looking up all tags matching {namespace_a!r}")
         all_characters = logic.search_tags_re(f"{namespace_a}", subpattern=None)
 
         self.pb['value'] += 25
@@ -148,8 +150,13 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
         skipped_too_few = 0
 
         for ci in all_characters:
+            log_debug = self.logger.debug
+            if any(substr in ci.value for substr in self.debug_specific):
+                log_debug = self.logger.warning
+                log_debug(f"Triggered extra inspection for {ci}")
+
             if ci.count < min_char_count:
-                self.logger.debug(f"Skipping tag {ci} without {min_char_count} occurrences")
+                log_debug(f"Skipping tag {ci} without {min_char_count} occurrences")
                 skipped_too_few += 1
                 continue
 
@@ -159,8 +166,12 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
                 orphans.append(ci.value)
                 continue
             if ci.value != si.ideal_tag:
-                self.logger.debug(f"Skipping non-ideal tag {ci.value} in {si}")
+                log_debug(f"Skipping non-ideal tag {ci.value} in {si}")
                 continue
+
+            if not ci.value.startswith('character'):
+                self.logger.warning(f"Strange tag {ci} returned by hydrus for search {namespace_a}")
+
             if len(si.ancestors) > 0:
                 if parent_prefix and any(a.startswith(parent_prefix) for a in si.ancestors):
                     self.logger.info(f"Skipping tag {ci.value} with known series parent in {si.ancestors}")
@@ -168,12 +179,20 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
                 self.logger.info(f"Adding known orphan tag {ci.value} with no instance of {parent_prefix}* in {si.ancestors}")
                 orphans.append(ci.value)
 
+            self.logger.info(f"Adding known orphan tag {ci.value} with no ancestors")
+            orphans.append(ci.value)
+
         if skipped_too_few > 0:
             self.setStatus(f"Filtered {skipped_too_few} tags without at least {min_char_count} occurrences")
 
         self.frame_ra.delete_all()
-        self.setStatus("Finding potential parents")
+        self.setStatus(f"Finding potential parents for {len(orphans)} orphans")
         for char in pb_iter(self.pb, orphans):
+            log_debug = self.logger.debug
+            if any(substr in char for substr in self.debug_specific):
+                log_debug = self.logger.warning
+                log_debug(f"Triggered extra inspection for {char}")
+
             if self.abort_threads:
                 self.abort_threads = False
                 break
@@ -181,7 +200,7 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
             si = all_relationships.get(char)
             my_counter = Counter()
 
-            self.logger.info(f"No parent series for {char!r} in {si}. Searching...")
+            log_debug(f"No parent series for {char!r} in {si}. Searching...")
 
             resp = logic.client.search_files(
                 tags=[char]
@@ -245,4 +264,4 @@ class ImplicitParentWindow(ToolWindow):  # noqa: PLR0904
 
 if __name__ == "__main__":
     logic.init_client()
-    ImplicitParentWindow()
+    ImplicitParentFinderWin()

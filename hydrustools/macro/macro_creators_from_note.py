@@ -1,14 +1,17 @@
 import logging
 import re
+import threading
 
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
+from hydrustools import htlogging
+
 from .. import logic
 from ..component.tag_adder_window import TagAction, TagAdderWindow
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = htlogging.get_logger(__name__)
+
 
 def has_note(notename: str, max_n: int = 4) -> list[str]:
     return [
@@ -65,7 +68,7 @@ def find_creators(tk=True):
 
     iterable = tqdm_iterator(
         [*logic.chunk(file_ids_with_note, 200)],
-        desc=f"Searching for any of {len(creator_names)} creator tags in filenames",
+        desc=f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames",
         unit="chunk",
         leave=False
     )
@@ -95,6 +98,9 @@ def find_creators(tk=True):
 
     TagAdderWindow(tag_actions)
 
+def start():
+    thread = threading.Thread(target=find_creators)
+    thread.start()
 
 if __name__ == "__main__":
     logic.init_client()

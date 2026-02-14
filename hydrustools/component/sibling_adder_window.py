@@ -8,7 +8,7 @@ from tkinter import ttk
 from .gui_util import Increment, ScrollableFrame, TextCopyWindow, tkwrap, tkwrapc
 from .toolwindow import ToolWindow
 
-logging.basicConfig(level=logging.INFO)
+
 
 @dataclass
 class SiblingAction():

@@ -9,6 +9,7 @@ import hydrus_api
 from PIL import ImageTk
 
 from hydrustools import logic
+from ..logic import FileMetadata
 
 from ..component.gui_util import (
     Increment,
@@ -22,7 +23,7 @@ from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..settings import Settings
 
-logging.basicConfig(level=logging.INFO)
+
 
 
 ISTH = TreeviewHeadings(
@@ -47,7 +48,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
         self.image_size = (100, 100)
 
         self.image_cache = []
-        self.known_metadata: dict[str, dict] = {}
+        self.known_metadata: dict[str, FileMetadata] = {}
 
         self.logger.info("Init widget")
         self.init_widget()
@@ -68,13 +69,14 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
             self.rowconfigure(1, weight=1)
 
 
-    def addItemFromMeta(self, metadata: dict, thumb=False):
+    def addItemFromMeta(self, metadata: FileMetadata, thumb=False):
         self.known_metadata[str(metadata['file_id'])] = metadata
+        taglist = metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
         self.table.insert_item({
             "id": metadata['file_id'],
             # "image": tkimg,
             "values": ISTH.values(
-                tags='\n'.join(metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0')),
+                tags='\n'.join(taglist),
                 urls='\n'.join(metadata['known_urls']),
                 notes=str(pprint.pformat(metadata['notes']))
             )
@@ -91,9 +93,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 
         lock = threading.Lock()
 
-        print(self.table.getAllIds())
-
-        thumb_tasks: list[dict] = [
+        thumb_tasks: list[FileMetadata] = [
             self.known_metadata[str(id)]
             for id in self.table.getAllIds()
         ]
@@ -107,8 +107,8 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 
             image_pool.submit(task)
 
-        image_pool.submit(self.setStatus, f"Loaded {total} thumbnails")
-        self.setStatus(f"Queued {total} thumbnail jobs")
+        image_pool.submit(self.logger.info, f"Loaded {total} thumbnails")
+        self.logger.info(f"Queued {total} thumbnail jobs")
 
     def addItemThumb(self, metadata):
         item_id = metadata['file_id']
@@ -144,7 +144,7 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.result: list[dict] | None = None
+        self.result: list[FileMetadata] | None = None
         self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
 
         self.initwindow()

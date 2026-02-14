@@ -9,18 +9,11 @@ from typing import Any, Callable
 import hydrus_api
 
 from .. import logic
-from ..component.gui_util import Increment, tkwrap, tkwrapc
+from ..component.gui_util import Increment, RegexEntry, SearchQueryEntry, tkwrap, tkwrapc
 from ..component.toolwindow import ToolWindow
 from ..settings import Settings
 
-
-def has_note(notename: str, max_n: int = 4) -> list[str]:
-    return [
-        *[f'system:has note with name "{notename}"'],
-        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
-    ]
-
-class RegexSearchWindow(ToolWindow):
+class RegexNoteSearchWin(ToolWindow):
     helpstr = """Search the contents of notes.
 
 Note title specifies the title of the note to search.
@@ -55,16 +48,17 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             frame_form.columnconfigure(index=1, weight=1)
 
             tk.Label(frame_form, text="Search query").grid(column=0, row=cy.inc(), sticky="e")
-            entry_search = ttk.Entry(frame_form, textvariable=self.textvar_prequery)
-            entry_search.grid(column=1, row=cy.value, sticky="ew")
+
+            self.entry_search = SearchQueryEntry(frame_form, textvariable=self.textvar_prequery)
+            self.entry_search.grid(column=1, row=cy.value, sticky="ew")
 
             tk.Label(frame_form, text="Note title").grid(column=0, row=cy.inc(), sticky="e")
-            entry_search = ttk.Entry(frame_form, textvariable=self.textvar_notename)
-            entry_search.grid(column=1, row=cy.value, sticky="ew")
+            entry_notetitle = ttk.Entry(frame_form, textvariable=self.textvar_notename)
+            entry_notetitle.grid(column=1, row=cy.value, sticky="ew")
 
             tk.Label(frame_form, text="Search pattern").grid(column=0, row=cy.inc(), sticky="e")
-            entry_search = ttk.Entry(frame_form, font=('Courier', 10), textvariable=self.textvar_pattern)
-            entry_search.grid(column=1, row=cy.value, sticky="ew")
+            entry_pattern = RegexEntry(frame_form, textvariable=self.textvar_pattern)
+            entry_pattern.grid(column=1, row=cy.value, sticky="ew")
 
         with tkwrap(ttk.Frame(self, padding=8)) as frame_row:
             frame_row.grid(column=0, row=main_row.inc(), sticky="nsew")
@@ -113,10 +107,12 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             # progress.init()
             # progress.setState('loading')
 
-            tag_query: list[str | list[str]] = [] # type: ignore
+            tag_query: list[str | list[str]] = []
+
+            tag_query.extend(self.entry_search.get_query())
 
             # TODO: Option to configure " (n)" suffix
-            tag_query.append(has_note(notename))
+            tag_query.append(logic.has_note(notename))
 
             if self.textvar_prequery.get():
                 tag_query.append(self.textvar_prequery.get())
@@ -142,6 +138,8 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
                     resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
                     for metadata in resp['metadata']:
+                        # TODO: Search alternates of notes, not just direct lookups
+
                         note_body = metadata['notes'].get(notename)
                         if matcher(pattern, note_body):
                             matching_ids.append(metadata['file_id'])

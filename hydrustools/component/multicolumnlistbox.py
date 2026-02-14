@@ -1,10 +1,13 @@
 
 import logging
+import pprint
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk
 from typing import Any, Callable, Literal, Required, TypedDict
 from PIL import ImageTk
+
+from hydrustools import htlogging
 
 
 class _TkTreeviewItemDict(TypedDict):
@@ -59,11 +62,12 @@ class MultiColumnListbox(tk.Frame):
         self.root_item = ''
 
         self.TkFont = tkFont.Font()
-        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
+        self.logger: logging.Logger = htlogging.get_logger(self.__class__.__name__)
         self.tree: ttk.Treeview
 
         self.setup_widgets(vscroll=vscroll, hscroll=hscroll)
-        self.build_tree(tabledata)
+        if len(tabledata) > 0:
+            self.build_tree(tabledata)
 
         if multiselect:
             self.tree.configure(selectmode=tk.NONE)
@@ -87,8 +91,11 @@ class MultiColumnListbox(tk.Frame):
         callback: Callable[[str], Any],
     ) -> None:
         def cb(event: tk.Event) -> Any:
-            desc = self.tree.identify("item", event.x, event.y)
-            return callback(desc)
+            if hasattr(event, 'x'):
+                desc = self.tree.identify("item", event.x, event.y)
+                return callback(desc)
+            else:
+                pprint.pprint(event)
 
         self.tree.bind(binding, cb)
 
@@ -102,23 +109,41 @@ class MultiColumnListbox(tk.Frame):
 
         show = "headings"
 
+        margin: int = 0
+
+
         if self.imagesize:
-            style.configure("MCL.Treeview", rowheight=self.imagesize[1])
+            style.configure(f"MCL{self.imagesize!r}.Treeview", rowheight=self.imagesize[1])
+            style.configure(f"MCL{self.imagesize!r}.Treeview", indent=0)
+            style.layout('MCL.Treeview.Item', [
+                ('Treeitem.padding', {'sticky': 'nswe', 'children': [
+                    # Indicator removed here
+                    ('Treeitem.image', {'side': 'left', 'sticky': ''}),
+                    # ('Treeitem.focus', {'side': 'left', 'sticky': ''}),
+                    # 'children': [
+                    #     ('Treeitem.text', {'side': 'left', 'sticky': ''})
+                    # ]})
+                ]})
+            ])
+            margin = 4
             show = "tree headings"
+
+        print("Setting up frame with image config", self.imagesize, "and headers", self.headers, show)
 
         self.tree: ttk.Treeview = ttk.Treeview(
             self,
             columns=self.headers,
             selectmode=tk.EXTENDED,
             show=show,
-            style="MCL.Treeview",
+            style=f"MCL{self.imagesize!r}.Treeview",
         )
 
         if self.imagesize:
             self.logger.info(f"Adding col #0 for image {self.imagesize}")
             # Configure the tree column for image previews (make width match rowheight)
-            self.tree.column("#0", width=40+self.imagesize[0], anchor="center", stretch=False)
+            self.tree.column("#0", width=(2*margin)+self.imagesize[0], anchor="center", stretch=False)
             self.tree.heading("#0", text="")
+            # self.tree.configure(padding=[-20, 0, 0, 0])
 
         self.tree.grid(column=0, row=0, sticky="nsew")
 
@@ -130,6 +155,12 @@ class MultiColumnListbox(tk.Frame):
             hsb = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
             hsb.grid(column=0, row=1, sticky="ew")
             self.tree.configure(xscrollcommand=hsb.set)
+
+        for col in self.headers:
+            if self.sortable:
+                self.tree.heading(col, text=col.title(), command=lambda c=col: self.sortby(self.tree, c, 0))
+            else:
+                self.tree.heading(col, text=col.title())
 
         container.grid_columnconfigure(0, weight=1)
         container.grid_rowconfigure(0, weight=1)
@@ -167,12 +198,6 @@ class MultiColumnListbox(tk.Frame):
         return self.tree.insert(self.root_item, tk.END, **item)
 
     def build_tree(self, itemlist: list[TreeListItemDict], resize=True) -> None:
-        for col in self.headers:
-            if self.sortable:
-                self.tree.heading(col, text=col.title(), command=lambda c=col: self.sortby(self.tree, c, 0))
-            else:
-                self.tree.heading(col, text=col.title())
-
         for item in itemlist:
             self.insert_item(item)
 

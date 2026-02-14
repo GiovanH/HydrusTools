@@ -5,56 +5,54 @@ from typing import Callable
 
 import hydrus_api
 
-from .tool.win_imagesearch import ImageSearchWindow
-
-from .tool.win_implicit_parents import ImplicitParentWindow
-from .tool.win_tagrelationships import TagRelationshipsWindow
-
-from . import logic
+from . import htlogging, logic
 from .component.gui_util import tkwrapc
-from .macro import macro_creatortags, macro_localchars, macro_matching_namespace, macro_pages
+from .macro import macro_creators_from_note, macro_localize_char_names, macro_matching_namespaced, macro_pages_from_note
 from .settings import Settings
-from .tool.win_altsync import AltSyncWindow
-from .tool.win_flatten import FlattenWindow
-from .tool.win_regex import RegexSearchWindow
-from .tool.win_tagsearch import TagSearchWindow
-
+from .tool.win_image_inspector import ImageInspectorWin
+from .tool.win_image_lookup import ImageMetadataLookupWin
+from .tool.win_imrel_altsync import AlternatesSyncWin
+from .tool.win_imsearch_regex import RegexNoteSearchWin
+from .tool.win_tag_manager import TagManagerWin
+from .tool.win_tagrel_flatten import SiblingFlattenWin
+from .tool.win_tagrel_implicit_parents import ImplicitParentFinderWin
+from .tool.win_tagrel_treebrowser import TagRelationshipsTreeWin
 
 MENU: dict[str, list[tuple[str, Callable | None]]] = {
     "Tag Management": [
-        ("Tag Browser", TagSearchWindow),
+        ("Tag Manager", TagManagerWin),
+        ("Image Inspector", ImageInspectorWin),
         ("Tree Visualizer", None),
-        ("Identify Reordered Character Names", macro_localchars.find_localchars),
+        ("Localize (Swapped) Character Names", macro_localize_char_names.find_localchars),
     ],
-    "Relationships": [
-        ("Flatten Siblings", FlattenWindow),
-        ("Synchronize Alternates (WIP)", AltSyncWindow),
-        ("Find implicit parents", ImplicitParentWindow),
+    "Tag Relationships": [
+        ("Flatten Tag Siblings", SiblingFlattenWin),
+        ("Find Implicit Parents", ImplicitParentFinderWin),
         # ("Find implicit parents Macro", macro_implicit_parents.run),
-        ("Detect tags' namespaced equivalents", macro_matching_namespace.run),
-        ("Make Series from Character Parens", None),
+        ("Detect Tags' Namespaced Equivalents", macro_matching_namespaced.run),
+        ("Parent Series from Character Parens", None),
         # We really want tag relationships for these...
-        ("Parent characters to series", None),
-        ("Detect Tag Siblings from Names", None),
+        # ("Detect Tag Siblings from Names", None),
         # ("Detect Tag Parents from Subsets", None),
     ],
     "Search": [
-        ("Note Search", RegexSearchWindow),
+        ("Note Search", RegexNoteSearchWin),
     ],
     "Metadata Lookup": [
-        ("Image Lookup", None),
+        # ("Image Lookup", None),
         ("Import Downloader Tags In Local Repo", None),
-        ("Extract Tags from Notes", None),
+        ("Extract Tags from Note Regex", None),
     ],
     "Filename Macros": [
-        ("Extract known creators from filename note", macro_creatortags.find_creators),
-        ("Extract page numbers from filename note", macro_pages.add_page_tags),
+        ("Extract creators from filename note", macro_creators_from_note.start),
+        ("Extract page numbers from filename note", macro_pages_from_note.add_page_tags),
     ],
     "Unsorted and WIP": [
         # ("Tag Editor", None),
-        ("Relationship Browser", TagRelationshipsWindow),
-        ("Image Search Test", ImageSearchWindow),
+        ("Relationship Tree Browser", TagRelationshipsTreeWin),
+        ("Image Metadata Lookup Test", ImageMetadataLookupWin),
         ("Mail Rules", None),
+        ("Synchronize Alternate Meta (WIP)", AlternatesSyncWin),
         # ("Extract known creators from filename note", macro_creatortags.find_creators),
         # ("Extract page numbers from filename note", macro_pages.add_page_tags),
     ],
@@ -64,7 +62,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = htlogging.get_logger(self.__class__.__name__)
         self.command_list = []
         self.initwindow()
 
@@ -83,7 +81,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
         self.mainloop()
 
     def initwindow(self) -> None:
-        self.geometry("250x540")
+        self.geometry("250x780")
         self.title("Tools")
 
         self.columnconfigure(0, weight=1)

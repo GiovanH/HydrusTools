@@ -1,12 +1,18 @@
+from collections import OrderedDict
 import dataclasses
+import functools
 import pprint
 import re
 from io import BytesIO
+from typing import Required, TypedDict
 from PIL import Image
 
 from PIL.ImageFile import ImageFile
 import hydrus_api
 from pick import pick
+
+from hydrustools.component.gui_util import flatList
+from hydrustools.component.toolwindow import ToolWindow
 
 from .settings import Settings
 
@@ -24,6 +30,21 @@ class SiblingInfo():
     siblings: frozenset[str]
     ancestors: frozenset[str]
     descendants: frozenset[str]
+
+class FileMetadata(TypedDict, total=False):
+    file_id: Required[int]
+    notes: Required[dict[str, str]]
+    known_urls: Required[list[str]]
+    tags: Required[dict[str, dict[str, dict[str, list[str]]]]]
+    height: Required[int]
+    width: Required[int]
+    time_modified: Required[int]
+    size: Required[int]
+    is_deleted: Required[bool]
+    is_inbox: Required[bool]
+    is_local: Required[bool]
+    is_trashed: Required[bool]
+
 
 
 def set_api_key(new_api_key):
@@ -156,21 +177,112 @@ def search_and_flatten_siblings(target_tags: list[str]) -> None:
         for si in selected_targets:
             replace_tag(si.tag, [si.ideal_tag])
 
+@dataclasses.dataclass
+class Namespace():
+    name: str
+    color: str = "#72a0c1"
 
-def get_render_scaled(metadata: dict) -> ImageFile:
-    resp = client.get_render(file_id=metadata["file_id"])
+namespace_list = [
+    Namespace("series", "#aa00aa"),
+    Namespace("character", "#00aa00"),
+    Namespace("creator", "#aa0000"),
+    Namespace("source", "#989898"),
+]
+
+namespace_map = OrderedDict((n.name, n) for n in namespace_list)
+
+@functools.cache
+def get_tag_namespace(tag: str) -> None | Namespace:
+    if ":" not in tag:
+        return None
+    ns = tag.split(":")[0]
+    return namespace_map.get(ns) or Namespace(ns)
+
+@functools.cache
+def get_tag_color(tag: str) -> None | str:
+    namespace = get_tag_namespace(tag)
+    if not namespace:
+        return "#006ffa"
+    return namespace.color
+
+@functools.cache
+def sort_tags_key(tag: str) -> tuple[int, ...]:
+    namespace = get_tag_namespace(tag)
+    ns_index = 99
+    if namespace:
+        ns_index = 100
+        try:
+            ns_index = namespace_list.index(namespace)
+        except ValueError:
+            pass
+    return (
+        ns_index,
+    )
+
+def sort_tags(tag_list: list[str]) -> list[str]:
+    return sorted(tag_list, key=sort_tags_key)
+
+def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list: list[FileMetadata]):
+    tool.setStatus(f"Setting {len(tag_list)} tags")
+    file_ids = [m['file_id'] for m in metadata_list]
+
+    client.add_tags(
+        file_ids=file_ids,
+        service_keys_to_tags={
+            local_tags_service_key: tag_list,
+        }
+    )
+
+    tool.logger.info(f"Checking differences: {[m['tags'] for m in metadata_list]=}")
+
+    all_tags = set(flatList([
+        meta['tags'][local_tags_service_key]['display_tags'].get(str(hydrus_api.TagStatus.CURRENT.value), [])
+        for meta in metadata_list
+    ]))
+
+    tool.logger.info("%s, %s", all_tags, set(tag_list))
+
+    removed_tags = set(all_tags).difference(set(tag_list))
+
+    if removed_tags:
+        tool.setStatus(f"Removing tags: {removed_tags}")
+        client.add_tags(
+            file_ids=file_ids,
+            service_keys_to_actions_to_tags={
+                local_tags_service_key: {
+                    hydrus_api.TagAction.DELETE: [*removed_tags]
+                }
+            }
+        )
+
+def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max_height: int) -> ImageFile:
+    ratio = min(max_width/width, max_height/height)
+    resp = client.get_render(
+        file_id=file_id,  # type: ignore
+        height=int(ratio*height),
+        width=int(ratio*width)
+    )
     resp.raise_for_status()
     image = Image.open(BytesIO(resp.content))
     return image
 
 
-def get_thumb_scaled(metadata: dict, max_width: int, max_height: int) -> ImageFile:
+def get_thumb_scaled(metadata: FileMetadata, max_width: int, max_height: int) -> ImageFile:
     resp = client.get_thumbnail(file_id=metadata["file_id"])
     resp.raise_for_status()
     image = Image.open(BytesIO(resp.content))
     # ratio =min(max_width/image.width, max_height/image.height)
     image.thumbnail((max_width, max_height))
     return image
+
+
+
+def has_note(notename: str, max_n: int = 4) -> list[str]:
+    return [
+        *[f'system:has note with name "{notename}"'],
+        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
+    ]
+
 
 
 if __name__ == "__main__":

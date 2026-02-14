@@ -12,7 +12,7 @@ from ..settings import Settings
 # HEAD_TAG = "Tag"
 HEAD_COUNT = "Count"
 
-class TagRelationshipsWindow(ToolWindow):  # noqa: PLR0904
+class TagRelationshipsTreeWin(ToolWindow):  # noqa: PLR0904
     helpstr = """TODO"""
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)

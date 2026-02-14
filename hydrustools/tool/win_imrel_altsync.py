@@ -21,7 +21,7 @@ def alternatesOfHash(file_hash):
     )['file_relationships']
     return file_relationships[file_hash][str(hydrus_api.DuplicateStatus.ALTERNATES.value)]
 
-class AltSyncWindow(ToolWindow):
+class AlternatesSyncWin(ToolWindow):
     helpstr = """Interactively synchronize metadata between alternate images.
 
 An automatic search will gather image sets whose tags don't all already match each other in the column on the left.
@@ -111,7 +111,8 @@ Clicking merge will add the specified tags to all images in the set.
             if hash not in self.file_ids and not self.allAlternateTagsMatch(hash):
                 self.file_ids.append(hash)
                 self.listbox_ids.insert(tk.END, hash)
-            if self.abort_threads: return
+            if self.abort_threads:
+                return
 
         # self.updateFileListbox()
 
@@ -226,7 +227,7 @@ Clicking merge will add the specified tags to all images in the set.
 
         removed_tags = set(all_tags).difference(set(self.tag_editor_list.tag_list))
 
-        self.setStatus(f"Pruning removed tags... {removed_tags}")
+        self.setStatus(f"Removing tags: {removed_tags}")
         if removed_tags:
             logic.client.add_tags(
                 hashes=self.selected_group_hashes,
