@@ -13,6 +13,7 @@ from ..logic import FileMetadata
 
 from ..component.gui_util import (
     Increment,
+    QueryHistory,
     SearchQueryEntry,
     TreeviewHeadings,
     pb_iter,
@@ -116,7 +117,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 
         item_id = metadata['file_id']
 
-        thumb = logic.get_thumb_scaled(metadata, *self.image_size)
+        thumb = logic.get_thumb_scaled(metadata['file_id'], *self.image_size)
         tkimg = ImageTk.PhotoImage(image=thumb, master=self)
         self.image_cache.append(tkimg)
 
@@ -144,11 +145,14 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 
 class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
     helpstr = """TODO"""
-    def __init__(self, *args_, **kwargs) -> None:
+    def __init__(self, include_notes=False, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
+
+        self.include_notes = include_notes
 
         self.result: list[FileMetadata] | None = None
         self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
+        self.textvar_query_hist: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query_hist')
 
         self.initwindow()
 
@@ -170,9 +174,16 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             tk.Label(frame_top, text="Query:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_search = SearchQueryEntry(frame_top, textvariable=self.textvar_query)
+            self.entry_search = SearchQueryEntry(frame_top, textvariable=self.textvar_query, hist_store=self.textvar_query_hist)
             self.entry_search.grid(column=cx.value, row=1, sticky="ew")
             self.entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, False))
+
+            # cx.inc()
+            # self.query_history = QueryHistory(
+            #     frame_top, hist_store=self.textvar_query_hist
+            # )
+            # self.query_history.bind("<<HistorySelected>>", lambda e: self.textvar_query.set(e.widget.get()))
+            # self.query_history.grid(column=cx.value, row=1, sticky="ew")
 
             cx.inc()
             btn_search = ttk.Button(frame_top, text="Search", command=self.startTaskCurry(self.doSearch, False))
@@ -229,10 +240,11 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
         if not matching_files:
             return
 
+        self.entry_search.add_history(self.textvar_query.get())
         self.setStatus(f"Getting metadata for {len(matching_files)} files")
 
         for id_chunk in pb_iter(self.pb, [*logic.chunk(matching_files, 200)]):
-            resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
+            resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=self.include_notes)
 
             def commit(resp=resp):
                 for metadata in resp['metadata']:

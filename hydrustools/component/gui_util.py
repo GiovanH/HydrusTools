@@ -100,13 +100,16 @@ class TreeviewHeadings():
         self.headings = [*headings.values()]
         self._indices = {h: i for i, h in enumerate(headings.keys())}
 
-    def values(self, **kwargs):
+    def values(self, **kwargs) -> list[str | None]:
         """Convert keyword args directly to row list"""
-        row = [None] * len(self.headings)
+        row: list[str | None] = [None] * len(self.headings)
         for key, value in kwargs.items():
             if key in self._indices:
                 row[self._indices[key]] = value
         return row
+
+    def fromContext(self, **kwargs) -> list[str | None]:
+        raise NotImplementedError
 
 
 class NSVar(tk.StringVar):
@@ -118,7 +121,45 @@ class NSVar(tk.StringVar):
         return value
 
 
-class SearchQueryEntry(ttk.Entry):
+
+class QueryHistory(ttk.Combobox):
+    def __init__(self, master, hist_store: tk.StringVar | None = None, history_length=10, *args, **kwargs):
+        kwargs['width'] = 0
+        super().__init__(master, *args, **kwargs)
+
+        self.history_length = history_length
+
+        if hist_store:
+            self.hist_var: tk.StringVar = hist_store
+            self.hist_list: list[str] = self.parse_hist(self.hist_var.get())
+            self.populate_history()
+        else:
+            print("No history store!", self)
+
+    #     self.bind("<<ComboboxSelected>>", self.reset)
+
+    # def reset(self, event=None):
+    #     self.event_generate("<<HistorySelected>>")
+    #     self.after_idle(lambda *a: self.set(''))
+
+    def parse_hist(self, hist_str: str) -> list[str]:
+        return hist_str.split("|")
+
+    def serialize_hist(self, hist: list[str]):
+        return "|".join(hist)
+
+    def populate_history(self):
+        self.config(values=self.hist_list)
+
+    def add_history(self, item: str):
+        if item in self.hist_list:
+            self.hist_list.remove(item)
+        self.hist_list = [*self.hist_list[-self.history_length:], item]
+        self.hist_var.set(self.serialize_hist(self.hist_list))
+        self.populate_history()
+
+
+class SearchQueryEntry(QueryHistory):
     def __init__(self, master: tk.Widget, textvariable: tk.StringVar, *args, **kwargs):
         self.textvar_query: tk.StringVar = textvariable
 
@@ -166,7 +207,6 @@ class RegexEntry(ttk.Entry):
     def __init__(self, container, *args, **kwargs):
         kwargs['font'] = ('Courier', 10)
         super().__init__(container, *args, **kwargs)
-
 
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, *args, **kwargs):

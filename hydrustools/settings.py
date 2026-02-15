@@ -30,6 +30,7 @@ class HTSettings(IniSettings):
     findimplicitparent_factor: int = 2
 
     imagesearch_query: str = ""
+    imagesearch_query_hist: str = ""
 
     def boundTkVar(self, master, name, constructor: Type[V] = tk.StringVar) -> V:
         var: V = constructor(master)

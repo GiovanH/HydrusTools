@@ -22,6 +22,8 @@ HEAD_ID = "File ID"
 HEAD_IDSTR = "Identifier"
 HEAD_NEWTAGS = "New tags"
 
+# TODO: Use image_picker for images
+
 class TagAdderWindow(ToolWindow):
     helpstr = """Change this help string"""
 

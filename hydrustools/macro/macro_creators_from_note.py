@@ -48,6 +48,13 @@ def all_creator_patterns(creator_names) -> list[tuple[str, re.Pattern]]:
 def find_creators(tk=True):
     tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
 
+    iterable = tqdm_iterator(
+        [],
+        desc="Searching...",
+        unit="chunk",
+        leave=False
+    )
+
     creator_names = all_creator_names()
     creator_patterns: list[tuple[str, re.Pattern]] = all_creator_patterns(creator_names)
 
@@ -66,6 +73,7 @@ def find_creators(tk=True):
 
     tag_actions: list[TagAction] = []
 
+    iterable.close()
     iterable = tqdm_iterator(
         [*logic.chunk(file_ids_with_note, 200)],
         desc=f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames",

@@ -16,7 +16,6 @@ from hydrustools.component.toolwindow import ToolWindow
 
 from .settings import Settings
 
-
 @dataclasses.dataclass
 class TagInfo():
     count: int
@@ -267,8 +266,8 @@ def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max
     return image
 
 
-def get_thumb_scaled(metadata: FileMetadata, max_width: int, max_height: int) -> ImageFile:
-    resp = client.get_thumbnail(file_id=metadata["file_id"])
+def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> ImageFile:
+    resp = client.get_thumbnail(file_id=file_id)
     resp.raise_for_status()
     image = Image.open(BytesIO(resp.content))
     # ratio =min(max_width/image.width, max_height/image.height)

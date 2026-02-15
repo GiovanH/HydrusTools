@@ -39,7 +39,7 @@ def render_image(file_id: int, width: int, height: int, max_width: int, max_heig
             return logic.get_render_scaled(file_id, width, height, max_width, max_height)
         except:  # noqa: E722
             return logic.get_thumb_scaled(
-                {"file_id": file_id},  # type: ignore
+                file_id,  # type: ignore
                 max_width=max_width,
                 max_height=max_height
             )

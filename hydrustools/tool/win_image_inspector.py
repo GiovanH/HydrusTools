@@ -192,7 +192,7 @@ class ImageInspectorWin(ToolWindow):
         if DEBUG_FAST_PICK:
             selection = debug_get_selection()
         else:
-            instance = ImagePickerWindow(master=self)
+            instance = ImagePickerWindow(master=self, include_notes=True)
             self.wait_window(instance)
             selection: None | list[FileMetadata] = instance.result
 
