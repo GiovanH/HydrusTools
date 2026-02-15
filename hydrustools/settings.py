@@ -17,6 +17,8 @@ class HTSettings(IniSettings):
 
     tagsearch_presearch: str = "<Changeme>"
     tagsearch_search: str = ""
+    tagsearch_presearch_hist: str = ""
+    tagsearch_search_hist: str = ""
     tagsearch_localonly: bool = True
 
     note_prequery: str = ""
@@ -28,6 +30,9 @@ class HTSettings(IniSettings):
     findimplicitparent_ns_child: str = "character:"
     findimplicitparent_min_count: int = 2
     findimplicitparent_factor: int = 2
+
+    extractcreatornote_notename: str = "filename"
+    extractcreatornote_min_count: int = 2
 
     imagesearch_query: str = ""
     imagesearch_query_hist: str = ""

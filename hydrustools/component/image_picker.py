@@ -8,6 +8,8 @@ from tkinter import ttk
 import hydrus_api
 from PIL import ImageTk
 
+from hydrustools.component.HydrusImageTable import HydrusImageTable
+
 from .. import logic
 from ..logic import FileMetadata
 
@@ -25,10 +27,9 @@ from ..component.toolwindow import ToolWindow
 from ..settings import Settings
 
 
-
-
 ISTH = TreeviewHeadings(
     {
+        "_hydrus_id": "_HYDRUS_ID",
         "tags": "Local Tags",
         "urls": "URLs",
         "notes": "Notes"
@@ -44,7 +45,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
         self.logger = self.toolmaster.logger
         self.setStatus = self.toolmaster.setStatus
 
-        self.table: MultiColumnListbox
+        self.table: HydrusImageTable
 
         self.image_size = (100, 100)
 
@@ -59,8 +60,9 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 
         # Right
 
-        self.table = MultiColumnListbox(
+        self.table = HydrusImageTable(
             self,
+            toolmaster=self.toolmaster,
             headers=ISTH.headings,
             imagesize=self.image_size
         )
@@ -69,59 +71,8 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
             tree.grid(column=0, row=1, sticky="nsew")
             self.rowconfigure(1, weight=1)
 
-
-    def addItemFromMeta(self, metadata: FileMetadata, thumb=False):
-        self.known_metadata[str(metadata['file_id'])] = metadata
-        taglist = metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
-        self.table.insert_item({
-            "id": metadata['file_id'],
-            # "image": tkimg,
-            "values": ISTH.values(
-                tags='\n'.join(taglist),
-                urls='\n'.join(metadata['known_urls']),
-                notes=str(pprint.pformat(metadata['notes']))
-            )
-        })
-        if thumb:
-            self.addItemThumb(metadata)
-
     def delete_all(self):
         self.table.delete_all()
-
-    def load_thumbnails(self, pb: ttk.Progressbar | dict = {'value': 0}):
-        image_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
-        pb['value'] = 0
-
-        lock = threading.Lock()
-
-        thumb_tasks: list[FileMetadata] = [
-            self.known_metadata[str(id)]
-            for id in self.table.getAllIds()
-        ]
-
-        total = len(thumb_tasks)
-        for i, metadata in enumerate(thumb_tasks):
-            def task(i=i, metadata=metadata):
-                self.addItemThumb(metadata)
-                with lock:
-                    pb['value'] = max(pb['value'], 100*(i+1)/total)
-
-            image_pool.submit(task)
-
-        image_pool.submit(self.logger.info, f"Loaded {total} thumbnails")
-        self.logger.info(f"Queued {total} thumbnail jobs")
-
-    def addItemThumb(self, metadata):
-        if self.toolmaster.abort_threads:
-            return
-
-        item_id = metadata['file_id']
-
-        thumb = logic.get_thumb_scaled(metadata['file_id'], *self.image_size)
-        tkimg = ImageTk.PhotoImage(image=thumb, master=self)
-        self.image_cache.append(tkimg)
-
-        self.after('idle', lambda: self.table.tree.item(item_id, image=tkimg))
 
 
 # class ImageSearchWindow(ToolWindow):  # noqa: PLR0904
@@ -240,6 +191,8 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
         if not matching_files:
             return
 
+        self.abort_threads = False
+
         self.entry_search.add_history(self.textvar_query.get())
         self.setStatus(f"Getting metadata for {len(matching_files)} files")
 
@@ -249,13 +202,21 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             def commit(resp=resp):
                 for metadata in resp['metadata']:
                     # pprint.pprint(metadata)
-                    self.search_frame.addItemFromMeta(metadata)
+                    taglist = metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
+                    self.search_frame.table.insert_item({
+                        "values": ISTH.values(
+                            _hydrus_id=metadata['file_id'],
+                            tags='\n'.join(taglist),
+                            urls='\n'.join(metadata['known_urls']),
+                            notes=str(pprint.pformat(metadata['notes']))
+                        )
+                    })
 
             self.after('idle', commit)
 
         if load_thumbnails:
             self.setStatus("Loading thumbnails")
-            self.search_frame.load_thumbnails(self.pb)
+            self.search_frame.table.load_thumbnails(self.pb)
 
     def confirm(self, event=None):
         ids = self.search_frame.table.getSelectionIDs()

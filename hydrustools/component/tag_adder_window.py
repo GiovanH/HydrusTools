@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 import pprint
 import tkinter as tk
@@ -24,14 +25,19 @@ HEAD_NEWTAGS = "New tags"
 
 # TODO: Use image_picker for images
 
-class TagAdderWindow(ToolWindow):
+class TagAdderFrame(ttk.Frame):
     helpstr = """Change this help string"""
 
-    def __init__(self, tag_actions: list[TagAction], *args_, **kwargs) -> None:
-        super().__init__(*args_, **kwargs)
+    def __init__(self, master: ToolWindow, pack_buttons=True, *args_, **kwargs) -> None:
+        super().__init__(master=master, *args_, **kwargs)
 
-        self.logger.info(pprint.pformat(tag_actions))
-        self.tag_actions: list[TagAction] = tag_actions
+        self.toolmaster: ToolWindow = master
+        self.logger: logging.Logger = master.logger
+
+        self.pack_buttons = pack_buttons
+
+        # self.logger.info(pprint.pformat(tag_actions))
+        self.tag_actions: list[TagAction] = []
 
         self.table_headings = [
             HEAD_ID,
@@ -39,15 +45,21 @@ class TagAdderWindow(ToolWindow):
             HEAD_NEWTAGS
         ]
 
-        self.initwindow()
-        self.focus()
+        self.initwindow(pack_buttons=pack_buttons)
 
-        self.mainloop()
+    def delete_all(self):
+        # self.suggestions.clear()
+        self.tree_tags.delete_all()
 
-    def initwindow(self) -> None:
-        self.title("Add Tags")
-        self.geometry("970x570")
+    def add_item(self, ta: TagAction):
+        # self.tree_tags.insert('', tk.END, values=row)
+        self.tag_actions.append(ta)
+        i = self.tag_actions.index(ta)
 
+        self.tree_tags.insert_item({"id": i, "values": [ta.file_id, ta.identifier, ' '.join(ta.new_tags)]})
+        # self.suggestions.append(si)
+
+    def initwindow(self, pack_buttons: bool) -> None:
         self.columnconfigure(0, weight=1)
 
         counter_main_row = Increment()
@@ -56,31 +68,28 @@ class TagAdderWindow(ToolWindow):
         counter_main_row.inc()
         self.tree_tags = MultiColumnListbox(self, headers=self.table_headings)  # noqa: F821
 
-        self.tree_tags.update_tree([
-            {"id": i, "values": [ta.file_id, ta.identifier, ' '.join(ta.new_tags)]}
-            for i, ta in enumerate(self.tag_actions)
-        ])
-
         with tkwrap(self.tree_tags) as tree:
             # assert isinstance(tree, ttk.Treeview)
             tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
             self.rowconfigure(counter_main_row.value, weight=1)
 
-        with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as frame_bottom:
-            frame_bottom.grid(row=counter_main_row.inc(), column=0, columnspan=2, sticky="ew")
+        self.btn_open_sel = partial(ttk.Button, text="Open selected", command=self.openPage, width=25)
+        self.btn_apply_sel = partial(ttk.Button, text="Apply selected", command=self.applySelected, width=25)
+        self.btn_apply_all = partial(ttk.Button, text="Apply all", command=self.applyAll, width=25)
 
-            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=0, row=0, sticky="nsew")
+        if pack_buttons:
+            with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as frame_bottom:
+                frame_bottom.grid(row=counter_main_row.inc(), column=0, columnspan=2, sticky="ew")
 
-            frame_bottom.columnconfigure(0, weight=1)
+                ttk.Label(frame_bottom, textvariable=self.toolmaster.textvar_status).grid(column=0, row=0, sticky="nsew")
 
-            btn_flatten = ttk.Button(frame_bottom, text="Open selected", command=self.openPage, width=40)
-            btn_flatten.grid(column=1, row=0, sticky="nse")
+                frame_bottom.columnconfigure(0, weight=1)
 
-            btn_flatten = ttk.Button(frame_bottom, text="Apply selected", command=self.applySelected, width=40)
-            btn_flatten.grid(column=2, row=0, sticky="nse")
+                self.btn_open_sel(frame_bottom).grid(column=1, row=0, sticky="nse")
 
-            btn_flatten = ttk.Button(frame_bottom, text="Apply all", command=self.applyAll, width=40)
-            btn_flatten.grid(column=3, row=0, sticky="nse")
+                self.btn_apply_sel(frame_bottom).grid(column=2, row=0, sticky="nse")
+
+                self.btn_apply_all(frame_bottom).grid(column=3, row=0, sticky="nse")
 
     def applySelected(self, event=None):
         # selection = [
@@ -119,7 +128,7 @@ class TagAdderWindow(ToolWindow):
                         logic.local_tags_service_key: ta.new_tags,
                     }
                 )
-                self.setStatus(f"Added tags {ta.new_tags!r} to {ta.file_id}")
+                self.toolmaster.setStatus(f"Added tags {ta.new_tags!r} to {ta.file_id}")
                 self.tree_tags.tree.delete(self.tag_actions.index(ta))
 
     def openPage(self, event=None):
@@ -132,3 +141,29 @@ class TagAdderWindow(ToolWindow):
             for i in selection
         ]
         logic.client.add_popup("Tag Search", files_label=f"Selected Images", file_ids=matching_ids) # type: ignore
+
+    def deleteSelected(self, event=None):
+        self.tree_tags.tree.delete(*self.tree_tags.tree.selection())
+
+class TagAdderWindow(ToolWindow):  # noqa: PLR0904
+    helpstr = """"""
+    def __init__(self, tag_actions: list[TagAction], *args_, **kwargs) -> None:
+        super().__init__(*args_, **kwargs)
+
+        self.tag_actions: list[TagAction] = tag_actions
+
+        self.title("Add tags")
+        self.geometry("970x570")
+
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
+        frame_ta = TagAdderFrame(self)
+        frame_ta.grid(column=0, row=0, sticky="nsew")
+        self.bind("<Delete>", frame_ta.deleteSelected)
+
+        for ta in tag_actions:
+            frame_ta.add_item(ta)
+
+        self.focus()
+        self.mainloop()

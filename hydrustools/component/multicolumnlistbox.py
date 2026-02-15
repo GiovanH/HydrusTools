@@ -143,6 +143,12 @@ class MultiColumnListbox(tk.Frame):
             self.tree.column("#0", width=(2*margin)+self.imagesize[0], anchor="center", stretch=False)
             self.tree.heading("#0", text="")
 
+
+        display_columns = tuple([i for i, h in enumerate(self.tree['columns']) if not h.startswith('_')])
+        print(self.tree['columns'], display_columns)
+
+        self.after_idle(lambda *e: self.tree.config(displaycolumns=display_columns))
+
         self.tree.grid(column=0, row=0, sticky="nsew")
 
         if vscroll:
@@ -263,3 +269,4 @@ class MultiColumnListbox(tk.Frame):
             self.tree.set(child)
             for child in self.tree.get_children()
         ]
+

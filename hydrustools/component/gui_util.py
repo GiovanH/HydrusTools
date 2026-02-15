@@ -97,12 +97,17 @@ class TreeviewHeadings():
 
     def __init__(self, headings: dict[str, str]):
         """Initialize with list of column headings"""
-        self.headings = [*headings.values()]
+
+        # Real headings for value row objects
+        self._headings: list[str] = [*headings.values()]
         self._indices = {h: i for i, h in enumerate(headings.keys())}
+
+        # Headings used for visual columns
+        self.headings: list[str] = self._headings #  [v for k, v in headings.items() if not k.startswith('_')]
 
     def values(self, **kwargs) -> list[str | None]:
         """Convert keyword args directly to row list"""
-        row: list[str | None] = [None] * len(self.headings)
+        row: list[str | None] = [None] * len(self._headings)
         for key, value in kwargs.items():
             if key in self._indices:
                 row[self._indices[key]] = value

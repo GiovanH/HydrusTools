@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
 from .. import logic
-from ..component.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
+from ..component.gui_util import Increment, QueryHistory, RegexEntry, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..logic import TagInfo
@@ -29,7 +29,9 @@ AND/OR opens search page for all images with the selected tags.
         self.table_headings = [HEAD_NAME, HEAD_COUNT]
 
         self.textvar_presearch: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_presearch')
+        self.textvar_presearch_hist: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_presearch_hist')
         self.textvar_search: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_search')
+        self.textvar_search_hist: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_search_hist')
 
         self.boolvar_localonly = Settings.boundTkVar(self, 'tagsearch_localonly', tk.BooleanVar)
 
@@ -59,9 +61,9 @@ AND/OR opens search page for all images with the selected tags.
             tk.Label(frame_top, text="Tag Query:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_presearch)
-            entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            self.entry_presearch = QueryHistory(frame_top, font=('Courier', 10), textvariable=self.textvar_presearch, hist_store=self.textvar_presearch_hist)
+            self.entry_presearch.grid(column=cx.value, row=1, sticky="ew")
+            self.entry_presearch.bind("<Return>", self.startTaskCurry(self.doSearch))
 
             cx.inc()
             frame_top.columnconfigure(cx.value, weight=2)
@@ -69,9 +71,9 @@ AND/OR opens search page for all images with the selected tags.
             tk.Label(frame_top, text="Regex refinement:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_search)
-            entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            self.entry_filter = RegexEntry(frame_top, font=('Courier', 10), textvariable=self.textvar_search, hist_store=self.textvar_search_hist)
+            self.entry_filter.grid(column=cx.value, row=1, sticky="ew")
+            self.entry_filter.bind("<Return>", self.startTaskCurry(self.doSearch))
 
             cx.inc()
             btn_search = ttk.Button(frame_top, text="Search", command=self.startTaskCurry(self.doSearch))
@@ -123,6 +125,9 @@ AND/OR opens search page for all images with the selected tags.
         search_query: str = self.textvar_presearch.get() or "*"
         search_refinement: str = self.textvar_search.get()
         self.setStatus(f"Searching {search_query!r} for {search_refinement!r}")
+
+        self.entry_filter.add_history(search_refinement)
+        self.entry_presearch.add_history(search_query)
 
         self.tree_tags.delete_all()
         # self.tree_tags.delete(*self.tree_tags.get_children())

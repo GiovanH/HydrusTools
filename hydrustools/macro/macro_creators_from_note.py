@@ -77,7 +77,7 @@ def find_creators(tk=True):
     iterable = tqdm_iterator(
         [*logic.chunk(file_ids_with_note, 200)],
         desc=f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames",
-        unit="chunk",
+        unit="page",
         leave=False
     )
 

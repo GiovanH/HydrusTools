@@ -5,6 +5,8 @@ from typing import Callable
 
 import hydrus_api
 
+from hydrustools.tool.win_image_extract_creator_from_notes import ExtractCreatorFromNotesWin
+
 from . import htlogging, logic
 from .component.gui_util import tkwrapc
 from .macro import macro_creators_from_note, macro_localize_char_names, macro_matching_namespaced, macro_pages_from_note
@@ -42,11 +44,12 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
     ],
     "Metadata Lookup": [
         # ("Image Lookup", None),
+        ("Extract Creator Tags from Notes", ExtractCreatorFromNotesWin),
         ("Import Downloader Tags In Local Repo", None),
         ("Extract Tags from Note Regex", None),
     ],
     "Filename Macros": [
-        ("Extract creators from filename note", macro_creators_from_note.start),
+        # ("Extract creators from filename note", macro_creators_from_note.start),
         ("Extract page numbers from filename note", macro_pages_from_note.add_page_tags),
     ],
     "Unsorted and WIP": [
