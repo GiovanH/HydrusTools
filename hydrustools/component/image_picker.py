@@ -8,7 +8,7 @@ from tkinter import ttk
 import hydrus_api
 from PIL import ImageTk
 
-from hydrustools import logic
+from .. import logic
 from ..logic import FileMetadata
 
 from ..component.gui_util import (
@@ -111,6 +111,9 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
         self.logger.info(f"Queued {total} thumbnail jobs")
 
     def addItemThumb(self, metadata):
+        if self.toolmaster.abort_threads:
+            return
+
         item_id = metadata['file_id']
 
         thumb = logic.get_thumb_scaled(metadata, *self.image_size)
@@ -191,15 +194,20 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=cx.inc(), row=0, sticky="nsew")
             frame_bottom.columnconfigure(cx.value, weight=1)
 
-            btn_open = ttk.Button(self, text="Pick selected images", command=self.confirm)
-            btn_open.grid(column=0, row=cx.inc(), sticky="nse")
+            btn_open = ttk.Button(frame_bottom, text="Pick all these images", command=self.confirm_all)
+            btn_open.grid(column=cx.inc(), row=0, sticky="nse")
 
+            btn_open = ttk.Button(frame_bottom, text="Pick selected images", command=self.confirm)
+            btn_open.grid(column=cx.inc(), row=0, sticky="nse")
 
-    def doSearch(self, event=None):
+    def search_get_ids(self):
         try:
             tag_query = self.entry_search.get_query()
         except ValueError:
             self.setStatus("Empty search query!")
+            return
+        except RuntimeError as e:
+            self.setStatus(e)
             return
 
         self.setStatus(f"Searching for query {tag_query!r}")
@@ -214,22 +222,48 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             self.setStatus(str(e))
             return
 
+        return matching_files
+
+    def doSearch(self, event=None, load_thumbnails=True):
+        matching_files = self.search_get_ids()
+        if not matching_files:
+            return
+
         self.setStatus(f"Getting metadata for {len(matching_files)} files")
 
         for id_chunk in pb_iter(self.pb, [*logic.chunk(matching_files, 200)]):
             resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
-            def commit():
+            def commit(resp=resp):
                 for metadata in resp['metadata']:
                     # pprint.pprint(metadata)
                     self.search_frame.addItemFromMeta(metadata)
 
             self.after('idle', commit)
 
-        self.search_frame.load_thumbnails(self.pb)
+        if load_thumbnails:
+            self.setStatus("Loading thumbnails")
+            self.search_frame.load_thumbnails(self.pb)
 
     def confirm(self, event=None):
         ids = self.search_frame.table.getSelectionIDs()
+        try:
+            self.result = [
+                self.search_frame.known_metadata[id] for id in ids
+            ]
+        except KeyError:
+            # print(ids, self.search_frame.known_metadata.keys())
+            raise
+        self.logger.info(f"Returning result {len(self.result)=}")
+        self.destroy()
+
+    def confirm_all(self, event=None):
+        if len(self.search_frame.table.getAllIds()) == 0:
+            self.doSearch(load_thumbnails=False)
+            self.update_idletasks()
+
+        ids = self.search_frame.table.getAllIds()
+
         try:
             self.result = [
                 self.search_frame.known_metadata[id] for id in ids

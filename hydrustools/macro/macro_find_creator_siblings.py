@@ -11,7 +11,7 @@ from ..component.relationship_adder import RelationshipAction, RelationshipAdder
 
 from .. import logic
 
-logger = htlogging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def tiformat(ti: logic.TagInfo):

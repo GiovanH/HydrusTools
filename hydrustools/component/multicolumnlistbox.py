@@ -62,7 +62,7 @@ class MultiColumnListbox(tk.Frame):
         self.root_item = ''
 
         self.TkFont = tkFont.Font()
-        self.logger: logging.Logger = htlogging.get_logger(self.__class__.__name__)
+        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self.tree: ttk.Treeview
 
         self.setup_widgets(vscroll=vscroll, hscroll=hscroll)
@@ -110,32 +110,31 @@ class MultiColumnListbox(tk.Frame):
         show = "headings"
 
         margin: int = 0
-
+        image_height = 0
+        stylename = f"MCL.Treeview"
 
         if self.imagesize:
-            style.configure(f"MCL{self.imagesize!r}.Treeview", rowheight=self.imagesize[1])
-            style.configure(f"MCL{self.imagesize!r}.Treeview", indent=0)
-            style.layout('MCL.Treeview.Item', [
+            image_height = self.imagesize[1]
+            stylename = f"MCL{image_height}.Treeview"
+            style.configure(stylename, rowheight=image_height)
+            style.configure(stylename, indent=0)
+            style.layout(f'{stylename}.Item', [
                 ('Treeitem.padding', {'sticky': 'nswe', 'children': [
                     # Indicator removed here
                     ('Treeitem.image', {'side': 'left', 'sticky': ''}),
-                    # ('Treeitem.focus', {'side': 'left', 'sticky': ''}),
-                    # 'children': [
-                    #     ('Treeitem.text', {'side': 'left', 'sticky': ''})
-                    # ]})
                 ]})
             ])
             margin = 4
             show = "tree headings"
 
-        print("Setting up frame with image config", self.imagesize, "and headers", self.headers, show)
+        print("Setting up frame with image config", self.imagesize, "and headers", self.headers, show, stylename)
 
         self.tree: ttk.Treeview = ttk.Treeview(
             self,
             columns=self.headers,
             selectmode=tk.EXTENDED,
             show=show,
-            style=f"MCL{self.imagesize!r}.Treeview",
+            style=stylename,
         )
 
         if self.imagesize:
@@ -143,7 +142,6 @@ class MultiColumnListbox(tk.Frame):
             # Configure the tree column for image previews (make width match rowheight)
             self.tree.column("#0", width=(2*margin)+self.imagesize[0], anchor="center", stretch=False)
             self.tree.heading("#0", text="")
-            # self.tree.configure(padding=[-20, 0, 0, 0])
 
         self.tree.grid(column=0, row=0, sticky="nsew")
 

@@ -126,6 +126,35 @@ class SearchQueryEntry(ttk.Entry):
         kwargs['textvariable'] = self.textvar_query
         super().__init__(master, *args, **kwargs)
 
+        self.bind("<<Paste>>", self.on_paste)
+
+    def on_paste(self, event=None):
+        """Handle paste events to replace newlines with ' AND '"""
+        try:
+            clipboard_text = self.clipboard_get()
+            processed_text = self.load_query(clipboard_text)
+
+            # Handle selection if exists
+            try:
+                sel_start = self.index(tk.SEL_FIRST)
+                sel_end = self.index(tk.SEL_LAST)
+                self.delete(sel_start, sel_end)
+                insert_pos = sel_start
+            except tk.TclError:
+                # No selection, use cursor position
+                insert_pos = self.index(tk.INSERT)
+
+            # Insert processed text
+            self.insert(insert_pos, processed_text)
+
+            return "break"  # Prevent default paste behavior
+        except tk.TclError:
+            # Clipboard empty or error
+            pass
+
+    def load_query(self, value):
+        return value.replace("\n", " AND ")
+
     def get_query(self) -> list[str]:
         tag_query = self.textvar_query.get()
         if not tag_query:

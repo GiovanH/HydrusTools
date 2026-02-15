@@ -1,6 +1,7 @@
 import logging
-
+import logging.handlers
 import colorama
+import os
 from colorama import Fore, Style
 
 colorama.init(autoreset=True)
@@ -17,14 +18,24 @@ class ColorFormatter(logging.Formatter):
             color = Fore.WHITE
         return f"{color}{super().format(record)}{Style.RESET_ALL}"
 
-def get_logger(name) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+def configure_logging():
+    s_handler = logging.StreamHandler()
+    s_handler.setLevel(level=logging.INFO)
+    s_handler.setFormatter(ColorFormatter(
+        '%(asctime)s [%(name)s] %(message)s',
+        datefmt='%H:%M:%S'
+    ))
 
-    colored_streamhandler = logging.StreamHandler()
-    colored_streamhandler.setLevel(logging.INFO)
-    colored_streamhandler.setFormatter(ColorFormatter('%(name)s %(message)s'))
+    loglevel = os.environ.get('LOGLEVEL')
+    if loglevel:
+        s_handler.setLevel(loglevel)
 
-    logger.addHandler(colored_streamhandler)
+    f_handler = logging.handlers.RotatingFileHandler("debug.log")
+    f_handler.setLevel(logging.DEBUG)
+    f_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s %(message)s [%(filename)s:%(lineno)d in %(funcName)s]'))
 
-    return logger
+    root_logger = logging.getLogger()
+    root_logger.addHandler(s_handler)
+    root_logger.addHandler(hdlr=f_handler)
+    root_logger.setLevel(logging.INFO)
+

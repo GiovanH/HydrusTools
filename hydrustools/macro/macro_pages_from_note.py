@@ -11,7 +11,7 @@ from ..component.tag_adder_window import TagAction, TagAdderWindow
 
 from .. import logic
 
-logger = htlogging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def has_note(max_n: int = 4) -> list[str]:

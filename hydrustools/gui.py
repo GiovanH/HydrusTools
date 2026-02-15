@@ -18,6 +18,8 @@ from .tool.win_tagrel_flatten import SiblingFlattenWin
 from .tool.win_tagrel_implicit_parents import ImplicitParentFinderWin
 from .tool.win_tagrel_treebrowser import TagRelationshipsTreeWin
 
+htlogging.configure_logging()
+
 MENU: dict[str, list[tuple[str, Callable | None]]] = {
     "Tag Management": [
         ("Tag Manager", TagManagerWin),
@@ -62,7 +64,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.logger = htlogging.get_logger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.command_list = []
         self.initwindow()
 
@@ -130,6 +132,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
 
 
 def main():
+
     try:
         logic.init_client()
     except hydrus_api.ConnectionError as e:

@@ -19,7 +19,7 @@ from ..component.gui_util import (
 )
 from ..component.toolwindow import ToolWindow
 
-DEBUG_FAST_PICK = True
+DEBUG_FAST_PICK = False
 
 def debug_get_selection():
     resp = logic.client.search_files(
@@ -38,6 +38,7 @@ class ImageInspectorWin(ToolWindow):
 
         self.current_image: None | FileMetadata = None
         self.result: list[FileMetadata] | None = None
+        self.refreshing: bool = False
 
         self.textvar_info = tk.StringVar(self, "No image selected")
 
@@ -46,8 +47,7 @@ class ImageInspectorWin(ToolWindow):
 
         self.known_metadata = self.image_list.known_metadata
 
-        if DEBUG_FAST_PICK:
-            self.pick_images()
+        self.after_idle(self.pick_images)
 
         self.mainloop()
 
@@ -85,8 +85,8 @@ class ImageInspectorWin(ToolWindow):
             col.rowconfigure(cy.value, weight=1)
             col.columnconfigure(0, weight=1, minsize=200)
 
-            self.btn_save_tags = ttk.Button(col, text="Save Tags", command=self.save_tag_list)
-            self.btn_save_tags.grid(column=0, row=cy.inc(), sticky="ew")
+            # self.btn_save_tags = ttk.Button(col, text="Save Tags", command=self.save_tag_list)
+            # self.btn_save_tags.grid(column=0, row=cy.inc(), sticky="ew")
 
         with tkwrapc(ttk.Frame(self)) as (row, cx, cy):
             row.grid(column=0, row=1, columnspan=ccx.inc(), sticky="ew")
@@ -109,7 +109,7 @@ class ImageInspectorWin(ToolWindow):
             col.columnconfigure(index=0, weight=1)
             col.rowconfigure(index=0, weight=1)
 
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (col, cx, cy):
+        with tkwrapc(ttk.PanedWindow(self)) as (col, cx, cy):
             col.grid(column=ccx.inc(), row=0, rowspan=2, sticky="nsew")
 
 
@@ -161,9 +161,9 @@ class ImageInspectorWin(ToolWindow):
 
     def entry_dwim(self, event=None):
         edited = False
-        if self.tag_editor_list.modified:
-            self.save_tag_list()
-            edited = True
+        # if self.tag_editor_list.modified:
+        #     self.save_tag_list()
+        #     edited = True
 
         if self.current_image and self.current_image['is_inbox'] and not self.current_image['is_deleted']:
             self.toggle_keep()
@@ -192,7 +192,7 @@ class ImageInspectorWin(ToolWindow):
         if DEBUG_FAST_PICK:
             selection = debug_get_selection()
         else:
-            instance = ImagePickerWindow()
+            instance = ImagePickerWindow(master=self)
             self.wait_window(instance)
             selection: None | list[FileMetadata] = instance.result
 
@@ -221,7 +221,7 @@ class ImageInspectorWin(ToolWindow):
             file_ids=[image_id],
             include_notes=True
         )['metadata'][0]
-        pprint.pprint(new_metadata)
+        # pprint.pprint(new_metadata)
         self.known_metadata[str(image_id)] = new_metadata
         self.set_image(new_metadata)
 
@@ -244,10 +244,12 @@ class ImageInspectorWin(ToolWindow):
 
         self.canvas.set_image(metadata)
 
+        self.refreshing = True
         tag_list = metadata['tags'][logic.local_tags_service_key]['display_tags'].get(str(hydrus_api.TagStatus.CURRENT.value), [])
         self.tag_editor_list.setTagList(tag_list)
 
         self.tag_editor_list.modified = False
+        self.refreshing = False
         self.configure_visual()
 
 
@@ -285,6 +287,12 @@ class ImageInspectorWin(ToolWindow):
         self.textvar_info.set(value='\n'.join(lines))
 
     def configure_visual(self, event=None):
+        # Actually, just autosave
+        if not self.refreshing and self.tag_editor_list.modified:
+            self.save_tag_list()
+
+        return
+
         if self.tag_editor_list.modified:
             # self.setStatus(f"Modified {self.tag_editor_list.modified}, bad")
             self.btn_save_tags.configure(state=tk.ACTIVE)
@@ -304,12 +312,14 @@ class ImageInspectorWin(ToolWindow):
             self.textvar_info.set("No image selected")
             return
 
+        file_id = metadata['file_id']
+
         if metadata['is_inbox']:
-            logic.client.archive_files(file_ids=[metadata['file_id']])
-            self.setStatus("Moved file to archive")
+            logic.client.archive_files(file_ids=[file_id])
+            self.setStatus(f"Moved file {file_id} to archive")
         else:
-            logic.client.unarchive_files(file_ids=[metadata['file_id']])
-            self.setStatus("Moved file to inbox")
+            logic.client.unarchive_files(file_ids=[file_id])
+            self.setStatus(f"Moved file {file_id} to inbox")
 
         if self.tag_editor_list.modified:
             self.save_tag_list()
@@ -322,12 +332,14 @@ class ImageInspectorWin(ToolWindow):
             self.textvar_info.set("No image selected")
             return
 
+        file_id = metadata['file_id']
+
         if metadata['is_trashed']:
-            logic.client.undelete_files(file_ids=[metadata['file_id']])
-            self.setStatus("Removed file from trash")
+            logic.client.undelete_files(file_ids=[file_id])
+            self.setStatus(f"Removed file {file_id} from trash")
         else:
-            logic.client.delete_files(file_ids=[metadata['file_id']])
-            self.setStatus("Moved file to trash")
+            logic.client.delete_files(file_ids=[file_id])
+            self.setStatus(f"Moved file {file_id} to trash")
 
         if self.tag_editor_list.modified:
             self.save_tag_list()

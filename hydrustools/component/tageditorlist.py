@@ -142,7 +142,7 @@ class TagEditorList(ttk.Frame):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.logger = htlogging.get_logger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.tag_list = []
         self.modified = False
 

@@ -25,7 +25,7 @@ class ToolWindow(tk.Toplevel):
         super().__init__(*args_, **kwargs)
 
         self.textvar_status = tk.StringVar(self, value="Ready")
-        self.logger: logging.Logger = htlogging.get_logger(self.__class__.__name__)
+        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self.abort_threads = False
 
         self.bind("<F1>", lambda *a: self.showHelp())

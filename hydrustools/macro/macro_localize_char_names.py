@@ -9,7 +9,7 @@ from ..component.sibling_adder_window import SiblingAction, SiblingAdderWindow
 
 from .. import logic
 
-logger = htlogging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def find_localchars(tk=True):

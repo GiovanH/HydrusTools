@@ -10,7 +10,7 @@ from hydrustools import htlogging
 from .. import logic
 from ..component.tag_adder_window import TagAction, TagAdderWindow
 
-logger = htlogging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def has_note(notename: str, max_n: int = 4) -> list[str]:

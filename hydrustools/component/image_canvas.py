@@ -10,7 +10,7 @@ from hydrustools import htlogging, logic
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-logger = htlogging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 @contextmanager
 def timer(label="task"):
