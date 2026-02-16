@@ -1,9 +1,10 @@
+from abc import abstractmethod
 from functools import lru_cache
 from io import BytesIO
 import tkinter as tk
 from contextlib import contextmanager
 from tkinter import ttk
-from typing import Any, Generator, NamedTuple, Sequence, TypeVar
+from typing import Any, ClassVar, Generator, Generic, NamedTuple, Required, Sequence, TypeVar, TypedDict
 from PIL import Image, ImageTk
 
 import requests
@@ -90,6 +91,7 @@ def mod_selection(tree, prev, next):
     tree.focus(next_id)
     tree.see(next_id)
     tree.event_generate("<<TreeviewSelect>>")
+
 
 
 class TreeviewHeadings():
@@ -201,17 +203,17 @@ class SearchQueryEntry(QueryHistory):
     def load_query(self, value):
         return value.replace("\n", " AND ")
 
-    def get_query(self) -> list[str]:
+    def get_query(self) -> list[str | list[str]]:
         tag_query = self.textvar_query.get()
         if not tag_query:
             raise ValueError("Empty search query")
-        return tag_query.split(' AND ')
+        return tag_query.split(' AND ') # type: ignore
 
 
-class RegexEntry(ttk.Entry):
-    def __init__(self, container, *args, **kwargs):
+class RegexEntry(QueryHistory):
+    def __init__(self, master, *args, **kwargs):
         kwargs['font'] = ('Courier', 10)
-        super().__init__(container, *args, **kwargs)
+        super().__init__(master, *args, **kwargs)
 
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, *args, **kwargs):

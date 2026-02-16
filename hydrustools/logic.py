@@ -242,9 +242,18 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
     tool.logger.info("%s, %s", all_tags, set(tag_list))
 
     removed_tags = set(all_tags).difference(set(tag_list))
+    resp = client.get_siblings_and_parents(removed_tags)
+    for k, v in resp["tags"].items():
+        if v[local_tags_service_key]['ideal_tag'] in removed_tags:
+            for s in v[local_tags_service_key]['siblings']:
+                if s not in removed_tags:
+                    tool.logger.warning(f"Also removing sibling tag {s}")
+                    removed_tags.add(s)
+    # We also need to remove any siblings of these tags
+
 
     if removed_tags:
-        tool.setStatus(f"Removing tags: {removed_tags}")
+        tool.logger.info(f"Removing tags: {removed_tags}")
         client.add_tags(
             file_ids=file_ids,
             service_keys_to_actions_to_tags={

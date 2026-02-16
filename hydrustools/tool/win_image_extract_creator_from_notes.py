@@ -1,5 +1,3 @@
-from collections import Counter
-import pprint
 import re
 from tkinter import ttk
 import tkinter as tk
@@ -7,8 +5,7 @@ import tkinter as tk
 from hydrustools.component.tag_adder_window import TagAction, TagAdderFrame
 
 
-from ..component.gui_util import pb_iter, tkwrapc
-from ..component.relationship_adder import RelationshipAction, RelationshipAdderFrame
+from ..component.gui_util import SearchQueryEntry, pb_iter, tkwrapc
 from ..component.toolwindow import ToolWindow
 
 from .. import logic
@@ -42,6 +39,8 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
+        self.var_search: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_search')
+        self.var_search_hist: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_search_hist')
         self.var_notename: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_notename')
         self.var_min_count: tk.IntVar = Settings.boundTkVar(self, 'extractcreatornote_min_count', tk.IntVar)
 
@@ -49,8 +48,10 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
 
         self.initwindow()
         self.bind("<Escape>", self.abort)
+        self.bind("<Delete>", self.frame_ta.deleteSelected)
 
-        self.startTask(self.doSearch)
+
+        self.startTask(self.doSearch, lock=False)
         self.mainloop()
 
     def abort(self, event=None):
@@ -67,26 +68,35 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
             frame.grid(column=0, row=0, sticky="ew")
 
             cx.inc()
+            tk.Label(frame, text="Image filter:")\
+                .grid(column=cx.value, row=0, sticky="w")
+
+            self.entry_search = SearchQueryEntry(frame, textvariable=self.var_search, hist_store=self.var_search_hist)
+            self.entry_search.grid(column=cx.value, row=1, sticky="ew")
+            frame.columnconfigure(index=cx.value, weight=1)
+            self.entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
+
+            cx.inc()
             tk.Label(frame, text="Note name:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            entry_search = ttk.Entry(frame, textvariable=self.var_notename)
-            entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            entry_notename = ttk.Entry(frame, textvariable=self.var_notename)
+            entry_notename.grid(column=cx.value, row=1, sticky="ew")
+            entry_notename.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
 
             cx.inc()
             tk.Label(frame, text="Minimum creator count:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            entry_search = ttk.Spinbox(frame, textvariable=self.var_min_count, from_=1, to=500)
-            entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            entry_count = ttk.Spinbox(frame, textvariable=self.var_min_count, from_=1, to=500)
+            entry_count.grid(column=cx.value, row=1, sticky="ew")
+            entry_count.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
 
             cx.inc()
             frame.columnconfigure(cx.value, weight=1)
 
             cx.inc()
-            btn_search = ttk.Button(frame, text="Search", command=self.startTaskCurry(self.doSearch))
+            btn_search = ttk.Button(frame, text="Search", command=self.startTaskCurry(self.doSearch, lock=False))
             btn_search.grid(column=cx.value, row=1, sticky="ew")
 
         self.frame_ta = TagAdderFrame(self, pack_buttons=False)
@@ -138,11 +148,14 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
 
         notename = "filename"
 
-        tag_query: list[str | list[str]] = [] # type: ignore
+        tag_query: list[str | list[str]] = self.entry_search.get_query()
+
+        self.entry_search.add_history(self.var_search.get())
 
         tag_query.append(has_note(notename))
         tag_query.append("-creator:*")
-        tag_query.append("source:e621")
+
+        self.frame_ta.delete_all()
 
         self.pb['value'] += 25
         self.setStatus(f"Searching for files with note {notename!r} and no creator...")

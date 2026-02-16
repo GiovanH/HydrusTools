@@ -1,11 +1,14 @@
+from collections import OrderedDict
+import dataclasses
 from functools import partial
 import logging
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import ttk
+from typing import ClassVar
 
 from .gui_util import Increment, tkwrap
-from .multicolumnlistbox import MultiColumnListbox
+from .multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from .toolwindow import ToolWindow
 from ..settings import Settings
 from .gui_util import TextCopyWindow
@@ -18,9 +21,18 @@ class RelationshipAction():
     new_tag: str
     note: str
 
-HEAD_TAG_A = "Source tag"
-HEAD_TAG_B = "New relationship"
-HEAD_TAG_COMMENT = "Note"
+class RelationshipActionSchema(TreeviewSchema[RelationshipAction]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('target_tag', 'Source Tag'),
+        ('new_tag', 'New Relationship'),
+        ('note', 'Note'),
+    ])
+
+    @staticmethod
+    def to_tree_item(item: RelationshipAction) -> TreeListItemDict:
+        return {
+            "values": [*dataclasses.astuple(item)]
+        }
 
 
 class RelationshipAdderFrame(ttk.Frame):
@@ -29,20 +41,13 @@ class RelationshipAdderFrame(ttk.Frame):
         self.toolmaster: ToolWindow = master
         self.logger: logging.Logger = master.logger
 
-        self.table_headings = [HEAD_TAG_A, HEAD_TAG_B, HEAD_TAG_COMMENT]
-        # self.suggestions: list[RelationshipAction] = []
-
         self.initwidget(pack_buttons=pack_buttons)
 
     def delete_all(self):
-        # self.suggestions.clear()
         self.tree_tags.delete_all()
 
     def add_item(self, si: RelationshipAction):
-        row = [si.target_tag, si.new_tag, si.note]
-        # self.tree_tags.insert('', tk.END, values=row)
-        self.tree_tags.insert_item({"values": row})
-        # self.suggestions.append(si)
+        self.tree_tags.insert_item(RelationshipActionSchema.to_tree_item(si))
 
     def setSuggestions(self, suggestions: list[RelationshipAction]):
         self.delete_all()
@@ -54,9 +59,8 @@ class RelationshipAdderFrame(ttk.Frame):
 
         counter_main_row = Increment()
 
-        # Right
         counter_main_row.inc()
-        self.tree_tags = MultiColumnListbox(self, headers=self.table_headings)
+        self.tree_tags = MultiColumnListbox(self, schema=RelationshipActionSchema)
 
         with tkwrap(self.tree_tags) as tree:
             # assert isinstance(tree, ttk.Treeview)
@@ -84,7 +88,7 @@ class RelationshipAdderFrame(ttk.Frame):
 
     def copyImportAll(self, event=None):
         selection: list[tuple[str, str]] = [
-            (d[HEAD_TAG_A], d[HEAD_TAG_B])
+            (d['target_tag'], d['new_tag'])
             for d in self.tree_tags.getAllDicts()
         ]
 
@@ -99,7 +103,7 @@ class RelationshipAdderFrame(ttk.Frame):
 
     def copyImport(self, event=None):
         selection: list[tuple[str, str]] = [
-            (d[HEAD_TAG_A], d[HEAD_TAG_B])
+            (d['target_tag'], d['new_tag'])
             for d in self.tree_tags.getSelectionDicts()
         ]
 

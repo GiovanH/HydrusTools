@@ -1,14 +1,17 @@
+from collections import OrderedDict
+import dataclasses
 from functools import partial
 import logging
-import pprint
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import messagebox, ttk
+from typing import ClassVar
 
 from hydrustools import logic
+from hydrustools.component.HydrusImageTable import HydrusImageTable
 
 from .gui_util import Increment, tkwrap
-from .multicolumnlistbox import MultiColumnListbox
+from .multicolumnlistbox import TreeListItemDict, TreeviewSchema
 from .toolwindow import ToolWindow
 
 
@@ -19,11 +22,25 @@ class TagAction():
     identifier: str
     new_tags: list[str]
 
-HEAD_ID = "File ID"
-HEAD_IDSTR = "Identifier"
-HEAD_NEWTAGS = "New tags"
+# HEAD_ID = "File ID"
+# HEAD_IDSTR = "Identifier"
+# HEAD_NEWTAGS = "New tags"
 
 # TODO: Use image_picker for images
+
+class TagActionSchema(TreeviewSchema[TagAction]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('file_id', None),
+        ('identifier', 'Identifier'),
+        ('new_tags', 'New Tags'),
+    ])
+    imagesize = (100, 100)
+
+    @staticmethod
+    def to_tree_item(item: TagAction) -> TreeListItemDict:
+        return {
+            "values": [*dataclasses.astuple(item)]
+        }
 
 class TagAdderFrame(ttk.Frame):
     helpstr = """Change this help string"""
@@ -39,25 +56,25 @@ class TagAdderFrame(ttk.Frame):
         # self.logger.info(pprint.pformat(tag_actions))
         self.tag_actions: list[TagAction] = []
 
-        self.table_headings = [
-            HEAD_ID,
-            HEAD_IDSTR,
-            HEAD_NEWTAGS
-        ]
-
         self.initwindow(pack_buttons=pack_buttons)
 
     def delete_all(self):
         # self.suggestions.clear()
         self.tree_tags.delete_all()
 
-    def add_item(self, ta: TagAction):
+    def add_item(self, ta: TagAction, thumb=True):
         # self.tree_tags.insert('', tk.END, values=row)
         self.tag_actions.append(ta)
         i = self.tag_actions.index(ta)
 
-        self.tree_tags.insert_item({"id": i, "values": [ta.file_id, ta.identifier, ' '.join(ta.new_tags)]})
+        tkid = self.tree_tags.insert_item({
+            "id": i,
+            **TagActionSchema.to_tree_item(ta)
+        })
         # self.suggestions.append(si)
+
+        if thumb:
+            self.tree_tags.addItemThumb(tkid=tkid, file_id=ta.file_id)
 
     def initwindow(self, pack_buttons: bool) -> None:
         self.columnconfigure(0, weight=1)
@@ -66,7 +83,7 @@ class TagAdderFrame(ttk.Frame):
 
         # Right
         counter_main_row.inc()
-        self.tree_tags = MultiColumnListbox(self, headers=self.table_headings)  # noqa: F821
+        self.tree_tags = HydrusImageTable(self, toolmaster=self.toolmaster, schema=TagActionSchema)  # noqa: F821
 
         with tkwrap(self.tree_tags) as tree:
             # assert isinstance(tree, ttk.Treeview)
@@ -140,7 +157,7 @@ class TagAdderFrame(ttk.Frame):
             self.tag_actions[int(i)].file_id
             for i in selection
         ]
-        logic.client.add_popup("Tag Search", files_label=f"Selected Images", file_ids=matching_ids) # type: ignore
+        logic.client.add_popup("Tag Search", files_label="Selected Images", file_ids=matching_ids) # type: ignore
 
     def deleteSelected(self, event=None):
         self.tree_tags.tree.delete(*self.tree_tags.tree.selection())

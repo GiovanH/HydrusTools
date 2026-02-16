@@ -9,7 +9,7 @@ from hydrustools.tool.win_image_extract_creator_from_notes import ExtractCreator
 
 from . import htlogging, logic
 from .component.gui_util import tkwrapc
-from .macro import macro_creators_from_note, macro_localize_char_names, macro_matching_namespaced, macro_pages_from_note
+from .macro import macro_localize_char_names, macro_matching_namespaced, macro_pages_from_note
 from .settings import Settings
 from .tool.win_image_inspector import ImageInspectorWin
 from .tool.win_image_lookup import ImageMetadataLookupWin

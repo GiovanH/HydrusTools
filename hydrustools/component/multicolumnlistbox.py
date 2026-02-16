@@ -1,13 +1,13 @@
 
+from abc import abstractmethod
+from collections import Counter, OrderedDict
 import logging
 import pprint
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk
-from typing import Any, Callable, Literal, Required, TypedDict
+from typing import Any, Callable, ClassVar, Generic, Literal, Required, TypeVar, TypedDict
 from PIL import ImageTk
-
-from hydrustools import htlogging
 
 
 class _TkTreeviewItemDict(TypedDict):
@@ -33,31 +33,50 @@ def xstr(s, nonestr=str(None)) -> str:
     else:
         return nonestr
 
+T = TypeVar('T')
+
+class TreeviewSchema(Generic[T]):
+    # Map column ids to labels
+    headers: ClassVar[OrderedDict[str, str | None]]
+    imagesize: tuple[int, int] | None = None
+
+    columns: ClassVar[tuple[str, ...]]
+    displaycolumns: ClassVar[tuple[str, ...]]
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        cls.columns = tuple(cls.headers.keys())
+        cls.displaycolumns = tuple([
+            column for (column, label) in cls.headers.items()
+            if label is not None
+        ])
+
+    @staticmethod
+    @abstractmethod
+    def to_tree_item(item: T) -> TreeListItemDict: pass
 
 
-class MultiColumnListbox(tk.Frame):
+class MultiColumnListbox(tk.Frame, Generic[T]):
     """use a ttk.TreeView as a multicolumn ListBox"""
 
     def __init__(
         self,
         parent,
-        headers: list[str],
-        tabledata: list[TreeListItemDict] = [],
+        schema: type[TreeviewSchema[T]],
         multiselect: bool = False,
         sortable: bool = True,
         vscroll: bool = True,
         hscroll: bool = False,
         nonestr: str = "None",
-        imagesize: tuple[int, int] | None = None,
-        *args,
-        **kwargs,
+        # *args,
+        # **kwargs,
     ) -> None:
-        tk.Frame.__init__(self, parent, *args, **kwargs)
+        tk.Frame.__init__(self, parent) # , *args, **kwargs)
 
+        self.schema: type[TreeviewSchema[T]] = schema
         self.sortable: bool = sortable
-        self.headers: list[str] = headers  # This must remain static.
         self.nonestr: str = nonestr
-        self.imagesize = imagesize
 
         self.root_item = ''
 
@@ -66,8 +85,6 @@ class MultiColumnListbox(tk.Frame):
         self.tree: ttk.Treeview
 
         self.setup_widgets(vscroll=vscroll, hscroll=hscroll)
-        if len(tabledata) > 0:
-            self.build_tree(tabledata)
 
         if multiselect:
             self.tree.configure(selectmode=tk.NONE)
@@ -111,10 +128,10 @@ class MultiColumnListbox(tk.Frame):
 
         margin: int = 0
         image_height = 0
-        stylename = f"MCL.Treeview"
+        stylename = "MCL.Treeview"
 
-        if self.imagesize:
-            image_height = self.imagesize[1]
+        if self.schema.imagesize:
+            image_height = self.schema.imagesize[1]
             stylename = f"MCL{image_height}.Treeview"
             style.configure(stylename, rowheight=image_height)
             style.configure(stylename, indent=0)
@@ -127,29 +144,38 @@ class MultiColumnListbox(tk.Frame):
             margin = 4
             show = "tree headings"
 
-        print("Setting up frame with image config", self.imagesize, "and headers", self.headers, show, stylename)
+        self.logger.debug("Setting up frame with image config", self.schema.imagesize, "and headers", self.schema.headers, show, stylename)
 
-        self.tree: ttk.Treeview = ttk.Treeview(
+        self.tree = ttk.Treeview(
             self,
-            columns=self.headers,
+            columns=self.schema.columns,
             selectmode=tk.EXTENDED,
             show=show,
             style=stylename,
         )
 
-        if self.imagesize:
-            self.logger.info(f"Adding col #0 for image {self.imagesize}")
+        if self.schema.imagesize:
+            self.logger.debug(f"Adding col #0 for image {self.schema.imagesize}")
             # Configure the tree column for image previews (make width match rowheight)
-            self.tree.column("#0", width=(2*margin)+self.imagesize[0], anchor="center", stretch=False)
+            self.tree.column("#0", width=(2*margin)+self.schema.imagesize[0], anchor="center", stretch=False)
             self.tree.heading("#0", text="")
 
+        def set_columns():
+            display_columns = self.schema.displaycolumns
+            try:
+                # self.tree.config(columns=self.schema.columns)
+                self.tree.config(displaycolumns=display_columns)
+            except:
+                self.logger.error("Display Columns: %s", display_columns)
+                self.logger.error("Columns: %s", self.tree['column'])
+                # self.after_idle(set_columns)
+                raise
 
-        display_columns = tuple([i for i, h in enumerate(self.tree['columns']) if not h.startswith('_')])
-        print(self.tree['columns'], display_columns)
-
-        self.after_idle(lambda *e: self.tree.config(displaycolumns=display_columns))
+        # self.tree.after_idle(set_columns)
+        set_columns()
 
         self.tree.grid(column=0, row=0, sticky="nsew")
+
 
         if vscroll:
             vsb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
@@ -160,11 +186,17 @@ class MultiColumnListbox(tk.Frame):
             hsb.grid(column=0, row=1, sticky="ew")
             self.tree.configure(xscrollcommand=hsb.set)
 
-        for col in self.headers:
+        for col, label in self.schema.headers.items():
+            if col not in self.schema.displaycolumns:
+                self.logger.debug("Not adding header for col %s, not in %s", col, self.schema.displaycolumns)
+                continue
+            if label is None:
+                self.logger.info("Not adding header for col %s, label is None: %s", col, label)
+                continue
             if self.sortable:
-                self.tree.heading(col, text=col.title(), command=lambda c=col: self.sortby(self.tree, c, 0))
+                self.tree.heading(col, text=label, command=lambda c=col: self.sortby(self.tree, c, 0))
             else:
-                self.tree.heading(col, text=col.title())
+                self.tree.heading(col, text=label)
 
         container.grid_columnconfigure(0, weight=1)
         container.grid_rowconfigure(0, weight=1)
@@ -211,21 +243,28 @@ class MultiColumnListbox(tk.Frame):
     def resize_cols(self):
         self.logger.info("Resizing...")
 
-        for col in self.headers:
-            self.tree.column(col, width=self.TkFont.measure(col.title()))
+        for col in self.schema.displaycolumns:
+            label = self.schema.headers.get(col)
+            assert isinstance(label, str)
+            self.tree.column(col, width=self.TkFont.measure(label))
 
-        avgs = [0] * len(self.headers)
+        avgs = Counter(self.schema.displaycolumns)
 
         for itemid in self.tree.get_children(""):
             item = self.tree.set(itemid)
             # adjust column's width if necessary to fit each value
-            for index, val in enumerate(item.values()):
+            for key in self.schema.displaycolumns:
+                val = item[key]
                 if val and val != "":
                     col_w = self.TkFont.measure(val)
-                    avgs[index] = (col_w + avgs[index]) // 2
+                    avgs[key] += col_w
 
-        for i in range(0, len(self.headers)):
-            self.tree.column(self.headers[i], width=min(int(avgs[i]), 480))
+        total_children = len(self.tree.get_children(""))
+        if total_children == 0:
+            return
+
+        for key, width in avgs.items():
+            self.tree.column(key, width=min(int(width//total_children), 480))
 
         self.logger.info("Resized")
 

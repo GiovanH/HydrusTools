@@ -28,12 +28,12 @@ class ImplicitParentFinderWin(ToolWindow):  # noqa: PLR0904
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.textvar_ns_parent = Settings.boundTkVar(self, 'findimplicitparent_ns_parent')
-        self.textvar_ns_child = Settings.boundTkVar(self, 'findimplicitparent_ns_child')
+        self.textvar_ns_parent: tk.StringVar = Settings.boundTkVar(self, 'findimplicitparent_ns_parent')
+        self.textvar_ns_child: tk.StringVar = Settings.boundTkVar(self, 'findimplicitparent_ns_child')
         self.var_min_count: tk.IntVar = Settings.boundTkVar(self, 'findimplicitparent_min_count', tk.IntVar)
         self.var_tag_factor = Settings.boundTkVar(self, 'findimplicitparent_factor', tk.IntVar)
 
-        self.debug_specific = ['voltron', 'my hero', "todoroki"]
+        self.debug_specific = []
 
         self.abort_threads = False
 

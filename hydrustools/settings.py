@@ -31,6 +31,8 @@ class HTSettings(IniSettings):
     findimplicitparent_min_count: int = 2
     findimplicitparent_factor: int = 2
 
+    extractcreatornote_search: str = ""
+    extractcreatornote_search_hist: str = ""
     extractcreatornote_notename: str = "filename"
     extractcreatornote_min_count: int = 2
 

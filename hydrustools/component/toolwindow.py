@@ -89,5 +89,5 @@ class ToolWindow(tk.Toplevel):
         taskthread = threading.Thread(target=task, daemon=True)
         taskthread.start()
 
-    def startTaskCurry(self, *args, **kw) -> Callable[..., None]:
-        return lambda *a: self.startTask( *args, **kw)
+    def startTaskCurry(self, callback, lock=True) -> Callable[..., None]:
+        return lambda *event: self.startTask(callback, lock=lock)

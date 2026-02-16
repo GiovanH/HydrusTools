@@ -1,40 +1,53 @@
-import concurrent.futures
-import logging
+from collections import OrderedDict
+import dataclasses
 import pprint
-import threading
 import tkinter as tk
 from tkinter import ttk
+from typing import ClassVar
 
 import hydrus_api
-from PIL import ImageTk
 
 from hydrustools.component.HydrusImageTable import HydrusImageTable
+from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
+from hydrustools.component.relationship_adder import RelationshipAction
 
 from .. import logic
 from ..logic import FileMetadata
 
 from ..component.gui_util import (
     Increment,
-    QueryHistory,
     SearchQueryEntry,
     TreeviewHeadings,
     pb_iter,
     tkwrap,
     tkwrapc,
 )
-from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..settings import Settings
 
 
-ISTH = TreeviewHeadings(
-    {
-        "_hydrus_id": "_HYDRUS_ID",
-        "tags": "Local Tags",
-        "urls": "URLs",
-        "notes": "Notes"
-    }
-)
+class ImageFileSchema(TreeviewSchema[FileMetadata]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('file_id', None),
+        ('tag_list', 'Local Tags'),
+        ('urls', 'URLs'),
+        ('notes', 'Notes'),
+    ])
+    imagesize = (100, 100)
+
+    @staticmethod
+    def to_tree_item(item: FileMetadata) -> TreeListItemDict:
+        taglist = item['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
+        return {
+            "id": item['file_id'],
+            "values": [
+                item['file_id'],
+                '\n'.join(taglist),
+                '\n'.join(item['known_urls']),
+                str(pprint.pformat(item['notes']))
+            ]
+        }
+
 
 class ImageListFrame(ttk.Frame):  # noqa: PLR0904
     helpstr = """"""
@@ -50,7 +63,6 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
         self.image_size = (100, 100)
 
         self.image_cache = []
-        self.known_metadata: dict[str, FileMetadata] = {}
 
         self.logger.info("Init widget")
         self.init_widget()
@@ -63,8 +75,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
         self.table = HydrusImageTable(
             self,
             toolmaster=self.toolmaster,
-            headers=ISTH.headings,
-            imagesize=self.image_size
+            schema=ImageFileSchema
         )
 
         with tkwrap(self.table) as tree:
@@ -100,6 +111,8 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
         super().__init__(*args_, **kwargs)
 
         self.include_notes = include_notes
+
+        self.known_metadata: dict[int, FileMetadata] = {}
 
         self.result: list[FileMetadata] | None = None
         self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
@@ -202,15 +215,9 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             def commit(resp=resp):
                 for metadata in resp['metadata']:
                     # pprint.pprint(metadata)
-                    taglist = metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
-                    self.search_frame.table.insert_item({
-                        "values": ISTH.values(
-                            _hydrus_id=metadata['file_id'],
-                            tags='\n'.join(taglist),
-                            urls='\n'.join(metadata['known_urls']),
-                            notes=str(pprint.pformat(metadata['notes']))
-                        )
-                    })
+                    file_id: int = metadata['file_id']
+                    self.known_metadata[file_id] = metadata
+                    self.search_frame.table.insert_item(ImageFileSchema.to_tree_item(metadata))
 
             self.after('idle', commit)
 
@@ -222,10 +229,10 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
         ids = self.search_frame.table.getSelectionIDs()
         try:
             self.result = [
-                self.search_frame.known_metadata[id] for id in ids
+                self.known_metadata[int(id)] for id in ids
             ]
         except KeyError:
-            # print(ids, self.search_frame.known_metadata.keys())
+            # print(ids, self.known_metadata.keys())
             raise
         self.logger.info(f"Returning result {len(self.result)=}")
         self.destroy()
@@ -239,10 +246,10 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
 
         try:
             self.result = [
-                self.search_frame.known_metadata[id] for id in ids
+                self.known_metadata[int(id)] for id in ids
             ]
         except KeyError:
-            # print(ids, self.search_frame.known_metadata.keys())
+            # print(ids, self.known_metadata.keys())
             raise
         self.logger.info(f"Returning result {len(self.result)=}")
         self.destroy()

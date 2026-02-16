@@ -1,16 +1,27 @@
+from collections import OrderedDict
 import re
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
+from typing import ClassVar
 
 from .. import logic
 from ..component.gui_util import Increment, QueryHistory, RegexEntry, TextCopyWindow, tkwrap, tkwrapc
-from ..component.multicolumnlistbox import MultiColumnListbox
+from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
 from ..logic import TagInfo
 from ..settings import Settings
 
-HEAD_NAME = "Tag Name"
-HEAD_COUNT = "Count"
+class TagSchema(TreeviewSchema[TagInfo]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('name', 'Tag name'),
+        ('count', 'Count')
+    ])
+
+    @staticmethod
+    def to_tree_item(item: TagInfo) -> TreeListItemDict:
+        return {
+            "values": [item.value, item.count]
+        }
 
 class TagManagerWin(ToolWindow):  # noqa: PLR0904
     helpstr = """Bulk search and edit tags.
@@ -25,8 +36,6 @@ AND/OR opens search page for all images with the selected tags.
     """
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
-
-        self.table_headings = [HEAD_NAME, HEAD_COUNT]
 
         self.textvar_presearch: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_presearch')
         self.textvar_presearch_hist: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_presearch_hist')
@@ -83,7 +92,7 @@ AND/OR opens search page for all images with the selected tags.
 
         # Right
         counter_main_row.inc()
-        self.tree_tags = MultiColumnListbox(self, headers=self.table_headings)
+        self.tree_tags: MultiColumnListbox[TagInfo] = MultiColumnListbox(self, schema=TagSchema)
 
         with tkwrap(self.tree_tags) as tree:
             # assert isinstance(tree, ttk.Treeview)
@@ -175,7 +184,7 @@ AND/OR opens search page for all images with the selected tags.
 
     def openPage(self, OR=False):
         selection: list[str] = [
-            d[HEAD_NAME]
+            d['name']
             for d in self.tree_tags.getSelectionDicts()
         ]
         self.setStatus(f"Gathered {len(selection)} tags")
@@ -200,7 +209,7 @@ AND/OR opens search page for all images with the selected tags.
 
     def addNamespace(self, OR=False):
         selection: list[str] = [
-            d[HEAD_NAME]
+            d['name']
             for d in self.tree_tags.getSelectionDicts()
         ]
         self.setStatus(f"Gathered {len(selection)} tags")
@@ -224,7 +233,7 @@ AND/OR opens search page for all images with the selected tags.
 
     def deleteTags(self, OR=False):
         selection: list[str] = [
-            d[HEAD_NAME]
+            d['name']
             for d in self.tree_tags.getSelectionDicts()
         ]
         self.setStatus(f"Gathered {len(selection)} tags")

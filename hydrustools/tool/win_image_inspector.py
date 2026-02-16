@@ -1,10 +1,14 @@
+from collections import OrderedDict
 import pprint
 import tkinter as tk
 from tkinter import ttk
+from typing import ClassVar
 
 import hydrus_api
 
+from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.image_canvas import ContentCanvas
+from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
 
 from .. import logic
 from ..logic import FileMetadata
@@ -15,11 +19,25 @@ from ..component.gui_util import (
     Increment,
     get_selection_neighbors,
     mod_selection,
+    pb_iter,
     tkwrapc,
 )
 from ..component.toolwindow import ToolWindow
 
 DEBUG_FAST_PICK = False
+
+class ImageIconSchema(TreeviewSchema[FileMetadata]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('file_id', None),
+    ])
+    imagesize = (100, 100)
+
+    @staticmethod
+    def to_tree_item(item: FileMetadata) -> TreeListItemDict:
+        return {
+            "id": item['file_id'],
+            "values": [item['file_id']]
+        }
 
 def debug_get_selection():
     resp = logic.client.search_files(
@@ -45,7 +63,7 @@ class ImageInspectorWin(ToolWindow):
         self.initwindow()
         self.bind_controls()
 
-        self.known_metadata = self.image_list.known_metadata
+        self.known_metadata: dict[int, FileMetadata] = {}
 
         self.after_idle(self.pick_images)
 
@@ -62,17 +80,16 @@ class ImageInspectorWin(ToolWindow):
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
             col.grid(column=ccx.inc(), row=0, sticky="ns")
 
-            self.image_list = ImageListFrame(self, width=200)
+            self.image_list = HydrusImageTable(self, schema=ImageIconSchema)
             self.image_list.grid(column=cx.inc(), row=cy.inc(), in_=col)
             col.rowconfigure(cy.value, weight=1)
 
-            self.image_list.table.tree.configure(
-                columns=[],
+            self.image_list.tree.configure(
                 show="tree",
                 selectmode=tk.BROWSE
             )
 
-            self.image_list.table.tree.bind("<<TreeviewSelect>>", self.on_image_selected)
+            self.image_list.tree.bind("<<TreeviewSelect>>", self.on_image_selected)
 
             btn_open = ttk.Button(col, text="Pick Images", command=self.pick_images)
             btn_open.grid(column=cx.value, row=cy.inc(), sticky="ew")
@@ -136,17 +153,17 @@ class ImageInspectorWin(ToolWindow):
             # col.rowconfigure(index=0, weight=1)
 
     def next_image(self):
-        mod_selection(self.image_list.table.tree, prev=0, next=1)
+        mod_selection(self.image_list.tree, prev=0, next=1)
 
     def prev_image(self):
-        mod_selection(self.image_list.table.tree, prev=1, next=0)
+        mod_selection(self.image_list.tree, prev=1, next=0)
 
     def bind_controls(self):
         entry: tk.Entry = self.tag_editor_list.entry_add
 
         self.tag_editor_list.bind("<<Modified>>", self.configure_visual)
 
-        self.image_list.table.tree.configure(takefocus=False)
+        self.image_list.tree.configure(takefocus=False)
 
 
         entry.bind("<Right>", lambda e: entry.get() == "" and self.next_image())
@@ -183,7 +200,7 @@ class ImageInspectorWin(ToolWindow):
                 metadata_list=[self.current_image]
             )
             self.setStatus("Saved tag changes")
-            self.refresh_image(self.current_image['file_id'])
+            self.fetch_metadata_and_open(self.current_image['file_id'])
         except TypeError as e:
             self.logger.exception(f"Couldn't apply tag list: {self.tag_editor_list.tag_list=}, {self.tag_editor_list.modified}")
             raise e
@@ -202,40 +219,57 @@ class ImageInspectorWin(ToolWindow):
         self.setStatus(f"Opened list of {len(selection)} images")
         self.image_list.delete_all()
         for meta in selection:
-            self.image_list.addItemFromMeta(meta)
+            self.image_list.insert_item(ImageIconSchema.to_tree_item(meta))
+        self.fetch_all_metadata()
 
-        self.image_list.table.tree.selection_set(selection[0]["file_id"])
+        first_file_id = selection[0]["file_id"]
+        self.image_list.tree.selection_set(first_file_id)
+        self.image_list.tree.see(first_file_id)
 
         self.image_list.load_thumbnails()
+
+    def fetch_all_metadata(self):
+        all_ids = map(int, self.image_list.getAllIds())
+
+        for id_chunk in pb_iter(self.pb, [*logic.chunk(all_ids, 200)]):
+            resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
+
+            def commit(resp=resp):
+                for metadata in resp['metadata']:
+                    # pprint.pprint(metadata)
+                    file_id: int = metadata['file_id']
+                    self.known_metadata[file_id] = metadata
+
+            self.after('idle', commit)
 
     def refresh_current(self, event=None):
         if not self.current_image:
             self.setStatus("No current image")
             return
-        self.refresh_image(self.current_image['file_id'])
+        self.fetch_metadata_and_open(self.current_image['file_id'])
         self.setStatus("Refreshed metadata from server")
 
-    def refresh_image(self, image_id):
+    def fetch_metadata_and_open(self, image_id):
         self.logger.info(f"Refreshing metadata for {image_id}")
         new_metadata = logic.client.get_file_metadata(
             file_ids=[image_id],
             include_notes=True
         )['metadata'][0]
         # pprint.pprint(new_metadata)
-        self.known_metadata[str(image_id)] = new_metadata
+        self.known_metadata[image_id] = new_metadata
         self.set_image(new_metadata)
 
     def on_image_selected(self, event: tk.Event):
         widget: ttk.Treeview = event.widget # type: ignore
-        image_id = widget.selection()[0]
+        image_id = int(widget.selection()[0])
         if not image_id:
             self.logger.warning("Called on_image_selected with no selected image")
             return
-        metadata = self.known_metadata[str(image_id)]
+        metadata = self.known_metadata[image_id]
         self.set_image(metadata)
 
         for neighbor_id in get_selection_neighbors(widget):
-            self.canvas.preload_image(self.known_metadata[str(neighbor_id)])
+            self.canvas.preload_image(self.known_metadata[int(neighbor_id)])
 
     def set_image(self, metadata: logic.FileMetadata):
         self.current_image = metadata

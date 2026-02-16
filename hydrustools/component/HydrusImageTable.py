@@ -1,67 +1,31 @@
-from hydrustools.component.multicolumnlistbox import MultiColumnListbox
-
 import concurrent.futures
-import logging
-import pprint
 import threading
-import tkinter as tk
 from tkinter import ttk
 
-import hydrus_api
 from PIL import ImageTk
 
 from .. import logic
-from ..logic import FileMetadata
 
-from ..component.gui_util import (
-    Increment,
-    QueryHistory,
-    SearchQueryEntry,
-    TreeviewHeadings,
-    pb_iter,
-    tkwrap,
-    tkwrapc,
-)
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict
 from ..component.toolwindow import ToolWindow
-from ..settings import Settings
 
 
 class HydrusImageTable(MultiColumnListbox):
+    file_id_key = 'file_id'
+
     def __init__(
         self,
         master,
         toolmaster: None | ToolWindow = None,
         *args_,  **kwargs
     ) -> None:
-        self.imagesize: tuple[int, int]
         super().__init__(master, *args_, **kwargs)
 
         self.toolmaster: ToolWindow = toolmaster or master
         self.logger = self.toolmaster.logger
         self.setStatus = self.toolmaster.setStatus
 
-
         self.image_cache = []
-
-    # def addItemFromMeta(self, metadata: FileMetadata, thumb=False):
-    #     self.known_metadata[str(metadata['file_id'])] = metadata
-    #     taglist = metadata['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
-    #     self.table.insert_item({
-    #         "id": metadata['file_id'],
-    #         # "image": tkimg,
-    #         "values": ISTH.values(
-    #             tags='\n'.join(taglist),
-    #             urls='\n'.join(metadata['known_urls']),
-    #             notes=str(pprint.pformat(metadata['notes']))
-    #         )
-    #     })
-    #     if thumb:
-    #         self.addItemThumb(metadata)
-
-    def insert_item(self, item: TreeListItemDict) -> str: # type: ignore
-        # item['values']['_hydrus_id']
-        return super().insert_item(item)
 
     def load_thumbnails(self, pb: ttk.Progressbar | dict = {'value': 0}):
         image_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
@@ -69,8 +33,10 @@ class HydrusImageTable(MultiColumnListbox):
 
         lock = threading.Lock()
 
+        file_id_index = self.schema.columns.index(self.file_id_key)
+
         thumb_tasks: list[tuple] = [
-            (tkid, self.tree.set(tkid, column=0))
+            (tkid, self.tree.set(tkid, column=file_id_index))
             for tkid in
             self.tree.get_children()
         ]
@@ -93,8 +59,12 @@ class HydrusImageTable(MultiColumnListbox):
         if self.toolmaster.abort_threads is True:
             self.logger.debug("Aborting thumbnail %s %s", file_id, tkid)
             return
+        if self.schema.imagesize is None:
+            self.logger.debug("Can't add thumbnail when schema has no imagesize")
+            return
 
-        thumb = logic.get_thumb_scaled(file_id, *self.imagesize)
+
+        thumb = logic.get_thumb_scaled(file_id, *self.schema.imagesize)
         tkimg = ImageTk.PhotoImage(image=thumb, master=self)
         self.image_cache.append(tkimg)
 
