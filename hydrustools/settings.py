@@ -15,6 +15,12 @@ class HTSettings(IniSettings):
     flatten_presearch: str = "<Changeme>"
     flatten_search: str = ""
 
+    img_autosave: bool = True
+    img_dwim_savetags: bool = True
+    img_dwim_archive: bool = True
+    img_dwim_advance: bool = True
+    img_dwim_only_one: bool = True
+
     tagsearch_presearch: str = "<Changeme>"
     tagsearch_search: str = ""
     tagsearch_presearch_hist: str = ""

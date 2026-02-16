@@ -9,6 +9,7 @@ import hydrus_api
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.image_canvas import ContentCanvas
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
+from hydrustools.settings import Settings
 
 from .. import logic
 from ..logic import FileMetadata
@@ -60,6 +61,14 @@ class ImageInspectorWin(ToolWindow):
 
         self.textvar_info = tk.StringVar(self, "No image selected")
 
+        self.pref_autosave = Settings.boundTkVar(self, 'img_autosave', tk.BooleanVar)
+        self.pref_dwim_archive = Settings.boundTkVar(self, 'img_dwim_archive', tk.BooleanVar)
+        self.pref_dwim_advance = Settings.boundTkVar(self, 'img_dwim_advance', tk.BooleanVar)
+        self.pref_dwim_savetags = Settings.boundTkVar(self, 'img_dwim_savetags', tk.BooleanVar)
+        self.pref_dwim_only_one = Settings.boundTkVar(self, 'img_dwim_only_one', tk.BooleanVar)
+
+        self.pref_autosave.trace_add('write', self.configure_visual)
+
         self.initwindow()
         self.bind_controls()
 
@@ -102,8 +111,8 @@ class ImageInspectorWin(ToolWindow):
             col.rowconfigure(cy.value, weight=1)
             col.columnconfigure(0, weight=1, minsize=200)
 
-            # self.btn_save_tags = ttk.Button(col, text="Save Tags", command=self.save_tag_list)
-            # self.btn_save_tags.grid(column=0, row=cy.inc(), sticky="ew")
+            self.btn_save_tags = ttk.Button(col, text="Save Tags", command=self.save_tag_list)
+            self.btn_save_tags.grid(column=0, row=cy.inc(), sticky="ew")
 
         with tkwrapc(ttk.Frame(self)) as (row, cx, cy):
             row.grid(column=0, row=1, columnspan=ccx.inc(), sticky="ew")
@@ -130,13 +139,29 @@ class ImageInspectorWin(ToolWindow):
             col.grid(column=ccx.inc(), row=0, rowspan=2, sticky="nsew")
 
 
-            with tkwrapc(ttk.Frame(col, relief=tk.GROOVE)) as (row, crx, cry):
+            with tkwrapc(ttk.Frame(col, relief=tk.GROOVE, padding=4)) as (row, crx, cry):
                 row.grid(column=0, row=cy.inc(), sticky="nsew")
                 col.rowconfigure(cy.value, weight=1)
                 col.columnconfigure(0, weight=1)
 
                 lab = ttk.Label(row, textvariable=self.textvar_info, width=40, wraplength=250)
                 lab.grid(column=crx.inc(), row=cry.inc(), sticky="ew")
+
+            with tkwrapc(ttk.Frame(col, relief=tk.GROOVE, padding=4)) as (row, crx, cry):
+                row.grid(column=0, row=cy.inc(), sticky="sew")
+
+                for (var, label) in [
+                    (self.pref_autosave, "Autosave Changes"),
+                    (self.pref_dwim_archive, "DWIM: Archive"),
+                    (self.pref_dwim_advance, "DWIM: Advance"),
+                    (self.pref_dwim_savetags, "DWIM: Save tags"),
+                    (self.pref_dwim_only_one, "DWIM: Only one"),
+                ]:
+                    ttk.Checkbutton(
+                        row,
+                        variable=var,
+                        text=label
+                    ).pack(anchor='n', fill='x')
 
             with tkwrapc(ttk.Frame(col, relief=tk.GROOVE)) as (row, crx, cry):
                 row.grid(column=0, row=cy.inc(), sticky="sew")
@@ -165,9 +190,10 @@ class ImageInspectorWin(ToolWindow):
 
         self.image_list.tree.configure(takefocus=False)
 
-
         entry.bind("<Right>", lambda e: entry.get() == "" and self.next_image())
         entry.bind("<Left>", lambda e: entry.get() == "" and self.prev_image())
+        entry.bind("<Next>", lambda e: self.next_image())
+        entry.bind("<Prior>", lambda e: self.prev_image())
 
         entry.bind("<Control-e>", self.toggle_keep)
         entry.bind("<Control-d>", self.toggle_delete)
@@ -178,16 +204,24 @@ class ImageInspectorWin(ToolWindow):
 
     def entry_dwim(self, event=None):
         edited = False
-        # if self.tag_editor_list.modified:
-        #     self.save_tag_list()
-        #     edited = True
 
-        if self.current_image and self.current_image['is_inbox'] and not self.current_image['is_deleted']:
-            self.toggle_keep()
-            edited = True
+        if self.pref_dwim_savetags.get() and not self.pref_autosave.get():
+            if self.tag_editor_list.modified:
+                self.save_tag_list()
+                edited = True
+                if self.pref_dwim_only_one.get():
+                    return
 
-        if not edited:
-            self.next_image()
+        if self.pref_dwim_archive.get():
+            if self.current_image and self.current_image['is_inbox'] and not self.current_image['is_deleted']:
+                self.toggle_keep()
+                edited = True
+                if self.pref_dwim_only_one.get():
+                    return
+
+        if self.pref_dwim_advance.get():
+            if not edited:
+                self.next_image()
 
     def save_tag_list(self):
         if not self.current_image:
@@ -320,12 +354,15 @@ class ImageInspectorWin(ToolWindow):
 
         self.textvar_info.set(value='\n'.join(lines))
 
-    def configure_visual(self, event=None):
+    def configure_visual(self, *event):
         # Actually, just autosave
-        if not self.refreshing and self.tag_editor_list.modified:
-            self.save_tag_list()
+        if self.pref_autosave.get():
+            self.btn_save_tags.configure(state=tk.DISABLED)
 
-        return
+            if not self.refreshing and self.tag_editor_list.modified:
+                self.save_tag_list()
+
+            return
 
         if self.tag_editor_list.modified:
             # self.setStatus(f"Modified {self.tag_editor_list.modified}, bad")

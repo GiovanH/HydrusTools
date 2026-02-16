@@ -13,6 +13,8 @@ from hydrustools import htlogging, logic
 
 from .gui_util import tkwrapc
 
+# TODO: Better fuzzy searching
+# TODO: Use - in entry to remove tags
 
 
 
