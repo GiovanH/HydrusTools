@@ -127,7 +127,7 @@ Clicking merge will add the specified tags to all images in the set.
 
             for file_metadata in metadata:
                 try:
-                    tags = file_metadata['tags'][logic.local_tags_service_key]['display_tags'].get(str(hydrus_api.TagStatus.CURRENT.value), [])
+                    tags = logic.local_tags(file_metadata)
                     # pprint.pprint(tags)
                     self.tag_cache[file_metadata['hash']] = [t for t in tags if not t.startswith("source:")]
                 except:

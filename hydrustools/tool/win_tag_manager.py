@@ -5,11 +5,12 @@ from tkinter import messagebox, simpledialog, ttk
 from typing import ClassVar
 
 from .. import logic
-from ..component.gui_util import Increment, QueryHistory, RegexEntry, TextCopyWindow, tkwrap, tkwrapc
+from ..component.gui_util import QueryHistory, RegexEntry, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
 from ..logic import TagInfo
 from ..settings import Settings
+
 
 class TagSchema(TreeviewSchema[TagInfo]):
     headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
@@ -19,9 +20,8 @@ class TagSchema(TreeviewSchema[TagInfo]):
 
     @staticmethod
     def to_tree_item(item: TagInfo) -> TreeListItemDict:
-        return {
-            "values": [item.value, item.count]
-        }
+        return {"values": [item.value, item.count]}
+
 
 class TagManagerWin(ToolWindow):  # noqa: PLR0904
     helpstr = """Bulk search and edit tags.
@@ -34,15 +34,16 @@ AND/OR opens search page for all images with the selected tags.
 
 "Delete selected tag" removes all occurrences of the selected tags from all images.
     """
+
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.textvar_presearch: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_presearch')
-        self.textvar_presearch_hist: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_presearch_hist')
-        self.textvar_search: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_search')
-        self.textvar_search_hist: tk.StringVar = Settings.boundTkVar(self, 'tagsearch_search_hist')
+        self.textvar_presearch: tk.StringVar = Settings.boundTkVar(self, "tagsearch_presearch")
+        self.textvar_presearch_hist: tk.StringVar = Settings.boundTkVar(self, "tagsearch_presearch_hist")
+        self.textvar_search: tk.StringVar = Settings.boundTkVar(self, "tagsearch_search")
+        self.textvar_search_hist: tk.StringVar = Settings.boundTkVar(self, "tagsearch_search_hist")
 
-        self.boolvar_localonly = Settings.boundTkVar(self, 'tagsearch_localonly', tk.BooleanVar)
+        self.boolvar_localonly = Settings.boundTkVar(self, "tagsearch_localonly", tk.BooleanVar)
 
         self.initwindow()
 
@@ -55,32 +56,31 @@ AND/OR opens search page for all images with the selected tags.
 
         self.columnconfigure(0, weight=1)
 
-        counter_main_row = Increment()
-
-        # tk.Label(frame_row, text="Match partial string").grid(column=0, row=0, sticky="e")
-        # check_partial = ttk.Checkbutton(frame_row, variable=self.boolvar_partial)
-        # check_partial.grid(column=1, row=0, sticky="w")
-
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (frame_top, cx, _):
-            frame_top.grid(column=0, row=counter_main_row.inc(), sticky="ew", columnspan=2)
+            frame_top.pack(side=tk.TOP, fill=tk.X)
 
             cx.inc()
             frame_top.columnconfigure(cx.value, weight=1)
 
-            tk.Label(frame_top, text="Tag Query:")\
-                .grid(column=cx.value, row=0, sticky="w")
+            tk.Label(frame_top, text="Tag Query:").grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_presearch = QueryHistory(frame_top, font=('Courier', 10), textvariable=self.textvar_presearch, hist_store=self.textvar_presearch_hist)
+            self.entry_presearch = QueryHistory(
+                frame_top,
+                font=("Courier", 10),
+                textvariable=self.textvar_presearch,
+                hist_store=self.textvar_presearch_hist,
+            )
             self.entry_presearch.grid(column=cx.value, row=1, sticky="ew")
             self.entry_presearch.bind("<Return>", self.startTaskCurry(self.doSearch))
 
             cx.inc()
             frame_top.columnconfigure(cx.value, weight=2)
 
-            tk.Label(frame_top, text="Regex refinement:")\
-                .grid(column=cx.value, row=0, sticky="w")
+            tk.Label(frame_top, text="Regex refinement:").grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_filter = RegexEntry(frame_top, font=('Courier', 10), textvariable=self.textvar_search, hist_store=self.textvar_search_hist)
+            self.entry_filter = RegexEntry(
+                frame_top, font=("Courier", 10), textvariable=self.textvar_search, hist_store=self.textvar_search_hist
+            )
             self.entry_filter.grid(column=cx.value, row=1, sticky="ew")
             self.entry_filter.bind("<Return>", self.startTaskCurry(self.doSearch))
 
@@ -88,47 +88,31 @@ AND/OR opens search page for all images with the selected tags.
             btn_search = ttk.Button(frame_top, text="Search", command=self.startTaskCurry(self.doSearch))
             btn_search.grid(column=cx.value, row=1, sticky="ew")
 
-            # frame_top.rowconfigure(index=counter_frame.inc(), weight=1)
-
-        # Right
-        counter_main_row.inc()
         self.tree_tags: MultiColumnListbox[TagInfo] = MultiColumnListbox(self, schema=TagSchema)
-
-        with tkwrap(self.tree_tags) as tree:
-            # assert isinstance(tree, ttk.Treeview)
-            tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
-            self.rowconfigure(counter_main_row.value, weight=1)
+        self.tree_tags.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (frame_bottom, cx, cy):
-            frame_bottom.grid(row=counter_main_row.inc(), columnspan=2, sticky="ew")
+            frame_bottom.pack(side=tk.BOTTOM, fill=tk.X)
 
-            self.pb = ttk.Progressbar(frame_bottom, orient='vertical',
-                mode='determinate',
-                length=30
-            )
-            self.pb.grid(column=cx.inc(), row=0, sticky="ns")
+            self.pb = ttk.Progressbar(frame_bottom, orient="vertical", mode="determinate", length=30)
+            self.pb.pack(side=tk.LEFT, fill=tk.Y)
 
-            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=cx.inc(), row=0, sticky="nsew")
-            frame_bottom.columnconfigure(cx.value, weight=1)
+            ttk.Label(frame_bottom, textvariable=self.textvar_status).pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-            with tkwrapc(ttk.Frame(frame_bottom)) as (frame, ccx, ccy):
-                frame.grid(column=cx.inc(), row=0, sticky="nse")
+            with tkwrap(ttk.Frame(frame_bottom)) as frame:
+                frame.pack(side=tk.LEFT, fill=tk.Y)
 
                 btn_search = ttk.Button(frame, text="AND search selected", command=self.openPageAnd)
-                btn_search.grid(row=ccy.inc(), sticky="nsew")
+                btn_search.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
                 btn_search = ttk.Button(frame, text="OR search selected", command=self.openPageOr)
-                btn_search.grid(row=ccy.inc(), sticky="nsew")
-
-            # btn_search = ttk.Button(frame_bottom, text="Add Namespace", command=self.addNamespace)
-            # btn_search.grid(column=cx.inc(), row=0, sticky="nse")
+                btn_search.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
             btn_search = ttk.Button(frame_bottom, text="Map to siblings with namespace", command=self.addNamespace)
-            # btn_search.config(state=tk.DISABLED)
-            btn_search.grid(column=cx.inc(), row=0, sticky="nse")
+            btn_search.pack(side=tk.LEFT, fill=tk.Y)
 
             btn_search = ttk.Button(frame_bottom, text="Delete selected tag", command=self.deleteTags)
-            btn_search.grid(column=cx.inc(), row=0, sticky="nse")
+            btn_search.pack(side=tk.LEFT, fill=tk.Y)
 
     def doSearch(self, event=None):
         search_query: str = self.textvar_presearch.get() or "*"
@@ -139,27 +123,19 @@ AND/OR opens search page for all images with the selected tags.
         self.entry_presearch.add_history(search_query)
 
         self.tree_tags.delete_all()
-        # self.tree_tags.delete(*self.tree_tags.get_children())
 
         try:
-            results: list[TagInfo] = logic.search_tags_re(search_query, search_refinement,  display_type="display")
+            results: list[TagInfo] = logic.search_tags_re(search_query, search_refinement, display_type="display")
         except re.error as e:  # noqa: F821
             messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_refinement!r}\n{e}")
             return
 
-        # tag_count = {
-        #     tag.value: tag.count
-        #     for tag in results
-        # }
         self.setStatus(f"Found {len(results)} tags. Displaying...")
 
-        # targets: list[SiblingInfo] = logic.get_sibling_ideal_targets([ti.value for ti in results])
-
         def _apply():
-            self.tree_tags.update_tree([
-                {"values": [t.value, t.count]} for t in
-                sorted(results, key=lambda ti: ti.value)
-            ], resize=False)
+            self.tree_tags.update_tree(
+                [{"values": [t.value, t.count]} for t in sorted(results, key=lambda ti: ti.value)], resize=False
+            )
             self.setStatus("Done")
 
         if len(results) > 200:
@@ -168,13 +144,6 @@ AND/OR opens search page for all images with the selected tags.
             _apply()
             self.winfo_toplevel().after(10, self.tree_tags.resize_cols)
             self.setStatus("Done")
-        # for t in
-        #     # self.tree_tags.insert('', tk.END, values=row)
-        #     self.tree_tags.insert_item({"values": row})
-        #     if self.abort_threads: return
-
-
-
 
     def openPageAnd(self, event=None):
         return self.openPage(OR=False)
@@ -183,10 +152,7 @@ AND/OR opens search page for all images with the selected tags.
         return self.openPage(OR=True)
 
     def openPage(self, OR=False):
-        selection: list[str] = [
-            d['name']
-            for d in self.tree_tags.getSelectionDicts()
-        ]
+        selection: list[str] = [d["name"] for d in self.tree_tags.getSelectionDicts()]
         self.setStatus(f"Gathered {len(selection)} tags")
 
         tag_domain = None
@@ -198,55 +164,42 @@ AND/OR opens search page for all images with the selected tags.
             query = [query]
 
         matching_ids = logic.client.search_files(
-            tags=query, # type: ignore
+            tags=query,  # type: ignore
             tag_service_key=tag_domain,
-            return_file_ids=True
-        )['file_ids']
+            return_file_ids=True,
+        )["file_ids"]
         self.logger.info(matching_ids)
         self.setStatus(f"Got {len(matching_ids)} from search")
 
         logic.client.add_popup("Tag Search", files_label=f"{selection!r}", file_ids=matching_ids)
 
     def addNamespace(self, OR=False):
-        selection: list[str] = [
-            d['name']
-            for d in self.tree_tags.getSelectionDicts()
-        ]
+        selection: list[str] = [d["name"] for d in self.tree_tags.getSelectionDicts()]
         self.setStatus(f"Gathered {len(selection)} tags")
 
         resp = simpledialog.askstring("Namespace?", "Namespace name")
         if not resp:
             return
 
-        resp = resp.replace(':', '').strip()
-        pairs = [
-            (tag, f"{resp}:{tag}")
-            for tag in selection
-        ]
+        resp = resp.replace(":", "").strip()
+        pairs = [(tag, f"{resp}:{tag}") for tag in selection]
 
-        clip_import = '\n'.join(
-            f"{source}\n{ideal}"
-            for (source, ideal) in pairs
-        )
+        clip_import = "\n".join(f"{source}\n{ideal}" for (source, ideal) in pairs)
 
         TextCopyWindow(clip_import)
 
     def deleteTags(self, OR=False):
-        selection: list[str] = [
-            d['name']
-            for d in self.tree_tags.getSelectionDicts()
-        ]
+        selection: list[str] = [d["name"] for d in self.tree_tags.getSelectionDicts()]
         self.setStatus(f"Gathered {len(selection)} tags")
 
-        explaination = '\n'.join(selection)
+        explaination = "\n".join(selection)
         user_confirmed = messagebox.askyesno(
             title="Confirm",
-            message=f"Are you sure you want to remove all instances of the following tags from all images?\n\n{explaination}"
+            message=f"Are you sure you want to remove all instances of the following tags from all images?\n\n{explaination}",
         )
         if user_confirmed:
             with self.lock():
                 for tag_name in selection:
                     logic.replace_tag(tag_name, [])
-            # self.enable()
 
             self.startTask(self.doSearch)

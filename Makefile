@@ -18,6 +18,7 @@ VPYTHON=venv/Scripts/python.exe
 SRC_ROOT=.
 MODULE_SRCS=$(wildcard ${SRC_ROOT}/*/*.py)
 SCRIPT_SRCS=$(wildcard ${SRC_ROOT}/*.py)
+HOOK_SRCS=$(wildcard ${SRC_ROOT}/hooks/*)
 # SCRIPT_SRCS=${SRC_ROOT}/gui.py
 
 TARGET_EXES=\
@@ -66,7 +67,7 @@ venv/pyvenv.cfg: requirements.txt
 .PHONY: exe
 exe: venv ${TARGET_EXES}
 
-dist/${project_name}-%.exe: ${SRC_ROOT}/%.py ${MODULE_SRCS}
+dist/${project_name}-%.exe: ${SRC_ROOT}/%.py ${MODULE_SRCS} ${SCRIPT_SRCS} ${HOOK_SRCS} Makefile
 	mkdir -p dist build
 # 	cp icon.png build/
 	${VPYTHON} -m PyInstaller \
@@ -74,6 +75,7 @@ dist/${project_name}-%.exe: ${SRC_ROOT}/%.py ${MODULE_SRCS}
 		--paths src \
 		--onefile \
 		--console \
+		--additional-hooks-dir=hooks \
 		--distpath dist \
 		--workpath build \
 		--specpath build \

@@ -13,7 +13,9 @@ class HTSettings(IniSettings):
     gui_last: int = -1
 
     flatten_presearch: str = "<Changeme>"
+    flatten_presearch_hist: str = ""
     flatten_search: str = ""
+    flatten_search_hist: str = ""
 
     img_autosave: bool = True
     img_dwim_savetags: bool = True

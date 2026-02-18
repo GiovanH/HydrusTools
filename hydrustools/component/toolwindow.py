@@ -1,5 +1,6 @@
 
 import logging
+import pprint
 import threading
 import tkinter as tk
 from collections import defaultdict
@@ -30,6 +31,8 @@ class ToolWindow(tk.Toplevel):
 
         self.bind("<F1>", lambda *a: self.showHelp())
 
+
+        self.locking_lock = threading.Lock()
         self._locked = 0
         self._lock_states = defaultdict(list)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -55,28 +58,39 @@ class ToolWindow(tk.Toplevel):
         )
 
     def enable(self):
+        # pprint.pprint(self._lock_states)
         for w in recursive_widgets(self, 'state'):
             if not w.widgetName.endswith('label'):
-                state = self._lock_states[w.winfo_name].pop()
+                state = self._lock_states[w.winfo_name()].pop()
                 w.configure(state=state) # type: ignore
+        # pprint.pprint(self._lock_states)
 
     def disable(self):
+        # pprint.pprint(self._lock_states)
         for w in recursive_widgets(self, 'state'):
             if not w.widgetName.endswith('label'):
-                self._lock_states[w.winfo_name].append(w['state'])
+                self._lock_states[w.winfo_name()].append(w['state'])
                 w.configure(state=tk.DISABLED) # type: ignore
         # self.logger.info(self._lock_states)
+        # pprint.pprint(self._lock_states)
 
     @contextmanager
     def lock(self) -> Generator[None, Any, None]:
-        self._locked += 1
-        self.disable()
+        with self.locking_lock:
+            self.logger.debug("Locking; %s += 1", self._locked)
+            self._locked += 1
+            if self._locked == 1:
+                self.logger.debug("Locked, disabling")
+                self.disable()
         try:
             yield
         finally:
-            self._locked -= 1
-            if self._locked == 0:
-                self.enable()
+            with self.locking_lock:
+                self.logger.debug("Unlocking; %s -= 1", self._locked)
+                self._locked -= 1
+                if self._locked == 0:
+                    self.logger.debug("Unlocked, enabling")
+                    self.enable()
 
     def startTask(self, callback, lock=True) -> None:
         def task():

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from functools import lru_cache
+from functools import lru_cache, partial
 from io import BytesIO
 import tkinter as tk
 from contextlib import contextmanager
@@ -19,19 +19,21 @@ class Increment():
         return self.value
 
 
-class CoordFrame(NamedTuple):
-    widget: tk.Widget
+T = TypeVar("T", bound=tk.Widget)
+
+class CoordFrame(NamedTuple, Generic[T]):
+    widget: T
     counter_x: Increment
     counter_y: Increment
 
 
 @contextmanager
-def tkwrap(w: tk.Widget) -> Generator[tk.Widget, Any, None]:
+def tkwrap(w: T) -> Generator[T, Any, None]:
     yield w
 
 
 @contextmanager
-def tkwrapc(w: tk.Widget) -> Generator[CoordFrame, Any, None]:
+def tkwrapc(w: T) -> Generator[CoordFrame[T], Any, None]:
     yield CoordFrame(w, Increment(), Increment())
 
 
@@ -42,6 +44,7 @@ def flatList(lst):
     """
     return [item for sublist in lst for item in sublist]
 
+grooveframe: partial[ttk.Frame] = partial(ttk.Frame, relief=tk.GROOVE, padding=4)
 
 V = TypeVar("V")
 

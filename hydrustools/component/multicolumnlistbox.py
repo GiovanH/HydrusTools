@@ -27,7 +27,7 @@ class TreeListItemDict(TypedDict, total=False):
 
 
 def xstr(s, nonestr=str(None)) -> str:
-    if s:
+    if s is not None:
         # Strip invalid characters.
         return "".join([c for c in str(s) if ord(c) in range(65536)])
     else:
@@ -57,7 +57,7 @@ class TreeviewSchema(Generic[T]):
     def to_tree_item(item: T) -> TreeListItemDict: pass
 
 
-class MultiColumnListbox(tk.Frame, Generic[T]):
+class MultiColumnListbox(ttk.Frame, Generic[T]):
     """use a ttk.TreeView as a multicolumn ListBox"""
 
     def __init__(
@@ -72,7 +72,7 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
         # *args,
         # **kwargs,
     ) -> None:
-        tk.Frame.__init__(self, parent) # , *args, **kwargs)
+        super().__init__(parent) # , *args, **kwargs)
 
         self.schema: type[TreeviewSchema[T]] = schema
         self.sortable: bool = sortable
@@ -151,7 +151,7 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
             columns=self.schema.columns,
             selectmode=tk.EXTENDED,
             show=show,
-            style=stylename,
+            style=stylename
         )
 
         if self.schema.imagesize:
@@ -193,6 +193,8 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
             if label is None:
                 self.logger.info("Not adding header for col %s, label is None: %s", col, label)
                 continue
+
+            self.tree.column(col, width=self.TkFont.measure(label))
             if self.sortable:
                 self.tree.heading(col, text=label, command=lambda c=col: self.sortby(self.tree, c, 0))
             else:
@@ -238,7 +240,7 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
             self.insert_item(item)
 
         if resize:
-            self.winfo_toplevel().after(10, self.resize_cols)
+            self.winfo_toplevel().after_idle(self.resize_cols)
 
     def resize_cols(self):
         self.logger.info("Resizing...")
@@ -246,7 +248,7 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
         for col in self.schema.displaycolumns:
             label = self.schema.headers.get(col)
             assert isinstance(label, str)
-            self.tree.column(col, width=self.TkFont.measure(label))
+            # self.tree.column(col, width=self.TkFont.measure(label))
 
         avgs = Counter(self.schema.displaycolumns)
 
@@ -263,8 +265,11 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
         if total_children == 0:
             return
 
+        # total_children *= 10
+
         for key, width in avgs.items():
-            self.tree.column(key, width=min(int(width//total_children), 480))
+            # self.logger.info(f"{key}, {width}, {total_children}, {width//total_children}")
+            self.tree.column(key, width=min(width//total_children, 200))
 
         self.logger.info("Resized")
 
@@ -281,7 +286,7 @@ class MultiColumnListbox(tk.Frame, Generic[T]):
             self.insert_item(item)
         self.tree.item(self.root_item, open=True)
         if resize:
-            self.winfo_toplevel().after(10, self.resize_cols)
+            self.winfo_toplevel().after_idle(self.resize_cols)
 
     def modSelection(self, selectionNos: list[int]) -> None:
         select_these_items: list[str] = [

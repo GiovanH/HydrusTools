@@ -1,13 +1,37 @@
+import dataclasses
 import re
 import tkinter as tk
+from collections import OrderedDict
+from dataclasses import dataclass
 from tkinter import messagebox, ttk
+from typing import ClassVar
 
 from .. import logic
-from ..component.gui_util import Increment, tkwrap, tkwrapc
-from ..component.multicolumnlistbox import MultiColumnListbox
+from ..component.gui_util import Increment, QueryHistory, RegexEntry, pb_iter, tkwrap, tkwrapc
+from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
 from ..logic import SiblingInfo, TagInfo
 from ..settings import Settings
+
+
+@dataclass
+class RelFlattenAction():
+    source_tag: str
+    ideal_tag: str
+    source_count: int
+
+class RelFlattenActionSchema(TreeviewSchema[RelFlattenAction]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('source_tag', 'Source Tag'),
+        ('ideal_tag', 'Ideal Tag'),
+        ('source_count', 'Count'),
+    ])
+
+    @staticmethod
+    def to_tree_item(item: RelFlattenAction) -> TreeListItemDict:
+        return {
+            "values": [*dataclasses.astuple(item)]
+        }
 
 
 class SiblingFlattenWin(ToolWindow):  # noqa: PLR0904
@@ -22,8 +46,6 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.table_headings = ["Source Tag", "Ideal", "Count"]
-
         self.textvar_presearch: tk.StringVar = Settings.boundTkVar(self, 'flatten_presearch')
         self.textvar_search: tk.StringVar = Settings.boundTkVar(self, 'flatten_search')
 
@@ -36,12 +58,10 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         self.title("Flatten Tags")
         self.geometry("970x570")
 
-        self.columnconfigure(0, weight=1)
-
-        counter_main_row = Increment()
+        # self.columnconfigure(0, weight=1)
 
         with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (frame_top, cx, _):
-            frame_top.grid(column=0, row=counter_main_row.inc(), sticky="ew", columnspan=2)
+            frame_top.pack(side=tk.TOP, fill=tk.X)
 
             cx.inc()
             frame_top.columnconfigure(cx.value, weight=1)
@@ -49,7 +69,11 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             tk.Label(frame_top, text="Presearch substring:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_presearch)
+            entry_search = QueryHistory(
+                frame_top, font=('Courier', 10),
+                textvariable=self.textvar_presearch,
+                hist_store=Settings.boundTkVar(self, 'flatten_presearch_hist')
+            )
             entry_search.grid(column=cx.value, row=1, sticky="ew")
 
             cx.inc()
@@ -58,7 +82,11 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             tk.Label(frame_top, text="Regex refinement:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            entry_search = ttk.Entry(frame_top, font=('Courier', 10), textvariable=self.textvar_search)
+            entry_search = RegexEntry(
+                frame_top,
+                textvariable=self.textvar_search,
+                hist_store=Settings.boundTkVar(self, 'flatten_search_hist')
+            )
             entry_search.grid(column=cx.value, row=1, sticky="ew")
             entry_search.bind("<Return>", self.startSearch)
 
@@ -69,34 +97,31 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             # frame_top.rowconfigure(index=counter_frame.inc(), weight=1)
 
         # Right
-        counter_main_row.inc()
-        self.tree_tags = MultiColumnListbox(self, headers=self.table_headings)
-
-        with tkwrap(self.tree_tags) as tree:
-            # assert isinstance(tree, ttk.Treeview)
-            tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
-            self.rowconfigure(counter_main_row.value, weight=1)
+        self.tree_tags = MultiColumnListbox(self, schema=RelFlattenActionSchema)
+        self.tree_tags.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as frame_bottom:
-            frame_bottom.grid(row=counter_main_row.inc(), column=0, columnspan=2, sticky="ew")
+            frame_bottom.pack(side=tk.BOTTOM, fill=tk.X)
 
-            ttk.Label(frame_bottom, textvariable=self.textvar_status).grid(column=0, row=0, sticky="nsew")
+            self.pb = ttk.Progressbar(frame_bottom, orient='vertical',
+                mode='determinate',
+                length=30
+            )
+            self.pb.pack(side=tk.LEFT, fill=tk.Y)
 
-            frame_bottom.columnconfigure(0, weight=1)
+            ttk.Label(frame_bottom, textvariable=self.textvar_status).pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-            btn_flatten = ttk.Button(frame_bottom, text="Flatten!", command=self.startFlatten, width=40)
-            btn_flatten.grid(column=1, row=0, sticky="nse")
+            btn_flatten = ttk.Button(frame_bottom, text="Flatten!", command=self.startTaskCurry(self.doFlatten), width=40)
+            btn_flatten.pack(side=tk.RIGHT, fill=tk.Y)
 
     def startSearch(self, event=None):
         self.startTask(self.doSearch)
 
-    def startFlatten(self, event=None):
-        with self.lock():
-            self.after(100, self.doFlatten)
-
     def doSearch(self, event=None):
         search_query: str = self.textvar_presearch.get() or "*"
         search_refinement: str = self.textvar_search.get()
+
+        self.pb['value'] = 25
         self.setStatus(f"Searching {search_query!r} for {search_refinement!r}")
 
         self.tree_tags.delete_all()
@@ -113,25 +138,29 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             for tag in results
         }
 
+        self.pb['value'] += 25
         targets: list[SiblingInfo] = logic.get_sibling_ideal_targets([ti.value for ti in results])
         targets = [t for t in targets if t.tag != t.ideal_tag]
 
+        self.pb['value'] += 25
         for si in sorted(targets, key=lambda si: si.tag):
-            row = [si.tag, si.ideal_tag, tag_count.get(si.tag)]
-            # self.tree_tags.insert('', tk.END, values=row)
-            self.tree_tags.insert_item({"values": row})
+            self.tree_tags.insert_item(
+                RelFlattenActionSchema.to_tree_item(
+                    RelFlattenAction(
+                si.tag, si.ideal_tag,
+                tag_count[si.tag]
+                    )
+                )
+            )
 
         self.winfo_toplevel().after(10, self.tree_tags.resize_cols)
 
+        self.pb['value'] = 0
         self.setStatus(f"Found {len(targets)} siblings")
 
     def doFlatten(self, event=None):
-        # selection = [
-        #     (row['Source Tag'], row['Ideal'])
-        #     for row in (self.tree_tags.set(child) for child in self.tree_tags.selection())
-        # ]
         selection: list[tuple[str, str]] = [
-            (d['Source Tag'], d['Ideal'])
+            (d['source_tag'], d['ideal_tag'])
             for d in self.tree_tags.getSelectionDicts()
         ]
 
@@ -147,7 +176,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         )
         if user_confirmed:
             with self.lock():
-                for row in selection:
+                for row in pb_iter(self.pb, selection):
                     source_tag, ideal_tag = row
                     logic.replace_tag(source_tag, [ideal_tag])
             # self.enable()

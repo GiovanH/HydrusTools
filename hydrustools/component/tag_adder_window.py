@@ -10,23 +10,15 @@ from typing import ClassVar
 from hydrustools import logic
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 
-from .gui_util import Increment, tkwrap
+from .gui_util import Increment, pb_iter, tkwrap
 from .multicolumnlistbox import TreeListItemDict, TreeviewSchema
 from .toolwindow import ToolWindow
-
-
 
 @dataclass
 class TagAction():
     file_id: int
     identifier: str
     new_tags: list[str]
-
-# HEAD_ID = "File ID"
-# HEAD_IDSTR = "Identifier"
-# HEAD_NEWTAGS = "New tags"
-
-# TODO: Use image_picker for images
 
 class TagActionSchema(TreeviewSchema[TagAction]):
     headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
@@ -98,15 +90,21 @@ class TagAdderFrame(ttk.Frame):
             with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as frame_bottom:
                 frame_bottom.grid(row=counter_main_row.inc(), column=0, columnspan=2, sticky="ew")
 
-                ttk.Label(frame_bottom, textvariable=self.toolmaster.textvar_status).grid(column=0, row=0, sticky="nsew")
+                self.pb = ttk.Progressbar(frame_bottom, orient='vertical',
+                    mode='determinate',
+                    length=30
+                )
+                self.pb.grid(column=0, row=0, sticky="ns")
 
-                frame_bottom.columnconfigure(0, weight=1)
+                ttk.Label(frame_bottom, textvariable=self.toolmaster.textvar_status).grid(column=1, row=0, sticky="nsew")
 
-                self.btn_open_sel(frame_bottom).grid(column=1, row=0, sticky="nse")
+                frame_bottom.columnconfigure(1, weight=1)
 
-                self.btn_apply_sel(frame_bottom).grid(column=2, row=0, sticky="nse")
+                self.btn_open_sel(frame_bottom).grid(column=2, row=0, sticky="nse")
 
-                self.btn_apply_all(frame_bottom).grid(column=3, row=0, sticky="nse")
+                self.btn_apply_sel(frame_bottom).grid(column=3, row=0, sticky="nse")
+
+                self.btn_apply_all(frame_bottom).grid(column=4, row=0, sticky="nse")
 
     def applySelected(self, event=None):
         # selection = [
@@ -132,13 +130,14 @@ class TagAdderFrame(ttk.Frame):
         self.applyActions(self.tag_actions)
 
     def applyActions(self, actions):
-        explaination = '\n'.join(f'{a}' for a in actions)
+
+        explaination = '\n'.join(f'{a}' for a in actions[:60])
         user_confirmed = messagebox.askyesno(
             title="Confirm",
             message=f"{explaination}\n\nAdd tags to files?"
         )
         if user_confirmed:
-            for ta in actions:
+            for ta in pb_iter(self.pb, actions):
                 logic.client.add_tags(
                     file_ids=[ta.file_id],
                     service_keys_to_tags={

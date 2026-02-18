@@ -140,6 +140,19 @@ class ListboxNavigator:
         self.listbox.selection_set(self.current_index)
         self.listbox.see(self.current_index)
 
+class TagList(tk.Listbox):
+    def __init__(self, *args, **kwargs) -> None:
+        kwargs['selectmode'] = tk.EXTENDED
+        super().__init__(*args, **kwargs)
+
+    def insert(self, index, *elements):
+        for value in elements:
+            super().insert(index, value)
+            self.itemconfig(tk.END,
+                foreground=logic.get_tag_color(value),
+            )
+
+
 class TagEditorList(ttk.Frame):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -166,7 +179,7 @@ class TagEditorList(ttk.Frame):
     def initwindow(self) -> None:
         with tkwrapc(self) as (frame, cx, cy):
             # tk.Label(frame, text="Merged tags").grid(column=0, row=cy.inc(), sticky="ew")
-            self.listbox_taglist = tk.Listbox(frame, selectmode=tk.EXTENDED)
+            self.listbox_taglist = TagList(frame)
             self.listbox_taglist.grid(column=0, row=cy.inc(), sticky="nsew")
             frame.rowconfigure(index=cy.value, weight=1)
             frame.columnconfigure(index=0, weight=1)
@@ -233,9 +246,6 @@ class TagEditorList(ttk.Frame):
         if new_tag not in self.tag_list:
             self.tag_list.append(new_tag)
             self.listbox_taglist.insert(tk.END, new_tag)
-            self.listbox_taglist.itemconfig(tk.END,
-                foreground=logic.get_tag_color(new_tag),
-            )
             self.modified = True
             self.event_generate("<<Modified>>")
 

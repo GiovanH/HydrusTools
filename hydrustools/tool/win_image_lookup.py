@@ -1,187 +1,430 @@
+from collections import OrderedDict
+from dataclasses import dataclass
 import pprint
 import tkinter as tk
 from tkinter import ttk
+from typing import ClassVar
 
 import hydrus_api
 
+from hydrustools.component.HydrusImageTable import HydrusImageTable
+from hydrustools.component.image_canvas import ContentCanvas
+from hydrustools.component.imagetool import ImageIconSchema, ImageTool
+from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
+from hydrustools.settings import Settings
+from hydrustools.lookup.registry import LookupPlugin, MetadataActions
+
 from .. import logic
-from ..logic import FileMetadata
+from ..logic import FileMetadata, TagInfo
 from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
-from hydrustools.component.tageditorlist import TagEditorList
+from hydrustools.component.tageditorlist import TagEditorList, TagList
 
 from ..component.gui_util import (
     Increment,
+    get_selection_neighbors,
+    mod_selection,
+    pb_iter,
+    tkwrap,
     tkwrapc,
+    grooveframe
 )
 from ..component.toolwindow import ToolWindow
-from ..settings import Settings
 
-DEBUG_FAST_PICK = True
+from .. import lookup
 
-def debug_get_selection():
-    resp = logic.client.search_files(
-        tags=["meta:sfw", "source:newgrounds"] # type: ignore
-    )
-    matching_files = resp['file_ids']
-    resp = logic.client.get_file_metadata(file_ids=matching_files, include_notes=True)
-    return resp['metadata']
+plugin_registry: dict[str, LookupPlugin] = None # type: ignore
 
-class ImageMetadataLookupWin(ToolWindow):  # noqa: PLR0904
+class ImageIconSchemaBig(ImageIconSchema):
+    imagesize = (180, 180)
+
+@dataclass()
+class MetadataActionViz:
+    file_id: int
+    source: str
+    property: str
+    value: str
+    context: str = ""
+
+class MetadataActionSchema(TreeviewSchema[MetadataActionViz]):
+    headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
+        ('file_id', None),
+        ('source', "Source"),
+        ('property', "Property"),
+        ('value', "Value"),
+        ('context', "Context"),
+    ])
+
+    @staticmethod
+    def to_tree_item(item: MetadataActionViz) -> TreeListItemDict:
+        return {
+            "values": [item.file_id, item.source, item.property, item.value, item.context]
+        }
+
+class ImageMetadataLookupWin(ImageTool):
     helpstr = """TODO"""
+    schema = ImageIconSchemaBig
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
-        self.current_image: None | FileMetadata = None
-        self.result: list[FileMetadata] | None = None
-        self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
+
+        global plugin_registry
+        plugin_registry = lookup.registry.get_plugins()
+
+        self.get_file_metadata_kwargs = {
+            "include_notes": True,
+            "detailed_url_information": True
+        }
+
+        self.plugin_enabled = {
+            name: tk.BooleanVar(self)
+            for name in plugin_registry.keys()
+        }
+        self.checkbuttons: dict[str, ttk.Checkbutton] = {}
+
+        self.tag_count_cache: dict[str, int] = {}
+        self.all_relationships: dict[str, logic.SiblingInfo]
+
+        self.listbox_taglist: TagList
+        self.action_table: MultiColumnListbox
+
+        self.pref_unknown_tags_to_dl = tk.BooleanVar(self, value=True)
+        self.pref_creator_tags_always_local = tk.BooleanVar(self, value=True)
+
+        self.var_urls = tk.StringVar(self)
+        self.var_id = tk.StringVar(self)
+        self.var_tags = tk.StringVar(self)
+
 
         self.initwindow()
+        self.bind_controls()
+
+        self.after_idle(self.pick_images)
+        self.after_idle(self.update_tag_cache)
 
         self.mainloop()
 
     def initwindow(self):
-        self.title("Image Metadata Lookup")
-        self.geometry("1040x590")
+        self.title("Image Search")
+        self.geometry("1200x675")
 
-        self.rowconfigure(0, weight=1)
-        # self.columnconfigure(0, weight=1)
+        def col_current(m):
+            w = grooveframe(m)
+            ttk.Label(
+                w,
+                text="Current Metadata",
+            ).pack(anchor='n', fill='x')
 
-        ccx = Increment()
+            ttk.Label(
+                w,
+                textvariable=self.var_id
+            ).pack(anchor='n', fill='x')
 
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
-            col.grid(column=ccx.inc(), row=0, sticky="ns")
+            ttk.Label(
+                w,
+                textvariable=self.var_urls
+            ).pack(anchor='n', fill='x')
 
-            self.image_list = ImageListFrame(self, width=200)
-            self.image_list.grid(column=cx.inc(), row=cy.inc(), in_=col)
-            col.rowconfigure(cy.value, weight=1)
+            self.listbox_taglist = TagList(w)
+            self.listbox_taglist.pack(anchor='n', fill=tk.BOTH, expand=True)
+            return w
 
-            self.image_list.table.tree.configure(
-                columns=[],
-                show="tree",
-                selectmode=tk.BROWSE
-            )
-            # self.image_list.table.bindSelectionAction("<Button-1>", self.on_image_selected)
-            self.image_list.table.bindSelectionActionUID("<Button-1>", self.on_image_selected)
+        def col_plugins(m):
+            w = grooveframe(m)
+            ttk.Label(
+                w,
+                text="Prefs",
+            ).pack(anchor='n', fill='x')
 
-            btn_open = ttk.Button(col, text="Pick Images", command=self.pick_images)
-            btn_open.grid(column=cx.value, row=cy.inc(), sticky="ew")
+            btn = ttk.Checkbutton(
+                w,
+                variable=self.pref_unknown_tags_to_dl,
+                text="Move unknown tags to DL, not local"
+            ).pack(anchor='n', fill='x')
+            btn = ttk.Checkbutton(
+                w,
+                variable=self.pref_creator_tags_always_local,
+                text="...except creator tags"
+            ).pack(anchor='n', fill='x')
 
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
-            col.grid(column=ccx.inc(), row=0, sticky="nsew")
-            self.columnconfigure(ccx.value, weight=1)
-
-            lab = ttk.Label(master=col, text="Metadata Services")
-            lab.grid(column=cx.inc(), row=cy.inc(), sticky="ew")
-
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=8)) as (col, cx, cy):
-            col.grid(column=ccx.inc(), row=0, sticky="nsew")
-            self.columnconfigure(ccx.value, weight=1)
-
-            col.columnconfigure(0, weight=1)
-
-            lab = ttk.Label(col, text="Hydrus Image", anchor='center')
-            lab.grid(column=0, row=cy.inc(), sticky="ew")
-
-            self.tag_editor_list = TagEditorList(col)
-            self.tag_editor_list.grid(column=0, row=cy.inc(), sticky="nsew")
-            col.rowconfigure(cy.value, weight=1)
-
-            btn_merge = ttk.Button(col, text="Save Tags", command=self.save_tag_list)
-            btn_merge.grid(column=0, row=cy.inc(), sticky="ew")
-
-        with tkwrapc(ttk.Frame(self)) as (col, cx, cy):
-            col.grid(column=ccx.inc(), row=0, sticky="nsew")
-            self.columnconfigure(ccx.value, weight=0)
-
-            with tkwrapc(ttk.Frame(col, relief=tk.GROOVE)) as (row, crx, cry):
-                row.grid(column=0, row=cy.inc(), sticky="nsew")
-                col.rowconfigure(cy.value, weight=1)
-                col.columnconfigure(0, weight=1)
-
-                lab = ttk.Label(row, text="Source URLs")
-                lab.grid(column=crx.inc(), row=cry.inc(), sticky="ew")
-
-                self.text_current_urls = tk.Text(row, width=60, font=('Courier', 9))
-                self.text_current_urls.grid(column=crx.value, row=cry.inc(), sticky="ew")
-
-            with tkwrapc(ttk.Frame(col, relief=tk.GROOVE)) as (row, crx, cry):
-                row.grid(column=0, row=cy.inc(), sticky="nsew")
-                col.rowconfigure(cy.value, weight=1)
-                col.columnconfigure(0, weight=1)
-
-                lab = ttk.Label(row, text="Notes")
-                lab.grid(column=crx.inc(), row=cry.inc(), sticky="ew")
-
-                self.text_current_notes = tk.Text(row, width=60, font=('Courier', 9))
-                self.text_current_notes.grid(column=crx.value, row=cry.inc(), sticky="ew")
+            ttk.Label(
+                w,
+                text="Plugins",
+            ).pack(anchor='n', fill='x')
 
 
-        with tkwrapc(ttk.Frame(self)) as (row, cx, cy):
-            row.grid(column=0, row=1, columnspan=ccx.inc(), sticky="ew")
+            for (id_, var) in self.plugin_enabled.items():
+                label = plugin_registry[id_].name
+                btn = ttk.Checkbutton(
+                    w,
+                    variable=var,
+                    text=label
+                )
+                self.checkbuttons[id_] = btn
+                btn.pack(anchor='n', fill='x')
 
-            self.pb = ttk.Progressbar(row, orient='vertical',
+            btn_refresh = ttk.Button(w, text="Lookup", command=self.startTaskCurry(self.doSearch))
+            btn_refresh.pack(anchor='s', fill='x')
+            return w
+
+        def col_suggestions(m):
+            w = grooveframe(m)
+            ttk.Label(
+                w,
+                text="Suggestions"
+            ).pack(anchor='n', fill='x')
+
+            self.action_table = MultiColumnListbox(w, schema=MetadataActionSchema)
+            self.action_table.pack(anchor='n', fill=tk.BOTH, expand=True)
+
+            with tkwrap(ttk.Frame(w)) as frame:
+                btn_selected = ttk.Button(frame, text="Apply selected", command=self.apply_selected, width=30)
+                btn_selected.pack(side=tk.RIGHT)
+                btn_all = ttk.Button(frame, text="Apply all", command=self.apply_all, width=30)
+                btn_all.pack(side=tk.RIGHT)
+
+                frame.pack(side=tk.BOTTOM, fill=tk.X)
+            return w
+
+        def row_status(m):
+            w = grooveframe(m)
+
+            self.pb = ttk.Progressbar(w, orient='vertical',
                 mode='determinate',
                 length=30
             )
-            self.pb.grid(column=cx.inc(), row=0, sticky="ns")
+            self.pb.pack(side=tk.LEFT, fill=tk.Y)
 
-            ttk.Label(row, textvariable=self.textvar_status).grid(column=cx.inc(), row=0, sticky="nsew")
-            row.columnconfigure(cx.value, weight=1)
+            ttk.Label(w, textvariable=self.textvar_status).pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            return w
 
-    def save_tag_list(self):
-        if not self.current_image:
-            self.logger.error("Can't set tags, no image selected")
-            return
-        logic.set_tag_list_of_images(
-            tag_list=self.tag_editor_list.tag_list,
-            tool=self,
-            metadata_list=[self.current_image]
-        )
-        self.refresh_image(self.current_image['file_id'])
 
-    def pick_images(self, event=None):
-        if DEBUG_FAST_PICK:
-            selection = debug_get_selection()
-        else:
-            instance = ImagePickerWindow()
-            self.wait_window(instance)
-            selection: None | list[FileMetadata] = instance.result
-        # selection = ImagePickerWindow.pick()
+        with tkwrap(ttk.PanedWindow(self, orient="horizontal")) as window:
+            window.pack(expand=True, fill=tk.BOTH)
 
-        if not selection:
-            self.setStatus("Selection canceled")
-            return
-        self.setStatus(f"Opened list of {len(selection)} images")
-        self.image_list.delete_all()
-        for meta in selection:
-            self.image_list.addItemFromMeta(meta)
-        self.image_list.load_thumbnails()
+            with tkwrapc(ttk.Frame(master=window)) as (left_frame, cx, cy):
+                # Fixed-width image frame
+                self.fac_image_list_frame(left_frame).grid(column=cx.inc(), row=0, sticky="ns")
 
-    def refresh_image(self, image_id):
-        new_metadata = logic.client.get_file_metadata(
-            file_ids=[image_id]
-        )['metadata'][0]
-        self.image_list.known_metadata[str(image_id)] = new_metadata
-        self.set_image(new_metadata)
+                left_frame.rowconfigure(index=0, weight=1)
+                # Stretchy editor columns
+                with tkwrap(ttk.PanedWindow(left_frame, orient="horizontal")) as frame:
+                    frame.add(col_current(frame), weight=1)
+                    frame.add(col_plugins(frame), weight=1)
 
-    def on_image_selected(self, image_id):
-        metadata = self.image_list.known_metadata[str(image_id)]
-        self.set_image(metadata)
+                    frame.grid(column=cx.inc(), row=0, sticky="nsew")
+                    left_frame.columnconfigure(index=cx.value, weight=1)
+
+                # Columnspan status bar
+                row_status(left_frame).grid(column=0, row=1, columnspan=cx.inc(), sticky="nsew")
+
+                window.add(left_frame, weight=2)
+
+            window.add(col_suggestions(window), weight=3)
+
+        self.image_list.resize_cols()
+
+
+
+    def bind_controls(self):
+        pass
 
     def set_image(self, metadata: logic.FileMetadata):
-        pprint.pprint(metadata)
-        self.current_image = metadata
+        refreshing = False
+        if self.current_image and metadata['file_id'] == self.current_image.get('file_id'):
+            refreshing = True
 
-        pprint.pprint(metadata)
+        super().set_image(metadata)
 
-        self.tag_editor_list.setTagList(metadata['tags'][logic.local_tags_service_key]['display_tags'].get(str(hydrus_api.TagStatus.CURRENT.value), []))
+        if not refreshing:
+            self.action_table.delete_all()
 
-        self.text_current_urls.configure(state=tk.NORMAL)
-        self.text_current_urls.delete("1.0", tk.END)
-        self.text_current_urls.insert(tk.END, '\n'.join(metadata['known_urls']))
-        self.text_current_urls.configure(state=tk.DISABLED)
+        assert self.current_image
 
-        self.text_current_notes.configure(state=tk.NORMAL)
-        self.text_current_notes.delete("1.0", tk.END)
-        self.text_current_notes.insert(tk.END, pprint.pformat(metadata['notes'], width=60))
-        self.text_current_notes.configure(state=tk.DISABLED)
+        tag_list = logic.local_tags(self.current_image)
+
+        self.var_id.set(str(self.current_image['file_id']))
+        self.var_urls.set('\n'.join(self.current_image['known_urls']))
+        # self.var_tags.set('\n'.join(tag_list))
+        self.listbox_taglist.delete(0, self.listbox_taglist.size())
+
+        for tag in logic.sort_tags(tag_list):
+            self.listbox_taglist.insert(tk.END, tag)
+
+        for (id_, var) in self.plugin_enabled.items():
+            if plugin_registry[id_].match(self.current_image):
+                var.set(True)
+            else:
+                var.set(False)
+
+        self.setStatus(f"Selected image {self.current_image['file_id']}")
+
+    def runPlugin(self, plugin_id):
+        assert self.current_image
+        plugin = plugin_registry[plugin_id]
+        actions = plugin.suggest(self.current_image, setStatus=self.setStatus)
+
+        if not actions:
+            return
+
+        self.addSuggestions(plugin, actions)
+
+    def update_tag_cache(self):
+        all_tags = logic.search_tags_re("*", subpattern=None)
+        all_tags_set = {ti.value for ti in all_tags}
+        self.tag_count_cache = {ti.value: ti.count for ti in all_tags}
+
+        sibling_resp = logic.get_sibling_ideal_targets([*all_tags_set])
+        self.all_relationships: dict[str, logic.SiblingInfo] = {
+            **{
+                s: si
+                for si in
+                sibling_resp
+                for s in si.siblings
+            }
+        }
+
+    def postprocessSuggestions(self, actions: MetadataActions) -> MetadataActions:
+
+        if actions.add_tags:
+
+            # self.update_tag_cache(actions.add_tags)
+
+            for tag_value in [*actions.add_tags]:
+                min_tag_count = 10
+
+                if self.pref_unknown_tags_to_dl.get():
+                    if tag_value.startswith("creator:") and self.pref_creator_tags_always_local.get():
+                        pass
+                    elif self.tag_count_cache.get(tag_value, 0) < min_tag_count:
+                        actions.add_tags.remove(tag_value)
+                        if not actions.add_downloader_tags:
+                            actions.add_downloader_tags = []
+                        actions.add_downloader_tags.append(tag_value)
+
+        return actions
+
+    def addSuggestions(self, plugin: LookupPlugin, actions: MetadataActions):
+        assert self.current_image
+
+        actions = self.postprocessSuggestions(actions)
+
+        for tag_value in actions.add_tags or []:
+            # TODO: Siblings
+            if tag_value in logic.local_tags(self.current_image):
+                continue
+
+            # TODO: Siblings
+            context = f"{self.tag_count_cache.get(tag_value, 0)}"
+
+            self.action_table.insert_item(MetadataActionSchema.to_tree_item(MetadataActionViz(
+                file_id=actions.file_id,
+                source=plugin.name,
+                property="Tag",
+                value=tag_value,
+                context=context
+            )))
+
+        for tag_value in actions.add_downloader_tags or []:
+            # TODO: Siblings
+            if tag_value in logic.local_tags(self.current_image):
+                continue
+
+            # TODO: Siblings
+            context = f"{self.tag_count_cache.get(tag_value, 0)}"
+
+            self.action_table.insert_item(MetadataActionSchema.to_tree_item(MetadataActionViz(
+                file_id=actions.file_id,
+                source=plugin.name,
+                property="Downloader Tag",
+                value=tag_value,
+                context=context
+            )))
+
+        for url in actions.add_urls or []:
+            if url in self.current_image['known_urls']:
+                continue
+
+            self.action_table.insert_item(MetadataActionSchema.to_tree_item(MetadataActionViz(
+                file_id=actions.file_id,
+                source=plugin.name,
+                property="URL",
+                value=url,
+                context=""
+            )))
+
+        if actions.add_notes:
+            self.setStatus("Not implemented: add_notes")
+
+    def doSearch(self, event=None):
+        if not self.current_image:
+            self.setStatus("Can't run lookup with no image selected")
+            return
+
+        self.action_table.delete_all()
+
+        for (id_, var) in pb_iter(self.pb, [*self.plugin_enabled.items()]):
+            if var.get():
+                self.runPlugin(id_)
+
+        self.after_idle(self.action_table.resize_cols)
+
+    def apply_selected(self):
+        self.apply_items(self.action_table.getSelectionDicts())
+        self.action_table.tree.delete(*self.action_table.tree.selection())
+
+    def apply_all(self):
+        self.apply_items(self.action_table.getAllDicts())
+        self.action_table.delete_all()
+
+    def apply_items(self, items: list[dict]):
+        assert self.current_image
+
+        file_id = self.current_image['file_id']
+
+        all_urls = []
+        all_tags = []
+        all_downloader_tags = []
+
+        for values in items:
+            if int(values['file_id']) != file_id:
+                raise ValueError("Sanity check failed: Tried to apply action %s to file %s" % (values, file_id))
+            if values['property'] == 'Tag':
+                all_tags.append(values['value'])
+            elif values['property'] == 'Downloader Tag':
+                all_tags.append(values['value'])
+            elif values['property'] == 'URL':
+                all_urls.append(values['value'])
+            else:
+                raise NotImplementedError(values['property'])
+
+        pprint.pprint([all_tags, all_urls])
+
+        acted = False
+
+        if len(all_downloader_tags) > 0:
+            self.setStatus(f"Adding {len(all_downloader_tags)} tags")
+            logic.client.add_tags(
+                file_ids=[file_id],
+                service_keys_to_tags={
+                    logic.downloader_tags_service_key: all_downloader_tags
+                }
+            )
+            acted = True
+
+        if len(all_tags) > 0:
+            self.setStatus(f"Adding {len(all_tags)} tags")
+            logic.client.add_tags(
+                file_ids=[file_id],
+                service_keys_to_tags={
+                    logic.local_tags_service_key: all_tags
+                }
+            )
+            acted = True
+
+        if len(all_urls) > 0:
+            self.setStatus(f"Adding {len(all_urls)} source urls")
+            logic.client.associate_url(file_ids=[file_id], urls_to_add=all_urls)
+            acted = True
+
+        if acted:
+            self.refresh_current()
