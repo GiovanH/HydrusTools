@@ -1,8 +1,11 @@
 from abc import abstractmethod
 from dataclasses import dataclass
+import logging
 from typing import Callable
 
 from hydrustools.logic import FileMetadata
+
+logger = logging.getLogger(__name__)
 
 @dataclass()
 class MetadataActions:
@@ -29,7 +32,6 @@ class LookupPlugin():
     def suggest(self, metadata: FileMetadata, setStatus: Callable[[str], None]) -> MetadataActions | None:
         pass
 
-
 _registry: dict[str, type[LookupPlugin]] = {}
 
 def register(cls: type[LookupPlugin]):
@@ -42,3 +44,52 @@ def get_plugins() -> dict[str, LookupPlugin]:
         plugin_id: plugin()
         for plugin_id, plugin in _registry.items()
     }
+
+def postprocessSuggestions(
+    actions: MetadataActions,
+
+    tag_namespace_whitelist: list[str] | None = None,
+
+    tag_count_cache: dict[str, int] = {},
+    unknown_tags_min_count: None | int = None,
+
+    creator_tags_always_local: bool = True,
+
+    no_downloader_tags: bool = False,
+    underscores_to_spaces: bool = False,
+) -> MetadataActions:
+
+    if actions.add_tags:
+        if underscores_to_spaces:
+            actions.add_tags = [
+                tag.replace('_', ' ')
+                for tag in actions.add_tags
+            ]
+
+        for tag_value in [*actions.add_tags]:
+
+            # If whitelist, remove tags not matching
+            if tag_namespace_whitelist:
+                if not any(tag_value.startswith(f"{prefix}:") for prefix in tag_namespace_whitelist):
+                    logger.debug("Removing %s, not in whitelist %s", tag_value, tag_namespace_whitelist)
+                    actions.add_tags.remove(tag_value)
+                    continue
+
+            # If there's a minimum count, move tags to dltags
+            if unknown_tags_min_count:
+                # ...unless creator tags are always local
+                if tag_value.startswith("creator:") and creator_tags_always_local:
+                    pass
+
+                elif tag_count_cache.get(tag_value, 0) < unknown_tags_min_count:
+                    actions.add_tags.remove(tag_value)
+                    if not actions.add_downloader_tags:
+                        actions.add_downloader_tags = []
+                    actions.add_downloader_tags.append(tag_value)
+
+    if actions.add_downloader_tags:
+        # Remove all downloader tags?
+        if no_downloader_tags:
+            actions.add_downloader_tags = []
+
+    return actions

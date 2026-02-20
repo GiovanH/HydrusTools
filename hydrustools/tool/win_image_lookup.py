@@ -12,7 +12,7 @@ from hydrustools.component.image_canvas import ContentCanvas
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from hydrustools.settings import Settings
-from hydrustools.lookup.registry import LookupPlugin, MetadataActions
+from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
 
 from .. import logic
 from ..logic import FileMetadata, TagInfo
@@ -76,7 +76,7 @@ class ImageMetadataLookupWin(ImageTool):
         }
 
         self.plugin_enabled = {
-            name: tk.BooleanVar(self)
+            name: tk.BooleanVar(self, value=True)
             for name in plugin_registry.keys()
         }
         self.checkbuttons: dict[str, ttk.Checkbutton] = {}
@@ -89,6 +89,8 @@ class ImageMetadataLookupWin(ImageTool):
 
         self.pref_unknown_tags_to_dl = tk.BooleanVar(self, value=True)
         self.pref_creator_tags_always_local = tk.BooleanVar(self, value=True)
+        self.pref_no_dltags = tk.BooleanVar(self, value=False)
+        self.pref_replace_underscores = tk.BooleanVar(self, value=True)
 
         self.var_urls = tk.StringVar(self)
         self.var_id = tk.StringVar(self)
@@ -137,13 +139,23 @@ class ImageMetadataLookupWin(ImageTool):
 
             btn = ttk.Checkbutton(
                 w,
+                variable=self.pref_creator_tags_always_local,
+                text="...except creator tags"
+            ).pack(anchor='n', fill='x')
+            btn = ttk.Checkbutton(
+                w,
                 variable=self.pref_unknown_tags_to_dl,
                 text="Move unknown tags to DL, not local"
             ).pack(anchor='n', fill='x')
             btn = ttk.Checkbutton(
                 w,
-                variable=self.pref_creator_tags_always_local,
-                text="...except creator tags"
+                variable=self.pref_no_dltags,
+                text="Ignore all downloader tags"
+            ).pack(anchor='n', fill='x')
+            btn = ttk.Checkbutton(
+                w,
+                variable=self.pref_replace_underscores,
+                text="Replace underscores with spaces"
             ).pack(anchor='n', fill='x')
 
             ttk.Label(
@@ -244,7 +256,7 @@ class ImageMetadataLookupWin(ImageTool):
 
         self.var_id.set(str(self.current_image['file_id']))
         self.var_urls.set('\n'.join(self.current_image['known_urls']))
-        # self.var_tags.set('\n'.join(tag_list))
+
         self.listbox_taglist.delete(0, self.listbox_taglist.size())
 
         for tag in logic.sort_tags(tag_list):
@@ -252,9 +264,9 @@ class ImageMetadataLookupWin(ImageTool):
 
         for (id_, var) in self.plugin_enabled.items():
             if plugin_registry[id_].match(self.current_image):
-                var.set(True)
+                self.checkbuttons[id_].config(state=tk.NORMAL)
             else:
-                var.set(False)
+                self.checkbuttons[id_].config(state=tk.DISABLED)
 
         self.setStatus(f"Selected image {self.current_image['file_id']}")
 
@@ -283,30 +295,33 @@ class ImageMetadataLookupWin(ImageTool):
             }
         }
 
-    def postprocessSuggestions(self, actions: MetadataActions) -> MetadataActions:
-
-        if actions.add_tags:
-
-            # self.update_tag_cache(actions.add_tags)
-
-            for tag_value in [*actions.add_tags]:
-                min_tag_count = 10
-
-                if self.pref_unknown_tags_to_dl.get():
-                    if tag_value.startswith("creator:") and self.pref_creator_tags_always_local.get():
-                        pass
-                    elif self.tag_count_cache.get(tag_value, 0) < min_tag_count:
-                        actions.add_tags.remove(tag_value)
-                        if not actions.add_downloader_tags:
-                            actions.add_downloader_tags = []
-                        actions.add_downloader_tags.append(tag_value)
-
-        return actions
-
     def addSuggestions(self, plugin: LookupPlugin, actions: MetadataActions):
         assert self.current_image
 
-        actions = self.postprocessSuggestions(actions)
+        min_tag_count = (10 if self.pref_unknown_tags_to_dl.get() else None)
+        actions = postprocessSuggestions(
+            actions,
+
+            unknown_tags_min_count=min_tag_count,
+            tag_count_cache=self.tag_count_cache,
+
+            no_downloader_tags=self.pref_no_dltags.get(),
+            underscores_to_spaces=self.pref_replace_underscores.get(),
+
+            creator_tags_always_local=self.pref_creator_tags_always_local.get()
+        )
+
+        for url in actions.add_urls or []:
+            if url in self.current_image['known_urls']:
+                continue
+
+            self.action_table.insert_item(MetadataActionSchema.to_tree_item(MetadataActionViz(
+                file_id=actions.file_id,
+                source=plugin.name,
+                property="URL",
+                value=url,
+                context=""
+            )))
 
         for tag_value in actions.add_tags or []:
             # TODO: Siblings
@@ -340,17 +355,6 @@ class ImageMetadataLookupWin(ImageTool):
                 context=context
             )))
 
-        for url in actions.add_urls or []:
-            if url in self.current_image['known_urls']:
-                continue
-
-            self.action_table.insert_item(MetadataActionSchema.to_tree_item(MetadataActionViz(
-                file_id=actions.file_id,
-                source=plugin.name,
-                property="URL",
-                value=url,
-                context=""
-            )))
 
         if actions.add_notes:
             self.setStatus("Not implemented: add_notes")

@@ -117,7 +117,7 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
         self.tree.bind(binding, cb)
 
     def setup_widgets(self, vscroll=True, hscroll=True) -> None:
-        container: tk.Frame = self
+        container: ttk.Frame = self
 
         # Create a treeview with dual scrollbars. Enable the tree column
         # ("#0") so images provided via the `image` insert argument are shown.

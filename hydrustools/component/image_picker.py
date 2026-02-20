@@ -37,7 +37,7 @@ class ImageFileSchema(TreeviewSchema[FileMetadata]):
 
     @staticmethod
     def to_tree_item(item: FileMetadata) -> TreeListItemDict:
-        taglist = item['tags'][logic.local_tags_service_key]['display_tags'].get('0', [])
+        taglist = logic.local_tags(item)
         return {
             "id": item['file_id'],
             "values": [
