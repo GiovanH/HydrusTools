@@ -10,6 +10,8 @@ from PIL import Image, ImageTk
 import requests
 import win32clipboard
 
+from hydrustools.settings import Settings
+
 class Increment():
     def __init__(self):
         self.value = -1
@@ -133,30 +135,18 @@ class NSVar(tk.StringVar):
 
 
 class QueryHistory(ttk.Combobox):
-    def __init__(self, master, hist_store: tk.StringVar | None = None, history_length=10, *args, **kwargs):
+    def __init__(self, master, hist_store: str | None = None, history_length=10, *args, **kwargs):
         kwargs['width'] = 0
         super().__init__(master, *args, **kwargs)
 
         self.history_length = history_length
 
         if hist_store:
-            self.hist_var: tk.StringVar = hist_store
-            self.hist_list: list[str] = self.parse_hist(self.hist_var.get())
+            self.hist_var: str = hist_store
+            self.hist_list: list[str] = Settings.__getattribute__(self.hist_var)
             self.populate_history()
         else:
             print("No history store!", self)
-
-    #     self.bind("<<ComboboxSelected>>", self.reset)
-
-    # def reset(self, event=None):
-    #     self.event_generate("<<HistorySelected>>")
-    #     self.after_idle(lambda *a: self.set(''))
-
-    def parse_hist(self, hist_str: str) -> list[str]:
-        return hist_str.split("|")
-
-    def serialize_hist(self, hist: list[str]):
-        return "|".join(hist)
 
     def populate_history(self):
         self.config(values=self.hist_list)
@@ -165,7 +155,7 @@ class QueryHistory(ttk.Combobox):
         if item in self.hist_list:
             self.hist_list.remove(item)
         self.hist_list = [*self.hist_list[-self.history_length:], item]
-        self.hist_var.set(self.serialize_hist(self.hist_list))
+        Settings.__setattr__(self.hist_var, self.hist_list)
         self.populate_history()
 
 

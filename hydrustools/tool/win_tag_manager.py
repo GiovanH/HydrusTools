@@ -68,7 +68,7 @@ AND/OR opens search page for all images with the selected tags.
                 frame_top,
                 font=("Courier", 10),
                 textvariable=self.textvar_presearch,
-                hist_store=self.textvar_presearch_hist,
+                hist_store='tagsearch_presearch_hl',
             )
             self.entry_presearch.grid(column=cx.value, row=1, sticky="ew")
             self.entry_presearch.bind("<Return>", self.startTaskCurry(self.doSearch))
@@ -79,7 +79,7 @@ AND/OR opens search page for all images with the selected tags.
             tk.Label(frame_top, text="Regex refinement:").grid(column=cx.value, row=0, sticky="w")
 
             self.entry_filter = RegexEntry(
-                frame_top, font=("Courier", 10), textvariable=self.textvar_search, hist_store=self.textvar_search_hist
+                frame_top, font=("Courier", 10), textvariable=self.textvar_search, hist_store='tagsearch_search_hl'
             )
             self.entry_filter.grid(column=cx.value, row=1, sticky="ew")
             self.entry_filter.bind("<Return>", self.startTaskCurry(self.doSearch))

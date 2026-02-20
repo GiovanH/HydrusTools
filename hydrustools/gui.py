@@ -44,6 +44,7 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
     ],
     "Metadata Lookup": [
         # ("Image Lookup", None),
+        ("Image Metadata Lookup", ImageMetadataLookupWin),
         ("Extract Creator Tags from Notes", ExtractCreatorFromNotesWin),
         ("Import Downloader Tags In Local Repo", None),
         ("Extract Tags from Note Regex", None),
@@ -55,7 +56,6 @@ MENU: dict[str, list[tuple[str, Callable | None]]] = {
     "Unsorted and WIP": [
         # ("Tag Editor", None),
         ("Relationship Tree Browser", TagRelationshipsTreeWin),
-        ("Image Metadata Lookup Test", ImageMetadataLookupWin),
         ("Mail Rules", None),
         ("Synchronize Alternate Meta (WIP)", AlternatesSyncWin),
         # ("Extract known creators from filename note", macro_creatortags.find_creators),
@@ -135,7 +135,6 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
 
 
 def main():
-
     try:
         logic.init_client()
     except hydrus_api.ConnectionError as e:

@@ -116,7 +116,6 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
 
         self.result: list[FileMetadata] | None = None
         self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
-        self.textvar_query_hist: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query_hist')
 
         self.initwindow()
 
@@ -138,7 +137,7 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             tk.Label(frame_top, text="Query:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_search = SearchQueryEntry(frame_top, textvariable=self.textvar_query, hist_store=self.textvar_query_hist)
+            self.entry_search = SearchQueryEntry(frame_top, textvariable=self.textvar_query, hist_store='imagesearch_query_hl')
             self.entry_search.grid(column=cx.value, row=1, sticky="ew")
             self.entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, False))
 

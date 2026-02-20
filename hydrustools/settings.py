@@ -12,6 +12,8 @@ class HTSettings(IniSettings):
 
     gui_last: int = -1
 
+    gui_test_list: list[str] = []
+
     flatten_presearch: str = "<Changeme>"
     flatten_presearch_hist: str = ""
     flatten_search: str = ""
@@ -25,8 +27,8 @@ class HTSettings(IniSettings):
 
     tagsearch_presearch: str = "<Changeme>"
     tagsearch_search: str = ""
-    tagsearch_presearch_hist: str = ""
-    tagsearch_search_hist: str = ""
+    tagsearch_presearch_hl: list[str] = []
+    tagsearch_search_hl: list[str] = []
     tagsearch_localonly: bool = True
 
     note_prequery: str = ""
@@ -40,12 +42,12 @@ class HTSettings(IniSettings):
     findimplicitparent_factor: int = 2
 
     extractcreatornote_search: str = ""
-    extractcreatornote_search_hist: str = ""
+    extractcreatornote_search_hl: list[str] = []
     extractcreatornote_notename: str = "filename"
     extractcreatornote_min_count: int = 2
 
     imagesearch_query: str = ""
-    imagesearch_query_hist: str = ""
+    imagesearch_query_hl: list[str] = []
 
     def boundTkVar(self, master, name, constructor: Type[V] = tk.StringVar) -> V:
         var: V = constructor(master)

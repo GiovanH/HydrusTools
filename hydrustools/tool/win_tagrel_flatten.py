@@ -72,7 +72,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             entry_search = QueryHistory(
                 frame_top, font=('Courier', 10),
                 textvariable=self.textvar_presearch,
-                hist_store=Settings.boundTkVar(self, 'flatten_presearch_hist')
+                hist_store='flatten_presearch_hl'
             )
             entry_search.grid(column=cx.value, row=1, sticky="ew")
 
@@ -85,7 +85,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             entry_search = RegexEntry(
                 frame_top,
                 textvariable=self.textvar_search,
-                hist_store=Settings.boundTkVar(self, 'flatten_search_hist')
+                hist_store='flatten_search_hl'
             )
             entry_search.grid(column=cx.value, row=1, sticky="ew")
             entry_search.bind("<Return>", self.startSearch)

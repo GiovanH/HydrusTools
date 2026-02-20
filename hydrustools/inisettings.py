@@ -1,6 +1,7 @@
 import configparser
+import json
 from pathlib import Path
-from typing import Any, get_type_hints
+from typing import Any, get_type_hints, get_origin
 
 
 class IniSettings:
@@ -20,7 +21,10 @@ class IniSettings:
     _ini_file: Path
     _config: configparser.ConfigParser
     _section: str = "DEFAULT"
+    _list_delimiter: str = "|"
     _initialized: bool = False
+
+    _schema: dict[str, Any]
 
     def __init__(self, ini_file: Path | None = None, section: str = "DEFAULT"):
         """Initialize settings from an INI file.
@@ -34,6 +38,7 @@ class IniSettings:
         object.__setattr__(self, "_section", section)
         object.__setattr__(self, "_config", configparser.ConfigParser())
         object.__setattr__(self, "_initialized", False)
+        object.__setattr__(self, "_schema", self._get_schema())
 
         # Load existing INI file if it exists
         if self._ini_file.exists():
@@ -43,14 +48,14 @@ class IniSettings:
         if not self._config.has_section(self._section) and self._section != "DEFAULT":
             self._config.add_section(self._section)
 
-        object.__setattr__(self, "_initialized", True)
-
         # Initialize with defaults for any missing values
         self._init_defaults()
 
+        object.__setattr__(self, "_initialized", True)
+
     def _init_defaults(self):
         """Initialize settings with default values if not present in INI."""
-        schema = self._get_schema()
+        schema = self._schema
         changed = False
 
         for attr, default_value in schema.items():
@@ -71,9 +76,9 @@ class IniSettings:
                 continue
 
             # Get class attributes that have defaults
-            for attr, value in cls.__dict__.items():
-                if not attr.startswith("_") and not callable(value):
-                    schema[attr] = value
+            for attr, default in cls.__dict__.items():
+                if not attr.startswith("_") and not callable(default):
+                    schema[attr] = default
 
         return schema
 
@@ -81,7 +86,9 @@ class IniSettings:
         """Convert a Python value to a string for INI storage."""
         if isinstance(value, bool):
             return str(value)
-        return str(value)
+        if isinstance(value, str):
+            return str(value)
+        return json.dumps(value)
 
     def _deserialize(self, attr: str, value: str) -> Any:
         """Convert an INI string value to the appropriate Python type."""
@@ -96,8 +103,7 @@ class IniSettings:
         if expected_type in (int, float, str):
             return expected_type(value)
 
-        # Default to string
-        return value
+        return json.loads(value)
 
     def _save(self) -> None:
         """Save the current configuration to the INI file."""
@@ -112,8 +118,7 @@ class IniSettings:
             return object.__getattribute__(self, name)
 
         # Check if this is part of the schema
-        schema = self._get_schema()
-        if name not in schema:
+        if name not in self._schema:
             return object.__getattribute__(self, name)
 
         # Load from INI
@@ -126,7 +131,7 @@ class IniSettings:
             return deserialize(name, raw_value)
 
         # Return default if not in INI
-        return schema[name]
+        return self._schema[name]
 
     def __setattr__(self, name: str, value: Any):
         """Intercept attribute writes to save to INI file."""
@@ -136,8 +141,7 @@ class IniSettings:
             return
 
         # Check if this is part of the schema
-        schema = self._get_schema()
-        if name not in schema:
+        if name not in self._schema:
             object.__setattr__(self, name, value)
             return
 

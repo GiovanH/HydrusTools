@@ -40,7 +40,7 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
         super().__init__(*args_, **kwargs)
 
         self.var_search: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_search')
-        self.var_search_hist: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_search_hist')
+        # self.var_search_hist: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_search_hist')
         self.var_notename: tk.StringVar = Settings.boundTkVar(self, 'extractcreatornote_notename')
         self.var_min_count: tk.IntVar = Settings.boundTkVar(self, 'extractcreatornote_min_count', tk.IntVar)
 
@@ -71,7 +71,7 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
             tk.Label(frame, text="Image filter:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_search = SearchQueryEntry(frame, textvariable=self.var_search, hist_store=self.var_search_hist)
+            self.entry_search = SearchQueryEntry(frame, textvariable=self.var_search, hist_store='extractcreatornote_search_hl')
             self.entry_search.grid(column=cx.value, row=1, sticky="ew")
             frame.columnconfigure(index=cx.value, weight=1)
             self.entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
