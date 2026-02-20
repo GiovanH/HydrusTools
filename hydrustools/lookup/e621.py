@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @memory.cache
 def lookup_e621(e621_url):
-    time.sleep(1)
+    # time.sleep(1)
     response = requests.get(
         f"{e621_url}.json?login={Settings.e621_user}&api_key={Settings.e621_api_key}",
         headers={

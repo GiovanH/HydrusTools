@@ -9,6 +9,7 @@ from tkinter import messagebox
 from typing import Any, Callable, Generator, Iterable
 
 from hydrustools import htlogging
+from hydrustools.util import timer
 
 from ..settings import Settings
 
@@ -94,11 +95,12 @@ class ToolWindow(tk.Toplevel):
 
     def startTask(self, callback, lock=True) -> None:
         def task():
-            if lock:
-                with self.lock():
+            with timer(repr(callback), self.logger.info):
+                if lock:
+                    with self.lock():
+                        callback()
+                else:
                     callback()
-            else:
-                callback()
 
         taskthread = threading.Thread(target=task, daemon=True)
         taskthread.start()

@@ -1,33 +1,16 @@
 import concurrent.futures
 import functools
 import tkinter as tk
-from contextlib import contextmanager
 from PIL import Image, ImageDraw, ImageFile, ImageTk
 import logging
 
 from hydrustools import htlogging, logic
+from hydrustools.util import timer
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 logger = logging.getLogger(__name__)
-
-@contextmanager
-def timer(label="task"):
-    """Times a code block and prints time taken to screen
-
-    Args:
-        label (str, optional): Description of task
-    """
-    import time
-    start_time = time.time()
-
-    try:
-        yield None
-    finally:
-        time_taken = time.time() - start_time
-        if time_taken > 1:
-            logger.info(f"Processed {label} in {time_taken} secs")
 
 
 @functools.cache

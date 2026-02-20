@@ -63,10 +63,13 @@ class HydrusImageTable(MultiColumnListbox):
             self.logger.debug("Can't add thumbnail when schema has no imagesize")
             return
 
-
         thumb = logic.get_thumb_scaled(file_id, *self.schema.imagesize)
         tkimg = ImageTk.PhotoImage(image=thumb, master=self)
         self.image_cache.append(tkimg)
 
         self.logger.debug(f"Applying image {tkimg} to tkid {tkid}")
-        self.after('idle', lambda: self.tree.item(tkid, image=tkimg))
+
+        def commititem(tkid=tkid, tkimg=tkimg):
+            if not self.toolmaster.abort_threads:
+                self.tree.item(tkid, image=tkimg)
+        self.after('idle', commititem)

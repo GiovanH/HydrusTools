@@ -74,7 +74,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
         if Settings.gui_last != -1:
             try:
                 command = self.command_list[Settings.gui_last]
-                self.logger.info(f"{command}, {Settings.gui_last} {self.command_list[Settings.gui_last]=}")
+                # self.logger.info(f"{command}, {Settings.gui_last} {self.command_list[Settings.gui_last]=}")
                 if command and hasattr(command, "showHelp"):
                     self.iconify()
                     command()
@@ -110,7 +110,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
 
                     def _launch(label=label, command=command):
                         if command and hasattr(command, "showHelp"):
-                            self.logger.info(f"Setting last as {label}, {command}")
+                            # self.logger.info(f"Setting last as {label}, {command}")
                             Settings.gui_last = self.command_list.index(command)
                             command()
                         if command:

@@ -13,6 +13,7 @@ from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from hydrustools.settings import Settings
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
+from hydrustools.util import timer
 
 from .. import logic
 from ..logic import FileMetadata, TagInfo
@@ -96,12 +97,11 @@ class ImageMetadataLookupWin(ImageTool):
         self.var_id = tk.StringVar(self)
         self.var_tags = tk.StringVar(self)
 
-
         self.initwindow()
         self.bind_controls()
 
         self.after_idle(self.pick_images)
-        self.after_idle(self.update_tag_cache)
+        self.startTask(self.update_tag_cache, lock=False)
 
         self.mainloop()
 
@@ -269,6 +269,8 @@ class ImageMetadataLookupWin(ImageTool):
                 self.checkbuttons[id_].config(state=tk.DISABLED)
 
         self.setStatus(f"Selected image {self.current_image['file_id']}")
+
+        self.startTask(self.doSearch)
 
     def runPlugin(self, plugin_id):
         assert self.current_image

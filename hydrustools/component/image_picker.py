@@ -64,7 +64,6 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 
         self.image_cache = []
 
-        self.logger.info("Init widget")
         self.init_widget()
 
     def init_widget(self) -> None:
