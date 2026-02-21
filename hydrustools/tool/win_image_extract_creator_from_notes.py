@@ -47,15 +47,11 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
         self.abort_threads = False
 
         self.initwindow()
-        self.bind("<Escape>", self.abort)
         self.bind("<Delete>", self.frame_ta.deleteSelected)
 
 
         self.startTask(self.doSearch, lock=False)
         self.mainloop()
-
-    def abort(self, event=None):
-        self.abort_threads = True
 
     def initwindow(self) -> None:
         self.title("Extract Creator from Notes")

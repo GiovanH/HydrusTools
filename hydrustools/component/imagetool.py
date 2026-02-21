@@ -133,21 +133,22 @@ class ImageTool(ToolWindow):
         if not self.current_image:
             self.setStatus("No current image")
             return
-        self.fetch_metadata_and_open(self.current_image['file_id'])
+        image_id = self.current_image['file_id']
+        self.logger.info(f"Refreshing metadata for {image_id}")
+        self.fetch_metadata_for_image(image_id)
         self.setStatus("Refreshed metadata from server")
+        self.set_image(self.known_metadata[image_id])
 
     def set_image(self, metadata: logic.FileMetadata):
         self.current_image = metadata
 
-    def fetch_metadata_and_open(self, image_id):
-        self.logger.info(f"Refreshing metadata for {image_id}")
+    def fetch_metadata_for_image(self, image_id):
         new_metadata = logic.client.get_file_metadata(
             file_ids=[image_id],
             include_notes=True
         )['metadata'][0]
         # pprint.pprint(new_metadata)
         self.known_metadata[image_id] = new_metadata
-        self.set_image(new_metadata)
 
     def on_image_selected(self, event: tk.Event):
         widget: ttk.Treeview = event.widget # type: ignore

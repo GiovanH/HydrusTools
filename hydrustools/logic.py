@@ -237,7 +237,7 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
     tool.logger.info(f"Checking differences: {[m['tags'] for m in metadata_list]=}")
 
     all_tags = set(flatList([
-        meta['tags'][local_tags_service_key]['display_tags'].get(str(hydrus_api.TagStatus.CURRENT.value), [])
+        local_tags(meta)
         for meta in metadata_list
     ]))
 

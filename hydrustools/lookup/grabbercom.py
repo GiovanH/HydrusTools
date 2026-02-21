@@ -55,7 +55,10 @@ def query_booru(source, url):
         logger.error(stdout)
         logger.error(stderr)
         raise
-    return json.loads(stdout)
+    result = json.loads(stdout)
+    if result.get('id') == '0':
+        raise ValueError(result)
+    return result
 
 def try_get_sites():
     localappdata = os.environ.get("LOCALAPPDATA")
@@ -68,6 +71,7 @@ def try_get_sites():
             for line in fp.read().split('\n'):
                 if line and line.strip() not in {"e621.net",}:
                     yield line.strip()
+
 
 if not Settings.grabber_sites:
     Settings.grabber_sites = [*set(try_get_sites())]
@@ -92,12 +96,12 @@ class grabberComPlugin(registry.LookupPlugin):
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
         for url in [eu for eu in metadata['known_urls'] if self.matchurl(eu)]:
-            setStatus("Looking up post %s" % url)
+            logger.info("%s Looking up post %s", self.__class__.__name__, url)
             source = urllib.parse.urlparse(url).netloc
             source = Settings.grabber_aliases.get(source, source)
             lookup = query_booru(source, url)
 
-            pprint.pprint(lookup)
+            # pprint.pprint(lookup)
 
             tags = []
             tags += [f'character:{c}' for c in lookup.get('character', [])]
@@ -112,6 +116,9 @@ class grabberComPlugin(registry.LookupPlugin):
             sources = lookup.get('sources', [])
             if lookup.get('url_page'):
                 sources.append(lookup.get('url_page'))
+
+            if len(tags) == 0:
+                pprint.pprint(lookup)
 
             return registry.MetadataActions(
                 file_id=metadata['file_id'],

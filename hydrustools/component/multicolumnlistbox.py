@@ -243,7 +243,7 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
             self.winfo_toplevel().after_idle(self.resize_cols)
 
     def resize_cols(self):
-        self.logger.info("Resizing...")
+        self.logger.debug("Resizing...")
 
         for col in self.schema.displaycolumns:
             label = self.schema.headers.get(col)
@@ -271,7 +271,7 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
             # self.logger.info(f"{key}, {width}, {total_children}, {width//total_children}")
             self.tree.column(key, width=min(width//total_children, 200))
 
-        self.logger.info("Resized")
+        self.logger.debug("Resized")
 
 
     def update_tree(self, itemlist: list[TreeListItemDict], resize=True) -> None:

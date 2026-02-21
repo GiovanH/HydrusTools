@@ -32,11 +32,15 @@ class ToolWindow(tk.Toplevel):
 
         self.bind("<F1>", lambda *a: self.showHelp())
 
+        self.bind("<Escape>", self.abort)
 
         self.locking_lock = threading.Lock()
         self._locked = 0
         self._lock_states = defaultdict(list)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def abort(self, event=None):
+        self.abort_threads = True
 
     def on_closing(self):
         Settings.gui_last = -1

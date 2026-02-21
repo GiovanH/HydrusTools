@@ -14,6 +14,7 @@ class MetadataActions:
     add_downloader_tags: None | list[str] = None
     add_urls: None | list[str] = None
     add_notes: None | list[dict[str, str]] = None
+    info_only: None | list[str] = None
 
 
 class LookupPlugin():
@@ -50,8 +51,9 @@ def postprocessSuggestions(
 
     tag_namespace_whitelist: list[str] | None = None,
 
+    tags_min_count_local: None | int = None,
+    tags_min_count_download: None | int = None,
     tag_count_cache: dict[str, int] = {},
-    unknown_tags_min_count: None | int = None,
 
     creator_tags_always_local: bool = True,
 
@@ -76,12 +78,12 @@ def postprocessSuggestions(
                     continue
 
             # If there's a minimum count, move tags to dltags
-            if unknown_tags_min_count:
+            if tags_min_count_local:
                 # ...unless creator tags are always local
                 if tag_value.startswith("creator:") and creator_tags_always_local:
                     pass
 
-                elif tag_count_cache.get(tag_value, 0) < unknown_tags_min_count:
+                elif tag_count_cache.get(tag_value, 0) < tags_min_count_local:
                     actions.add_tags.remove(tag_value)
                     if not actions.add_downloader_tags:
                         actions.add_downloader_tags = []
@@ -91,5 +93,14 @@ def postprocessSuggestions(
         # Remove all downloader tags?
         if no_downloader_tags:
             actions.add_downloader_tags = []
+
+        for tag_value in [*actions.add_downloader_tags]:
+            # If there's a minimum count, move tags to dltags
+            if tags_min_count_download:
+                if tag_count_cache.get(tag_value, 0) < tags_min_count_download:
+                    actions.add_downloader_tags.remove(tag_value)
+                    if not actions.info_only:
+                        actions.info_only = []
+                    actions.info_only.append(tag_value)
 
     return actions

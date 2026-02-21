@@ -15,9 +15,9 @@ class HTSettings(IniSettings):
     gui_test_list: list[str] = []
 
     flatten_presearch: str = "<Changeme>"
-    flatten_presearch_hist: str = ""
+    flatten_presearch_hl: list[str] = []
     flatten_search: str = ""
-    flatten_search_hist: str = ""
+    flatten_search_hl: list[str] = []
 
     img_autosave: bool = True
     img_dwim_savetags: bool = True
