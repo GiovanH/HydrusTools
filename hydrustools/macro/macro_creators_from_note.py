@@ -13,12 +13,6 @@ from ..component.tag_adder_window import TagAction, TagAdderWindow
 logger = logging.getLogger(__name__)
 
 
-def has_note(notename: str, max_n: int = 4) -> list[str]:
-    return [
-        *[f'system:has note with name "{notename}"'],
-        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
-    ]
-
 def all_creator_names(min_count=2):
     creator_tags = logic.client.search_tags(
         search="creator:*",
@@ -62,7 +56,7 @@ def find_creators(tk=True):
 
     tag_query: list[str | list[str]] = [] # type: ignore
 
-    tag_query.append(has_note(notename))
+    tag_query.append(logic.has_note(notename))
     tag_query.append("-creator:*")
 
     file_ids_with_note = logic.client.search_files(

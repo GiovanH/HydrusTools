@@ -1,6 +1,6 @@
+import logging
 from abc import abstractmethod
 from dataclasses import dataclass
-import logging
 from typing import Callable
 
 from hydrustools.logic import FileMetadata

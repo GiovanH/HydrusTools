@@ -86,6 +86,7 @@ class TagEditorList(ttk.Frame):
             frame.columnconfigure(index=0, weight=1)
 
             self.listbox_taglist.bind('<Delete>', self.removeSelectedTags)
+            self.listbox_taglist.bind('<Double-Button-1>', self.removeSelectedTags)
 
             vsb = ttk.Scrollbar(frame, orient="vertical", command=self.listbox_taglist.yview)
             vsb.grid(column=1, row=cy.value, sticky='ns')

@@ -4,6 +4,12 @@ import tkinter as tk
 from PIL import Image, ImageDraw, ImageFile, ImageTk
 import logging
 
+from collections import UserDict, OrderedDict
+from typing import Mapping, TypeVar, Generic
+
+K = TypeVar('K')
+V = TypeVar('V')
+
 from hydrustools import htlogging, logic
 from hydrustools.util import timer
 
@@ -11,7 +17,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 logger = logging.getLogger(__name__)
-
 
 @functools.cache
 def render_image(file_id: int, width: int, height: int, max_width: int, max_height: int) -> ImageFile.ImageFile:
@@ -27,7 +32,26 @@ def render_image(file_id: int, width: int, height: int, max_width: int, max_heig
                 max_height=max_height
             )
 
+class LRUDict(UserDict[K, V], Generic[K, V]):
+    def __init__(self, max_items: int):
+        super().__init__()
+        self.max_items = max_items
+        self.data: OrderedDict[K, V] = OrderedDict() # type: ignore
 
+    def __getitem__(self, key: K) -> V:
+        value = self.data.pop(key)
+        self.data[key] = value  # Move to end (most recently used)
+        return value
+
+    def __setitem__(self, key: K, value: V) -> None:
+        if key in self.data:
+            self.data.pop(key)
+        elif len(self.data) >= self.max_items:
+            self.data.popitem(last=False)  # Remove least recently used
+        self.data[key] = value
+
+    def __delitem__(self, key: K) -> None:
+        self.data.pop(key)
 
 class ContentCanvas(tk.Canvas):
     def __init__(self, *args, **kwargs):
@@ -38,7 +62,7 @@ class ContentCanvas(tk.Canvas):
         self.current_photoimg: ImageTk.PhotoImage | None = None
         self.current_meta: logic.FileMetadata | None = None
 
-        self.photoimage_cache: dict[tuple, ImageTk.PhotoImage] = {}
+        self.photoimage_cache: UserDict[tuple, ImageTk.PhotoImage] = LRUDict(30)
 
         self.initwindow()
 

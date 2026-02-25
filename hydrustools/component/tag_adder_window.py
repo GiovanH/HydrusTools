@@ -47,6 +47,7 @@ class TagAdderFrame(ttk.Frame):
 
         # self.logger.info(pprint.pformat(tag_actions))
         self.tag_actions: list[TagAction] = []
+        self.pb: None | ttk.Progressbar = None
 
         self.initwindow(pack_buttons=pack_buttons)
 
@@ -137,7 +138,7 @@ class TagAdderFrame(ttk.Frame):
             message=f"{explaination}\n\nAdd tags to files?"
         )
         if user_confirmed:
-            for ta in pb_iter(self.pb, actions):
+            for ta in pb_iter(self.pb or self.toolmaster.pb or {}, actions):
                 logic.client.add_tags(
                     file_ids=[ta.file_id],
                     service_keys_to_tags={

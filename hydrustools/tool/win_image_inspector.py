@@ -1,6 +1,6 @@
-from collections import OrderedDict
 import pprint
 import tkinter as tk
+from collections import OrderedDict
 from tkinter import ttk
 from typing import ClassVar
 
@@ -8,25 +8,25 @@ import hydrus_api
 
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.image_canvas import ContentCanvas
+from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
+from hydrustools.component.tageditorlist import TagEditorList
 from hydrustools.settings import Settings
 
 from .. import logic
-from ..logic import FileMetadata
-from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
-from hydrustools.component.tageditorlist import TagEditorList
-
 from ..component.gui_util import (
     Increment,
     get_selection_neighbors,
+    grooveframe,
     mod_selection,
     pb_iter,
     tkwrap,
     tkwrapc,
-    grooveframe
 )
 from ..component.toolwindow import ToolWindow
+from ..logic import FileMetadata
+
 
 class ImageInspectorWin(ImageTool):
     helpstr = """TODO"""
@@ -180,7 +180,7 @@ class ImageInspectorWin(ImageTool):
                 metadata_list=[self.current_image]
             )
             self.setStatus("Saved tag changes")
-            self.fetch_metadata_and_open(self.current_image['file_id'])
+            self.refresh_current()
         except TypeError as e:
             self.logger.exception(f"Couldn't apply tag list: {self.tag_editor_list.tag_list=}, {self.tag_editor_list.modified}")
             raise e

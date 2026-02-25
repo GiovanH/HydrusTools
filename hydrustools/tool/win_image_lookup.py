@@ -1,38 +1,35 @@
-from collections import OrderedDict
-from dataclasses import dataclass
 import pprint
 import tkinter as tk
-from tkinter import ttk
 import traceback
+from collections import OrderedDict
+from dataclasses import dataclass
+from tkinter import ttk
 from typing import ClassVar
 
 import hydrus_api
 
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.image_canvas import ContentCanvas
+from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
-from hydrustools.settings import Settings
+from hydrustools.component.tageditorlist import TagEditorList, TagList
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
+from hydrustools.settings import Settings
 from hydrustools.util import timer
 
-from .. import logic
-from ..logic import FileMetadata, TagInfo
-from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
-from hydrustools.component.tageditorlist import TagEditorList, TagList
-
+from .. import logic, lookup
 from ..component.gui_util import (
     Increment,
     get_selection_neighbors,
+    grooveframe,
     mod_selection,
     pb_iter,
     tkwrap,
     tkwrapc,
-    grooveframe
 )
 from ..component.toolwindow import ToolWindow
-
-from .. import lookup
+from ..logic import FileMetadata, TagInfo
 
 plugin_registry: dict[str, LookupPlugin] = None # type: ignore
 

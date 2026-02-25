@@ -12,12 +12,6 @@ from .. import logic
 from ..settings import Settings
 
 
-def has_note(notename: str, max_n: int = 4) -> list[str]:
-    return [
-        *[f'system:has note with name "{notename}"'],
-        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
-    ]
-
 def all_creator_names(min_count=2):
     creator_tags = logic.client.search_tags(
         search="creator:*",
@@ -142,13 +136,13 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
         creator_names = all_creator_names(min_count=min_count)
         creator_patterns: list[tuple[str, re.Pattern]] = self.all_creator_patterns(creator_names)
 
-        notename = "filename"
+        notename = self.var_notename.get()
 
         tag_query: list[str | list[str]] = self.entry_search.get_query()
 
         self.entry_search.add_history(self.var_search.get())
 
-        tag_query.append(has_note(notename))
+        tag_query.append(logic.has_note(notename))
         tag_query.append("-creator:*")
 
         self.frame_ta.delete_all()

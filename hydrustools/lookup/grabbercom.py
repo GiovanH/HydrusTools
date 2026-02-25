@@ -35,7 +35,7 @@ Settings = GrabberComSettings(Path("lookup/grabber.ini"))
 logger = logging.getLogger(__name__)
 
 @memory.cache
-def query_booru(source, url):
+def query_booru_url(source, url):
     cwd = Path(Settings.grabber_dir)
     cmd = [
         cwd.joinpath("./grabber.com"),
@@ -57,7 +57,9 @@ def query_booru(source, url):
         raise
     result = json.loads(stdout)
     if result.get('id') == '0':
-        raise ValueError(result)
+        logger.error(result)
+        logger.error(stderr)
+        raise ValueError(f"Grabber returned no valid ID from search {url}")
     return result
 
 def try_get_sites():
@@ -95,15 +97,20 @@ class grabberComPlugin(registry.LookupPlugin):
         )
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
-        for url in [eu for eu in metadata['known_urls'] if self.matchurl(eu)]:
+        all_sources: list[str] = metadata['known_urls']
+
+        tags = []
+
+        for url in [eu for eu in all_sources if self.matchurl(eu)]:
+            if url.startswith("https://rule34.paheal.net"):
+                logger.info("%s Host %s known to not return metadata", self.__class__.__name__, url)
+                continue
+
             logger.info("%s Looking up post %s", self.__class__.__name__, url)
             source = urllib.parse.urlparse(url).netloc
             source = Settings.grabber_aliases.get(source, source)
-            lookup = query_booru(source, url)
+            lookup = query_booru_url(source, url)
 
-            # pprint.pprint(lookup)
-
-            tags = []
             tags += [f'character:{c}' for c in lookup.get('character', [])]
             tags += [f'creator:{c}' for c in lookup.get('artist', [])]
             tags += [f'series:{c}' for c in lookup.get('copyright', [])]
@@ -113,15 +120,17 @@ class grabberComPlugin(registry.LookupPlugin):
                     *lookup.get('meta', []),
                 ]
             ]
-            sources = lookup.get('sources', [])
+            new_sources = lookup.get('sources', [])
             if lookup.get('url_page'):
-                sources.append(lookup.get('url_page'))
+                new_sources.append(lookup.get('url_page'))
+
+            all_sources += new_sources
 
             if len(tags) == 0:
                 pprint.pprint(lookup)
 
-            return registry.MetadataActions(
-                file_id=metadata['file_id'],
-                add_tags=tags,
-                add_urls=sources
-            )
+        return registry.MetadataActions(
+            file_id=metadata['file_id'],
+            add_tags=tags,
+            add_urls=all_sources
+        )
