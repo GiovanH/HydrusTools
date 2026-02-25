@@ -458,6 +458,7 @@ class ImageMetadataLookupWin(ImageTool):
 
         for (id_, var) in pb_iter(self.pb, [*self.plugin_enabled.items()]):
             if var.get():
+                self.setStatus(f"Running {id_}")
                 self.runPlugin(id_)
 
         self.after_idle(self.action_table.resize_cols)

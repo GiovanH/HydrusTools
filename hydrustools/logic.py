@@ -43,6 +43,7 @@ class FileMetadata(TypedDict, total=False):
     is_inbox: Required[bool]
     is_local: Required[bool]
     is_trashed: Required[bool]
+    hash: Required[str]
 
 
 

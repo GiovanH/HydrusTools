@@ -56,6 +56,7 @@ def postprocessSuggestions(
     tag_count_cache: dict[str, int] = {},
 
     creator_tags_always_local: bool = True,
+    character_tags_always_local: bool = True,
 
     no_downloader_tags: bool = False,
     underscores_to_spaces: bool = False,
@@ -81,6 +82,8 @@ def postprocessSuggestions(
             if tags_min_count_local:
                 # ...unless creator tags are always local
                 if tag_value.startswith("creator:") and creator_tags_always_local:
+                    pass
+                if tag_value.startswith("character:") and character_tags_always_local:
                     pass
 
                 elif tag_count_cache.get(tag_value, 0) < tags_min_count_local:

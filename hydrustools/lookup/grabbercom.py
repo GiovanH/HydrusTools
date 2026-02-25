@@ -1,14 +1,15 @@
+import glob
 import json
 import logging
+import os
 import pprint
 import re
 import subprocess
 import time
+import urllib.parse
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-import os
-import glob
 
 import requests
 from joblib import memory
@@ -18,7 +19,6 @@ from hydrustools.logic import FileMetadata
 
 from .. import logic
 from . import registry
-import urllib.parse
 
 memory = memory.Memory("cache")
 
@@ -33,6 +33,41 @@ Settings = GrabberComSettings(Path("lookup/grabber.ini"))
 
 
 logger = logging.getLogger(__name__)
+
+@memory.cache
+def query_booru_md5(source, md5_hash) -> None | dict:
+    cwd = Path(Settings.grabber_dir)
+    cmd = [
+        cwd.joinpath("./grabber.com"),
+        "-s", source,
+        "--tags", f"md5:{md5_hash}",
+        '--json', '--return-images', '--max', '1'
+    ]
+    stdout = None
+    stderr = None
+    try:
+        proc: subprocess.CompletedProcess = subprocess.run(cmd, cwd=cwd, capture_output=True)
+        stdout = proc.stdout
+        stderr = proc.stderr
+        proc.check_returncode()
+    except:
+        logger.error(cmd)
+        logger.error(stdout)
+        logger.error(stderr)
+        raise
+    result = json.loads(stdout)
+    if len(result) == 0:
+        # raise ValueError("Matched no images")
+        return None
+    if len(result) > 1:
+        raise ValueError("Matched multiple images")
+    result = result[0]
+    # if result.get('id') == '0':
+    #     logger.error(result)
+    #     logger.error(stderr)
+    #     raise ValueError(f"Grabber returned no valid ID from search {md5_hash}")
+    return result
+
 
 @memory.cache
 def query_booru_url(source, url):
@@ -56,10 +91,10 @@ def query_booru_url(source, url):
         logger.error(stderr)
         raise
     result = json.loads(stdout)
-    if result.get('id') == '0':
-        logger.error(result)
-        logger.error(stderr)
-        raise ValueError(f"Grabber returned no valid ID from search {url}")
+    # if result.get('id') == '0':
+    #     logger.error(result)
+    #     logger.error(stderr)
+    #     raise ValueError(f"Grabber returned no valid ID from search {url}")
     return result
 
 def try_get_sites():
@@ -79,10 +114,58 @@ if not Settings.grabber_sites:
     Settings.grabber_sites = [*set(try_get_sites())]
     print(Settings.grabber_sites)
 
+@registry.register
+class grabberComMd5Plugin(registry.LookupPlugin):
+    name = "Grabber by hash"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def match(self, metadata: FileMetadata) -> bool:
+        return True
+
+    def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
+        all_sources: list[str] = [*metadata['known_urls']]
+
+        md5_hash = logic.client.get_file_hashes(
+            hashes=[metadata['hash']],
+            desired_hash_type='md5',
+        )['hashes'][metadata['hash']]
+
+        if md5_hash:
+            for source in [
+                'rule34.paheal.net',
+                # "gelbooru.com",
+                "hypnohub.net",
+                "e621.net",
+                "rule34.xxx",
+                "rule34.us"
+            ]:
+                # if source not in Settings.grabber_sites:
+                #     continue
+                try:
+                    match = query_booru_md5(source, md5_hash)
+                    if not match:
+                        logger.info("%s has no results", source)
+                        continue
+                    # pprint.pprint(match)
+                    page = match.get('url_page')
+                    if page and page not in all_sources:
+                        setStatus(f"Adding new URL {page} to image")
+                        all_sources.append(page)
+                except Exception:
+                    logger.exception(source)
+                    continue
+
+        return registry.MetadataActions(
+            file_id=metadata['file_id'],
+            # add_tags=tags,
+            add_urls=list(set(all_sources))
+        )
 
 @registry.register
 class grabberComPlugin(registry.LookupPlugin):
-    name = "Grabber"
+    name = "Grabber by source"
 
     def __init__(self) -> None:
         super().__init__()
@@ -97,9 +180,11 @@ class grabberComPlugin(registry.LookupPlugin):
         )
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
-        all_sources: list[str] = metadata['known_urls']
+        all_sources: list[str] = [*metadata['known_urls']]
 
         tags = []
+
+        # pprint.pprint(metadata)
 
         for url in [eu for eu in all_sources if self.matchurl(eu)]:
             if url.startswith("https://rule34.paheal.net"):
@@ -126,11 +211,11 @@ class grabberComPlugin(registry.LookupPlugin):
 
             all_sources += new_sources
 
-            if len(tags) == 0:
-                pprint.pprint(lookup)
+            # if len(tags) == 0:
+            #     pprint.pprint(lookup)
 
         return registry.MetadataActions(
             file_id=metadata['file_id'],
             add_tags=tags,
-            add_urls=all_sources
+            add_urls=list(set(all_sources))
         )
