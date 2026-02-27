@@ -39,9 +39,9 @@ AND/OR opens search page for all images with the selected tags.
         super().__init__(*args_, **kwargs)
 
         self.textvar_presearch: tk.StringVar = Settings.boundTkVar(self, "tagsearch_presearch")
-        self.textvar_presearch_hist: tk.StringVar = Settings.boundTkVar(self, "tagsearch_presearch_hist")
+        # self.textvar_presearch_hist: tk.StringVar = Settings.boundTkVar(self, "tagsearch_presearch_hist")
         self.textvar_search: tk.StringVar = Settings.boundTkVar(self, "tagsearch_search")
-        self.textvar_search_hist: tk.StringVar = Settings.boundTkVar(self, "tagsearch_search_hist")
+        # self.textvar_search_hist: tk.StringVar = Settings.boundTkVar(self, "tagsearch_search_hist")
 
         self.boolvar_localonly = Settings.boundTkVar(self, "tagsearch_localonly", tk.BooleanVar)
 

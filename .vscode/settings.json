@@ -1,0 +1,11 @@
+{
+    "python.testing.unittestEnabled": true,
+    "python.testing.unittestArgs": [
+        "-v",
+        "-t", ".",      // Project root: This adds the root to sys.path
+        "-s",
+        "tests",
+        "-p",
+        "test*.py"
+    ]
+}

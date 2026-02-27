@@ -38,13 +38,14 @@ check: venv lint test
 .PHONY: lint
 lint: venv
 # 	-${VPYTHON} -m mypy ${SRC_ROOT}/${module_name}
-	-(cd ${module_name} && ../${VPYTHON} -m mypy *.py)
+	-(${VPYTHON} -m mypy *.py)
 	-vulture ${SRC_ROOT}/*.py
 
 .PHONY: test
 test: venv
 	${VPYTHON} -m doctest ${SRC_ROOT}/*.py
-	(cd ${module_name} && ../${VPYTHON} -c "import ${module_name}; import doctest; doctest.testmod(${module_name})")
+	${VPYTHON} -c "import ${module_name}; import doctest; doctest.testmod(${module_name})"
+	${VPYTHON} -m unittest
 
 .PHONY: clean
 clean:
@@ -61,7 +62,7 @@ venv/pyvenv.cfg: requirements.txt
 	${VPYTHON} -m pip install -r requirements.txt
 	${VPYTHON} -m pip install pyinstaller vulture mypy
 	-${VPYTHON} -m mypy --install-types --non-interactive
-	-(cd ${module_name} && ../${VPYTHON} -m mypy --install-types)
+	-(${VPYTHON} -m mypy --install-types)
 
 # Build
 .PHONY: exe

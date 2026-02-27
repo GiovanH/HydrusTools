@@ -6,6 +6,5 @@ pick
 numpy
 opencv-python
 pywin32
-# PyTaskbarProgress
 tqdm
 frozendict

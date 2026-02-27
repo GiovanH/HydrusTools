@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from collections.abc import Sequence
 import dataclasses
 import functools
 import pprint
@@ -134,7 +135,7 @@ def replace_tag(original_tag: str, new_tags: list[str]) -> None:
 def local_tags(metadata: FileMetadata, type_='display_tags') -> list[str]:
     return metadata['tags'][local_tags_service_key][type_].get(str(hydrus_api.TagStatus.CURRENT.value), [])
 
-def get_sibling_ideal_targets(target_tags: list[str]) -> list[SiblingInfo]:
+def get_sibling_ideal_targets(target_tags: Sequence[str]) -> list[SiblingInfo]:
     resp = client.get_siblings_and_parents(target_tags)
     # pprint.pprint(resp)
     tags: dict[str, dict[str, str]] = resp["tags"]

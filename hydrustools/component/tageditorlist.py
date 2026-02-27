@@ -1,10 +1,12 @@
 import logging
+import pprint
 import threading
 import tkinter as tk
+from collections.abc import Sequence
 from tkinter import TclError, ttk
-from typing import Sequence
 
 from hydrustools import logic
+from hydrustools.component import fuzzysearch
 from hydrustools.component.fuzzysearch import MatchResults, getMatches
 
 from .gui_util import tkwrapc
@@ -63,6 +65,9 @@ class TagEditorList(ttk.Frame):
         self.modified = False
 
         self.all_tags: Sequence[str] = []
+        self.tag_context: tuple[str, ...] = ()
+        self.tag_synonyms: dict[str, str] = {}
+
         self.last_query = ""
         self.last_tag: str | None = None
 
@@ -73,6 +78,8 @@ class TagEditorList(ttk.Frame):
         self.suggestion_nav = ListboxNavigator(self.listbox_suggestion)
 
         self.bind_controls()
+
+        self.pb: ttk.Progressbar | dict = {"value": 0}
 
         threading.Thread(target=self.load_suggestions, daemon=True).start()
 
@@ -142,6 +149,7 @@ class TagEditorList(ttk.Frame):
             self.addTag(tag)
             # self.listbox_taglist.insert(tk.END, tag)
 
+        self.load_context_suggestions()
         self.validate()
 
     def addTag(self, new_tag: str):
@@ -193,8 +201,12 @@ class TagEditorList(ttk.Frame):
         except TclError:
             selected_suggestion = False
         if selected_suggestion:
-            self.addTag(selected_suggestion)
-            self.last_tag = selected_suggestion
+            if selected_suggestion.startswith("-"):
+                # Delete command
+                self.removeTag(selected_suggestion[1:])
+            else:
+                self.addTag(selected_suggestion)
+                self.last_tag = selected_suggestion
             widget.delete(0, tk.END)
             self.validate()
             return
@@ -210,9 +222,42 @@ class TagEditorList(ttk.Frame):
         self.event_generate("<<DWIM>>")
 
     def load_suggestions(self, event=None):
-        # print("Loading suggestions...")
-        self.all_tags = tuple(t.value for t in logic.search_tags_re('*', subpattern=None, display_type='display'))
+        self.logger.info("Loading global suggestions...")
+
+        self.pb['value'] = 25
+        all_tags = tuple(t.value for t in logic.search_tags_re('*', subpattern=None, display_type='display'))
+
+        self.pb['value'] = 50
+        self.tag_synonyms = {
+            sib: si.ideal_tag
+            for si in logic.get_sibling_ideal_targets(all_tags)
+            for sib in si.siblings
+        }
+
+        self.all_tags = tuple(logic.flatList([
+            all_tags,
+            self.tag_synonyms.keys()
+        ]))
+
+        self.load_context_suggestions()
+
+        # self.all_tags = tuple(logic.flatList([all_tags, self.tag_synonyms.keys()]))
         # pprint.pprint(self.all_tags)
+
+    def load_context_suggestions(self, event=None):
+        self.logger.info("Loading context suggestions for %s", self.tag_list)
+
+        self.pb['value'] = 20
+        self.sib_info = logic.get_sibling_ideal_targets(self.tag_list)
+
+        self.pb['value'] = 90
+        self.tag_context = tuple(logic.flatList(
+            [*si.descendants]
+            for si in self.sib_info
+        ))
+
+        self.pb['value'] = 0
+        self.logger.info("Found %s tags in context", len(self.tag_synonyms))
 
     def show_suggestions(self, event=None):
         if len(self.all_tags) < 1:
@@ -227,13 +272,31 @@ class TagEditorList(ttk.Frame):
         if len(query) < 2:
             return
 
-        matches: MatchResults = getMatches(query, self.all_tags, fuzzy=True)
+        delete_commands = tuple(f"-{t}" for t in self.tag_list)
 
-        for tag in matches.all:
+        # TODO: This can build on previous results recursively
+        matches = fuzzysearch.perfect_search(
+            self.all_tags,
+            query,
+            context=self.tag_context,
+            extra_entries=delete_commands,
+            limit=20
+        )
+        # match_values = pfuzzer_search(self.all_tags, query)
+
+        # pprint.pprint(matches)
+
+        suggestions = []
+        for tag in matches:
+            tag = self.tag_synonyms.get(tag, tag)
+            if tag in suggestions:
+                # Deduplicate synonyms
+                continue
             self.listbox_suggestion.insert(tk.END, tag)
             self.listbox_suggestion.itemconfig(tk.END,
                 foreground=logic.get_tag_color(tag),
             )
+            suggestions.append(tag)
 
         self.last_query = query
 

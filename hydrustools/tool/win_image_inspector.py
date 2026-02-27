@@ -145,6 +145,7 @@ class ImageInspectorWin(ImageTool):
         entry.bind("<Control-d>", self.toggle_delete)
 
         self.tag_editor_list.bind("<<DWIM>>", self.entry_dwim)
+        self.tag_editor_list.pb = self.pb
 
         entry.focus()
 

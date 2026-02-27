@@ -1,12 +1,160 @@
 
+from collections import namedtuple
 from dataclasses import dataclass
 import functools
 import itertools
+import logging
+import pprint
 import re
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Hashable, Optional, Sequence
 
 # TODO: Better fuzzy searching
 # TODO: Use - in entry to remove tags
+
+"""
+Goals:
+
+- Segmented search. "j e" matches "john egbert"
+- Namespace support.
+    - "c:e" matches "character:egbert" and "creator:engles"
+    - "e" also matches "character:egbert"
+- Caching. Many searches are going to be run on the same collection
+- Context: Artifically increase the score for known relevant list items
+- Synonyms
+
+Don't need anymore:
+
+- Ambiguity checking: listbox already highlights a single element
+"""
+
+logger = logging.getLogger(__name__)
+
+# logger.setLevel(logging.DEBUG)
+
+@functools.lru_cache()
+def split_to_segments(q: str, query_split) -> tuple[str, ...]:
+    # logger.info(re.split(query_split, q))
+    return tuple(
+        s for s in
+        re.split(query_split, q)
+        if s
+    )
+
+
+@functools.lru_cache()
+def compare_segments(qseg, hseg, check_in=False) -> int:
+    if hseg.startswith(qseg):
+        return 10
+    if check_in and qseg in hseg:
+        return 1
+    return -1
+
+
+@functools.lru_cache()
+def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...]) -> int:
+    score = 0
+
+    qix = 0
+    hix = 0
+
+    while qix < len(query_segments) and hix < len(hay_segments):
+        qseg = query_segments[qix]
+        hseg = hay_segments[hix]
+
+        scoredelta = compare_segments(qseg, hseg)
+        logger.debug("  %s <> %s: %s", qseg, hseg, scoredelta)
+
+        if scoredelta == -1:
+            hix += 1
+            continue
+        else:
+            logger.debug("  score %s += %s (delta)", score, scoredelta)
+            score += scoredelta
+
+            logger.debug("  score %s -= %s", score, hix)
+            score -= hix
+
+            qix += 1
+            hix += 1
+            continue
+    if qix < len(query_segments):
+        # Didn't consume query
+        return 0
+
+    return score
+
+
+
+@functools.lru_cache()
+def perfect_search(
+    collection: tuple[str, ...],
+    query: str,
+    query_split: re.Pattern = re.compile(r'([\\ /_:()-])'),
+    extra_entries: tuple[str, ...] = (),
+    context: tuple[str, ...] = (),
+    always_context: bool = False,
+    limit: int | None = None
+) -> Sequence[str]:
+    # Each segment in the search must match a segment in the result, in some order
+    results: list[tuple[int, str]] = []
+
+    logger.info(extra_entries)
+    logger.info(context)
+
+    # Filter out
+    query_segments: tuple[str, ...] = split_to_segments(query, query_split)
+
+    visited = set()
+    for hay in itertools.chain(extra_entries, context, collection):
+        if limit and len(results) > limit:
+            break
+
+        if hay in visited:
+            # Don't duplicate context, even though prioritized
+            continue
+
+        visited.add(hay)
+
+        # if hay in context or hay in extra_entries:
+        #     logger.setLevel(logging.DEBUG)
+        # else:
+        #     logger.setLevel(logging.INFO)
+
+        logger.debug("%s <> %s", query, hay)
+        score = 0
+
+        if always_context and hay in context:
+            logger.debug("  score %s += %s", score, 10)
+            score += 10
+
+        hay_segments: tuple[str, ...] = split_to_segments(hay, query_split)
+
+        if query == hay:
+            score += 100
+        else:
+            score += score_segments(query_segments, hay_segments)
+
+        logger.debug("  %s", score)
+        if score == 0:
+            continue
+
+        if (not always_context) and (hay in context):
+            logger.debug("  score %s += %s (context)", score, 10)
+            score += 10
+
+        logger.debug("  %s", score)
+
+        results.append((score, hay))
+
+    results.sort(reverse=True)
+
+    # logger.debug(query)
+    # logger.debug(pprint.pformat(results))
+
+    return [val for score, val in results]
+    # matches = getMatches(query, collection)
+    # return matches.all
+
 
 @dataclass
 class MatchResults:
@@ -38,27 +186,6 @@ def _segmentMatches(collection: Sequence[str], query_split=r'[\\ /_:()-]'):
 
 @functools.lru_cache()
 def getMatches(query, collection: Sequence[str], query_split=r'[\\ /_:(-]', fuzzy=False, max_matches=64) -> MatchResults:
-    """
-    >>> getMatches("dav ja", collection)
-    MatchResults(all=[], resolved=None, unique=False)
-    >>> getMatches("ri j", collection, fuzzy=True)
-    MatchResults(all=['vris john'], resolved='vris john', unique=True)
-    >>> getMatches("jo", collection)
-    MatchResults(all=['john', 'john rose'], resolved='john', unique=False)
-
-    >>> getMatches("john", collection).resolved
-    'john'
-    >>> getMatches("john", collection).all
-    ['john', 'john rose']
-
-    >>> getMatches("-john", collection).resolved
-    'vris john'
-    >>> getMatches("-rose", collection).resolved
-    'john rose'
-
-    >>> getMatches("jo ro", collection).resolved
-    'john rose'
-    """
     matches = []
 
     query_segs: list[str] = _matchSegments(query, query_split)
@@ -82,7 +209,7 @@ def getMatches(query, collection: Sequence[str], query_split=r'[\\ /_:(-]', fuzz
                 passes_test = all(match_fn(theirs, ours) for (theirs, ours) in zipped)
                 # print(item, list(zipped), offset, offsetize, passes_test)
                 if passes_test:
-                    print(item, item_segs, zipped)
+                    # print(item, item_segs, zipped)
                     matches.append(item)
                     # break
             if len(matches) > max_matches:
