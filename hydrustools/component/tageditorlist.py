@@ -232,6 +232,7 @@ class TagEditorList(ttk.Frame):
             sib: si.ideal_tag
             for si in logic.get_sibling_ideal_targets(all_tags)
             for sib in si.siblings
+            if sib != si.ideal_tag
         }
 
         self.all_tags = tuple(logic.flatList([
@@ -248,16 +249,17 @@ class TagEditorList(ttk.Frame):
         self.logger.info("Loading context suggestions for %s", self.tag_list)
 
         self.pb['value'] = 20
-        self.sib_info = logic.get_sibling_ideal_targets(self.tag_list)
+        sib_info = logic.get_sibling_ideal_targets(self.tag_list)
 
         self.pb['value'] = 90
         self.tag_context = tuple(logic.flatList(
             [*si.descendants]
-            for si in self.sib_info
+            for si in sib_info
+            if si.ideal_tag in self.tag_list
         ))
 
         self.pb['value'] = 0
-        self.logger.info("Found %s tags in context", len(self.tag_synonyms))
+        self.logger.info("Found %s descendant tags in context", len(self.tag_context))
 
     def show_suggestions(self, event=None):
         if len(self.all_tags) < 1:
@@ -275,12 +277,21 @@ class TagEditorList(ttk.Frame):
         delete_commands = tuple(f"-{t}" for t in self.tag_list)
 
         # TODO: This can build on previous results recursively
-        matches = fuzzysearch.perfect_search(
-            self.all_tags,
-            query,
-            context=self.tag_context,
-            extra_entries=delete_commands,
-            limit=20
+        matches = fuzzysearch.merge_lists(
+            fuzzysearch.perfect_search(
+                self.tag_context,
+                query,
+                score_bonus=10
+            ),
+            fuzzysearch.perfect_search(
+                delete_commands,
+                query
+            ),
+            fuzzysearch.perfect_search(
+                self.all_tags,
+                query,
+                limit=20
+            )
         )
         # match_values = pfuzzer_search(self.all_tags, query)
 
@@ -288,7 +299,10 @@ class TagEditorList(ttk.Frame):
 
         suggestions = []
         for tag in matches:
-            tag = self.tag_synonyms.get(tag, tag)
+            syno = self.tag_synonyms.get(tag)
+            if syno:
+                # self.logger.info("%s is synonym of %s", syno, tag)
+                tag = syno
             if tag in suggestions:
                 # Deduplicate synonyms
                 continue

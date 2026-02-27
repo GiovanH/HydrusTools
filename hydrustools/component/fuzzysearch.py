@@ -43,8 +43,10 @@ def split_to_segments(q: str, query_split) -> tuple[str, ...]:
 
 @functools.lru_cache()
 def compare_segments(qseg, hseg, check_in=False) -> int:
+    if hseg == qseg:
+        return 30
     if hseg.startswith(qseg):
-        return 10
+        return 20
     if check_in and qseg in hseg:
         return 1
     return -1
@@ -62,16 +64,16 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
         hseg = hay_segments[hix]
 
         scoredelta = compare_segments(qseg, hseg)
-        logger.debug("  %s <> %s: %s", qseg, hseg, scoredelta)
+        logger.debug("    %s <> %s: %s", qseg, hseg, scoredelta)
 
         if scoredelta == -1:
             hix += 1
             continue
         else:
-            logger.debug("  score %s += %s (delta)", score, scoredelta)
+            logger.debug("    score %s += %s (delta)", score, scoredelta)
             score += scoredelta
 
-            logger.debug("  score %s -= %s", score, hix)
+            logger.debug("    score %s -= %s (hix)", score, hix)
             score -= hix
 
             qix += 1
@@ -81,8 +83,21 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
         # Didn't consume query
         return 0
 
+    len_pen = len([h for h in hay_segments if len(h) > 1])
+    logger.debug("    score %s -= %s (length)", score, len_pen)
+    score -= len_pen
+
     return score
 
+def merge_lists(
+    *lists: list[tuple[int, str]]
+) -> list[str]:
+
+    results = [item for sublist in lists for item in sublist]
+
+    results.sort(reverse=True)
+
+    return [val for score, val in results]
 
 
 @functools.lru_cache()
@@ -90,42 +105,38 @@ def perfect_search(
     collection: tuple[str, ...],
     query: str,
     query_split: re.Pattern = re.compile(r'([\\ /_:()-])'),
-    extra_entries: tuple[str, ...] = (),
-    context: tuple[str, ...] = (),
-    always_context: bool = False,
+    score_bonus: int = 0,
+    # extra_entries: tuple[str, ...] = (),
+    # context: tuple[str, ...] = (),
+    # always_context: bool = True,
     limit: int | None = None
-) -> Sequence[str]:
+) -> list[tuple[int, str]]:
     # Each segment in the search must match a segment in the result, in some order
     results: list[tuple[int, str]] = []
 
-    logger.info(extra_entries)
-    logger.info(context)
+    if len(query) > 3:
+        collection = tuple(merge_lists(
+            perfect_search(
+                collection,
+                query[:-2],
+                query_split=query_split,
+                score_bonus=score_bonus
+            )
+        ))
 
     # Filter out
     query_segments: tuple[str, ...] = split_to_segments(query, query_split)
 
     visited = set()
-    for hay in itertools.chain(extra_entries, context, collection):
+    # TODO: Always process extras and context ignoring limit. Then count the limit on collection
+    for hay in collection:
         if limit and len(results) > limit:
             break
 
-        if hay in visited:
-            # Don't duplicate context, even though prioritized
-            continue
-
         visited.add(hay)
-
-        # if hay in context or hay in extra_entries:
-        #     logger.setLevel(logging.DEBUG)
-        # else:
-        #     logger.setLevel(logging.INFO)
 
         logger.debug("%s <> %s", query, hay)
         score = 0
-
-        if always_context and hay in context:
-            logger.debug("  score %s += %s", score, 10)
-            score += 10
 
         hay_segments: tuple[str, ...] = split_to_segments(hay, query_split)
 
@@ -134,26 +145,20 @@ def perfect_search(
         else:
             score += score_segments(query_segments, hay_segments)
 
-        logger.debug("  %s", score)
-        if score == 0:
+        logger.debug("  scored %s", score)
+        if score < 1:
             continue
 
-        if (not always_context) and (hay in context):
-            logger.debug("  score %s += %s (context)", score, 10)
-            score += 10
+        logger.debug("  score %s += %s (bonus)", score, score_bonus)
+        score += score_bonus
 
-        logger.debug("  %s", score)
+        logger.debug("  final %s", score)
 
         results.append((score, hay))
 
-    results.sort(reverse=True)
-
-    # logger.debug(query)
-    # logger.debug(pprint.pformat(results))
-
-    return [val for score, val in results]
-    # matches = getMatches(query, collection)
-    # return matches.all
+    print(query)
+    pprint.pprint(results)
+    return results
 
 
 @dataclass

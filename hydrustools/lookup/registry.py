@@ -83,7 +83,7 @@ def postprocessSuggestions(
                 # ...unless creator tags are always local
                 if tag_value.startswith("creator:") and creator_tags_always_local:
                     pass
-                if tag_value.startswith("character:") and character_tags_always_local:
+                elif tag_value.startswith("character:") and character_tags_always_local:
                     pass
 
                 elif tag_count_cache.get(tag_value, 0) < tags_min_count_local:

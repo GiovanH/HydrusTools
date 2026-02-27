@@ -95,6 +95,7 @@ class ImageMetadataLookupWin(ImageTool):
         self.pref_min_count_local = tk.IntVar(self, value=20)
         self.pref_min_count_download = tk.IntVar(self, value=1)
         self.pref_creator_tags_always_local = tk.BooleanVar(self, value=True)
+        self.pref_character_tags_always_local = tk.BooleanVar(self, value=True)
         self.pref_no_dltags = tk.BooleanVar(self, value=False)
         self.pref_replace_underscores = tk.BooleanVar(self, value=True)
 
@@ -164,6 +165,11 @@ class ImageMetadataLookupWin(ImageTool):
                 text="Creator tags always local"
             ).pack(anchor='n', fill='x')
 
+            btn = ttk.Checkbutton(
+                w,
+                variable=self.pref_character_tags_always_local,
+                text="Character tags always local"
+            ).pack(anchor='n', fill='x')
             # btn = ttk.Checkbutton(
             #     w,
             #     variable=self.pref_no_dltags,
@@ -352,6 +358,7 @@ class ImageMetadataLookupWin(ImageTool):
             # no_downloader_tags=self.pref_no_dltags.get(),
             underscores_to_spaces=self.pref_replace_underscores.get(),
 
+            character_tags_always_local=self.pref_character_tags_always_local.get(),
             creator_tags_always_local=self.pref_creator_tags_always_local.get()
         )
 
