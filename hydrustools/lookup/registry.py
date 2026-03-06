@@ -19,6 +19,7 @@ class MetadataActions:
 
 class LookupPlugin():
     name: str
+    priority: int = 10
 
     @abstractmethod
     def match(self, metadata: FileMetadata) -> bool:

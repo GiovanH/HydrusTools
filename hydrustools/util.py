@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from typing import Callable
 
 @contextmanager
-def timer(label="task", logger: Callable[[str], None] = print):
+def timer(label="task", logger: Callable[[str], None] = print, min_secs=1):
     """Times a code block and prints time taken to screen
 
     Args:
@@ -15,5 +15,5 @@ def timer(label="task", logger: Callable[[str], None] = print):
         yield None
     finally:
         time_taken = time.time() - start_time
-        if time_taken > 1:
+        if time_taken > min_secs:
             logger(f"Processed {label} in {time_taken} secs")

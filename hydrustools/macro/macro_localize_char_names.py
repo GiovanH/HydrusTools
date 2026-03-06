@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def find_localchars(tk=True):
+    """The find_localchars macro searches all known character: tags for names that appear in different orders. It will group these by Series and collate them in a SiblingAdderWindow. Select the ideal version and the SiblingAdderWindow will export a relationship set.
+    """
     char_parser = re.compile(r'^character:(?P<first>[a-z]+) (?P<last>[a-z]+)(?P<suffix> \([a-z]+\))?$')
 
     chars_with_spaces = logic.search_tags_re("character:*", r'.+ .+')

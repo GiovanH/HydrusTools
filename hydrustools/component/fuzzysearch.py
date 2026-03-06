@@ -90,39 +90,43 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
     return score
 
 def merge_lists(
-    *lists: list[tuple[int, str]]
+    *lists: list[tuple[int, str]],
+    edits: list = []
 ) -> list[str]:
 
-    results = [item for sublist in lists for item in sublist]
+    results = []
+    for sublist in lists:
+        for item in sublist:
+            for p in edits:
+                item = p(item)
+            results.append(item)
 
     results.sort(reverse=True)
 
     return [val for score, val in results]
 
 
-@functools.lru_cache()
+@functools.lru_cache(maxsize=2048)
 def perfect_search(
     collection: tuple[str, ...],
     query: str,
     query_split: re.Pattern = re.compile(r'([\\ /_:()-])'),
     score_bonus: int = 0,
-    # extra_entries: tuple[str, ...] = (),
-    # context: tuple[str, ...] = (),
-    # always_context: bool = True,
     limit: int | None = None
 ) -> list[tuple[int, str]]:
     # Each segment in the search must match a segment in the result, in some order
     results: list[tuple[int, str]] = []
 
-    if len(query) > 3:
-        collection = tuple(merge_lists(
-            perfect_search(
-                collection,
-                query[:-2],
-                query_split=query_split,
-                score_bonus=score_bonus
-            )
-        ))
+    # if len(query) > 3:
+    #     collection = tuple(merge_lists(
+    #         perfect_search(
+    #             collection,
+    #             query[:-2],
+    #             query_split=query_split,
+    #             score_bonus=score_bonus,
+    #             limit=limit
+    #         )
+    #     ))
 
     # Filter out
     query_segments: tuple[str, ...] = split_to_segments(query, query_split)
@@ -156,8 +160,8 @@ def perfect_search(
 
         results.append((score, hay))
 
-    print(query)
-    pprint.pprint(results)
+    # print(query)
+    # pprint.pprint(results)
     return results
 
 

@@ -8,9 +8,14 @@ from tkinter import TclError, ttk
 from hydrustools import logic
 from hydrustools.component import fuzzysearch
 from hydrustools.component.fuzzysearch import MatchResults, getMatches
+from hydrustools.util import timer
 
 from .gui_util import tkwrapc
 
+def penalize_ships(tup: tuple[int, str]):
+    if tup[1].startswith("ship:"):
+        return (tup[0]-1, tup[1])
+    return tup
 
 class ListboxNavigator:
     def __init__(self, listbox: tk.Listbox):
@@ -66,7 +71,7 @@ class TagEditorList(ttk.Frame):
 
         self.all_tags: Sequence[str] = []
         self.tag_context: tuple[str, ...] = ()
-        self.tag_synonyms: dict[str, str] = {}
+        self.tag_synonyms_all: dict[str, str] = {}
 
         self.last_query = ""
         self.last_tag: str | None = None
@@ -228,22 +233,24 @@ class TagEditorList(ttk.Frame):
         all_tags = tuple(t.value for t in logic.search_tags_re('*', subpattern=None, display_type='display'))
 
         self.pb['value'] = 50
-        self.tag_synonyms = {
+        self.tag_synonyms_all = {
             sib: si.ideal_tag
             for si in logic.get_sibling_ideal_targets(all_tags)
             for sib in si.siblings
             if sib != si.ideal_tag
         }
 
-        self.all_tags = tuple(logic.flatList([
-            all_tags,
-            self.tag_synonyms.keys()
-        ]))
+        # pprint.pprint(self.tag_synonyms_all)
+
+        self.all_tags = tuple([
+            *all_tags,
+            *self.tag_synonyms_all.keys()
+        ])
+
+        # pprint.pprint(self.all_tags)
 
         self.load_context_suggestions()
 
-        # self.all_tags = tuple(logic.flatList([all_tags, self.tag_synonyms.keys()]))
-        # pprint.pprint(self.all_tags)
 
     def load_context_suggestions(self, event=None):
         self.logger.info("Loading context suggestions for %s", self.tag_list)
@@ -276,30 +283,35 @@ class TagEditorList(ttk.Frame):
 
         delete_commands = tuple(f"-{t}" for t in self.tag_list)
 
-        # TODO: This can build on previous results recursively
-        matches = fuzzysearch.merge_lists(
-            fuzzysearch.perfect_search(
-                self.tag_context,
-                query,
-                score_bonus=10
-            ),
-            fuzzysearch.perfect_search(
-                delete_commands,
-                query
-            ),
-            fuzzysearch.perfect_search(
+        with timer("all", min_secs=0, logger=self.logger.info):
+            match_all = fuzzysearch.perfect_search(
                 self.all_tags,
                 query,
                 limit=20
             )
-        )
-        # match_values = pfuzzer_search(self.all_tags, query)
+        with timer("commands", min_secs=0, logger=self.logger.info):
+            match_commands = fuzzysearch.perfect_search(
+                delete_commands,
+                query
+            )
 
-        # pprint.pprint(matches)
+        with timer("context", min_secs=0, logger=self.logger.info):
+            match_context = fuzzysearch.perfect_search(
+                self.tag_context,
+                query,
+                score_bonus=10
+            )
+
+        # TODO: This can build on previous results recursively
+        with timer("merge", min_secs=0, logger=self.logger.info):
+            matches = fuzzysearch.merge_lists(
+                match_all, match_commands, match_context,
+                edits=[penalize_ships]
+            )
 
         suggestions = []
         for tag in matches:
-            syno = self.tag_synonyms.get(tag)
+            syno = self.tag_synonyms_all.get(tag)
             if syno:
                 # self.logger.info("%s is synonym of %s", syno, tag)
                 tag = syno

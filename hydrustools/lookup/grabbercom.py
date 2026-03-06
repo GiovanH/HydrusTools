@@ -11,6 +11,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+import hydrus_api
 import requests
 from joblib import memory
 
@@ -20,7 +21,7 @@ from hydrustools.logic import FileMetadata
 from .. import logic
 from . import registry
 
-memory = memory.Memory("cache")
+memory = memory.Memory("cache", verbose=False)
 
 class GrabberComSettings(IniSettings):
     grabber_dir: str = ""
@@ -117,6 +118,7 @@ if not Settings.grabber_sites:
 @registry.register
 class grabberComMd5Plugin(registry.LookupPlugin):
     name = "Grabber by hash"
+    priority = 5
 
     def __init__(self) -> None:
         super().__init__()
@@ -127,12 +129,20 @@ class grabberComMd5Plugin(registry.LookupPlugin):
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
         all_sources: list[str] = [*metadata['known_urls']]
 
-        md5_hash = logic.client.get_file_hashes(
-            hashes=[metadata['hash']],
-            desired_hash_type='md5',
-        )['hashes'][metadata['hash']]
+        alternate_hashes = logic.client.get_file_relationships(
+            file_ids=[metadata['file_id']]
+        )['file_relationships'][metadata['hash']][str(hydrus_api.DuplicateStatus.ALTERNATES)]
 
-        if md5_hash:
+        resp = logic.client.get_file_hashes(
+            hashes=[metadata['hash'], *alternate_hashes],
+            desired_hash_type='md5',
+        )
+        # pprint.pprint(resp)
+
+        md5_hashes = [*resp['hashes'].values()]
+
+        for md5_hash in md5_hashes:
+            logger.info("searching hash %s of image %s", md5_hash, metadata['file_id'])
             for source in [
                 'rule34.paheal.net',
                 # "gelbooru.com",
@@ -146,7 +156,7 @@ class grabberComMd5Plugin(registry.LookupPlugin):
                 try:
                     match = query_booru_md5(source, md5_hash)
                     if not match:
-                        logger.info("%s has no results", source)
+                        # logger.info("%s has no results", source)
                         continue
                     # pprint.pprint(match)
                     page = match.get('url_page')
@@ -166,6 +176,7 @@ class grabberComMd5Plugin(registry.LookupPlugin):
 @registry.register
 class grabberComPlugin(registry.LookupPlugin):
     name = "Grabber by source"
+    priority = 15
 
     def __init__(self) -> None:
         super().__init__()

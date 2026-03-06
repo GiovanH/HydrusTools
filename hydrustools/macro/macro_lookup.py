@@ -2,6 +2,7 @@
 import argparse
 import logging
 import pprint
+from requests.exceptions import HTTPError
 
 from hydrustools import htlogging
 from hydrustools.lookup.registry import MetadataActions, get_plugins, postprocessSuggestions
@@ -107,13 +108,13 @@ if __name__ == '__main__':
     for image_id in matching_files:
         metadata: list[logic.FileMetadata] = logic.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
         for image in metadata:
-            for plugin in plugin_registry.values():
+            for plugin in sorted(plugin_registry.values(), key=lambda p: p.priority):
                 match = plugin.match(image)
                 print(image["file_id"], plugin, match)
                 if match:
                     try:
                         actions = plugin.suggest(image, print)
-                    except ValueError as e:
+                    except Exception as e:
                         print("Error with", plugin, e)
                         continue
 
