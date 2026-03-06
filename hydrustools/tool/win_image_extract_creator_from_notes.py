@@ -28,6 +28,7 @@ def all_creator_names(min_count=2):
 
 
 class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
+    label = "Extract Creator Tags from Notes"
     helpstr = """
     """
     def __init__(self, *args_, **kwargs) -> None:

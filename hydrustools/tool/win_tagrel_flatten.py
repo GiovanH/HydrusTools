@@ -35,6 +35,7 @@ class RelFlattenActionSchema(TreeviewSchema[RelFlattenAction]):
 
 
 class SiblingFlattenWin(ToolWindow):  # noqa: PLR0904
+    label = "Flatten Tab Siblings"
     helpstr = """Flatten tag siblings.
 
 Select the specific relationships to flatten and click the flatten button to commit changes.

@@ -13,7 +13,8 @@ from ..settings import Settings
 HEAD_COUNT = "Count"
 
 class TagRelationshipsTreeWin(ToolWindow):  # noqa: PLR0904
-    helpstr = """TODO"""
+    label = "Relationship Tree Browser"
+    helpstr = """Work in progress. Browse tag relationships."""
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 

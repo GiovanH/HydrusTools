@@ -21,6 +21,7 @@ def recursive_widgets(w, key) -> Iterable[tk.Widget]:
 
 
 class ToolWindow(tk.Toplevel):
+    label: str = ""
     helpstr: str = """Change this help string"""
 
     def __init__(self, *args_, **kwargs) -> None:
@@ -99,7 +100,7 @@ class ToolWindow(tk.Toplevel):
 
     def startTask(self, callback, lock=True) -> None:
         def task():
-            with timer(repr(callback), self.logger.info):
+            with timer(repr(callback), logger=self.logger.info):
                 if lock:
                     with self.lock():
                         callback()

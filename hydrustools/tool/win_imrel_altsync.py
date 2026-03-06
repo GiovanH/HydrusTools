@@ -22,6 +22,7 @@ def alternatesOfHash(file_hash):
     return file_relationships[file_hash][str(hydrus_api.DuplicateStatus.ALTERNATES.value)]
 
 class AlternatesSyncWin(ToolWindow):
+    label = "Synchronize Alternate Meta (WIP)"
     helpstr = """Interactively synchronize metadata between alternate images.
 
 An automatic search will gather image sets whose tags don't all already match each other in the column on the left.

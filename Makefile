@@ -35,10 +35,16 @@ watch:
 .PHONY: check
 check: venv lint test
 
+.PHONY: docs
+docs: ToolDocumentation.md
+
+ToolDocumentation.md: venv autodoc.py ${MODULE_SRCS}
+	${VPYTHON} autodoc.py > ToolDocumentation.md
+
 .PHONY: lint
 lint: venv
 # 	-${VPYTHON} -m mypy ${SRC_ROOT}/${module_name}
-	-(${VPYTHON} -m mypy *.py)
+	-${VPYTHON} -m mypy *.py
 	-vulture ${SRC_ROOT}/*.py
 
 .PHONY: test
@@ -62,7 +68,7 @@ venv/pyvenv.cfg: requirements.txt
 	${VPYTHON} -m pip install -r requirements.txt
 	${VPYTHON} -m pip install pyinstaller vulture mypy
 	-${VPYTHON} -m mypy --install-types --non-interactive
-	-(${VPYTHON} -m mypy --install-types)
+	-${VPYTHON} -m mypy --install-types
 
 # Build
 .PHONY: exe

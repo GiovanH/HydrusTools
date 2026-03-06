@@ -14,6 +14,7 @@ from ..component.toolwindow import ToolWindow
 from ..settings import Settings
 
 class RegexNoteSearchWin(ToolWindow):
+    label = "Regex Note Search"
     helpstr = """Search the contents of notes.
 
 Note title specifies the title of the note to search.

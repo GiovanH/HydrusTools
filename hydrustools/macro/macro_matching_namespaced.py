@@ -18,6 +18,8 @@ def tiformat(ti: logic.TagInfo):
     return f"{ti.value} ({ti.count})"
 
 def run(tk=True):
+    """Macro: Search for tags that are also present in a namespace and suggest adding sibling relationships for them.
+    """
     tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
 
     min_char_count = 10

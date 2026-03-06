@@ -29,7 +29,27 @@ from ..logic import FileMetadata
 
 
 class ImageInspectorWin(ImageTool):
-    helpstr = """TODO"""
+    label = "Image Inspector"
+    helpstr = """Manually tag images and edit metadata.
+
+First, select a group of images with the image search window. You can edit the current selection by clicking "Pick Images".
+
+Focus the text entry field under "Add Tags" for fully-automatic operation:
+
+Left/Right: Navigate
+F5: Refresh all metadata
+Ctrl-E: Toggle archive/inbox
+Ctrl-D: Toggle trashed
+Return: DWIM
+
+Adjust Do What I Mean behavior using the checkboxes on the right-hand panel.
+
+Type in the box to fuzzy-search for tags. Tag changes autosave if Autosave is checked, otherwise you will need to click Save, or use a DWIM action.
+
+Fuzzy-search notes:
+Tags
+If tagname is attached to the image, "-tagname" will remove it.
+"""
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 

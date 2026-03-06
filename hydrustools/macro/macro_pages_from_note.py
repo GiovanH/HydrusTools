@@ -46,6 +46,8 @@ def getFilenameInfo(metadata: dict) -> dict[str, str] | None:
 
 
 def add_page_tags(tk=True):
+    """Macro: Searches filename and filepath notes for something that looks like a page number, then proposes adding the appropriate page: tag.
+    """
     tag_query: list[str | list[str]] = [] # type: ignore
 
     tag_query.append(has_note())

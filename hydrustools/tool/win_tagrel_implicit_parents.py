@@ -13,18 +13,19 @@ from ..settings import Settings
 
 
 class ImplicitParentFinderWin(ToolWindow):  # noqa: PLR0904
+    label = "Find Implicit Parents"
     helpstr = """Find Implicit Parents
 
-    Some tags have logical implications that are already captured in the data but aren't added as automatic parent relationships yet. This detects those. It's designed to find characters that are almost always found in a specific series, but it can be used with other namespaces as well.
+Some tags have logical implications that are already captured in the data but aren't added as automatic parent relationships yet. This detects those. It's designed to find characters that are almost always found in a specific series, but it can be used with other namespaces as well.
 
-    Parent prefix filter is the tag prefix defining the kind of parent being searched for. Recommendations must have this prefix, and tags that already have a parent with this prefix are considered categorized already.
+Parent prefix filter is the tag prefix defining the kind of parent being searched for. Recommendations must have this prefix, and tags that already have a parent with this prefix are considered categorized already.
 
-    Child tag query is the search for child tags to examine. Since this is a search, you can include ":*" if your API supports it.
+Child tag query is the search for child tags to examine. Since this is a search, you can include ":*" if your API supports it.
 
-    Minimum count is the minimum number of times an orphan tag needs to appear to be considered. You can use this to filter out infrequent tags to speed up search time.
+Minimum count is the minimum number of times an orphan tag needs to appear to be considered. You can use this to filter out infrequent tags to speed up search time.
 
-    Parent factor defines how much more common a parent tag needs to be than other parent tags to be considered a match. Any potential parent tag needs to be this factor larger than other matching parent tags to be considered.
-    """
+Parent factor defines how much more common a parent tag needs to be than other parent tags to be considered a match. Any potential parent tag needs to be this factor larger than other matching parent tags to be considered."""
+
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 

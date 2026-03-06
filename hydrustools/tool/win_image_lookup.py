@@ -65,7 +65,10 @@ PROP_URL = "URL"
 PROP_INFO_ONLY = "Disabled"
 
 class ImageMetadataLookupWin(ImageTool):
-    helpstr = """TODO"""
+    label = "Image Metadata Lookup"
+    helpstr = """Similar to the Image Inspector, but looks up image metadata based on lookup plugins.
+
+Heavy work-in-progress"""
     schema = ImageIconSchemaBig
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
@@ -170,6 +173,7 @@ class ImageMetadataLookupWin(ImageTool):
                 variable=self.pref_character_tags_always_local,
                 text="Character tags always local"
             ).pack(anchor='n', fill='x')
+
             # btn = ttk.Checkbutton(
             #     w,
             #     variable=self.pref_no_dltags,

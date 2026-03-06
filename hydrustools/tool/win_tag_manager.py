@@ -24,6 +24,7 @@ class TagSchema(TreeviewSchema[TagInfo]):
 
 
 class TagManagerWin(ToolWindow):  # noqa: PLR0904
+    label = "Tag Manager"
     helpstr = """Bulk search and edit tags.
 
 Tag Query searches the tag list, regex refinment filters further.

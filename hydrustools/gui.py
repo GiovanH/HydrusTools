@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import logging
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -5,6 +6,7 @@ from typing import Callable
 
 import hydrus_api
 
+from hydrustools.component.toolwindow import ToolWindow
 from hydrustools.tool.win_image_extract_creator_from_notes import ExtractCreatorFromNotesWin
 
 from . import htlogging, logic
@@ -22,44 +24,98 @@ from .tool.win_tagrel_treebrowser import TagRelationshipsTreeWin
 
 htlogging.configure_logging()
 
-MENU: dict[str, list[tuple[str, Callable | None]]] = {
+def showDocFac(label: str, fn: Callable) -> None | Callable[..., None]:
+    if not fn.__doc__:
+        return None
+    def showDoc(label=label, fn=fn):
+        messagebox.showinfo(
+            title=f"Help for {label}",
+            message=fn.__doc__
+        )
+    return showDoc
+
+@dataclass
+class MenuEntry():
+    label: str
+    command: Callable | None = None
+    showHelp: Callable | None = None
+    is_tool: bool = False
+
+    @classmethod
+    def f(cls, *a):
+        if len(a) == 1:
+            (o,) = a
+            if (isinstance(o, type) and issubclass(o, ToolWindow)):
+                return cls(
+                    label=o.label,
+                    command=o,
+                    showHelp=o.showHelp,
+                    is_tool=True
+                )
+
+        if len(a) == 2:
+            label, o = a
+            if (isinstance(o, type) and issubclass(o, ToolWindow)):
+                if o.label:
+                    print("Extra label specified for", o, label, o.label)
+                return cls(
+                    label=label,
+                    command=o,
+                    showHelp=o.showHelp,
+                    is_tool=True
+                )
+            elif callable(o):
+                return cls(
+                    label=label,
+                    command=o,
+                    showHelp=showDocFac(label, o)
+                )
+            elif o is None:
+                return cls(
+                    label=label,
+                    command=o
+                )
+        raise NotImplementedError(a)
+
+
+MENU: dict[str, list[MenuEntry]] = {
     "Tag Management": [
-        ("Tag Manager", TagManagerWin),
-        ("Image Inspector", ImageInspectorWin),
-        ("Tree Visualizer", None),
-        ("Localize (Swapped) Character Names", macro_localize_char_names.find_localchars),
+        MenuEntry.f(TagManagerWin),
+        MenuEntry.f(ImageInspectorWin),
+        MenuEntry.f("Tree Visualizer", None),
+        MenuEntry.f(
+            "Localize (Swapped) Character Names",
+            macro_localize_char_names.find_localchars
+        ),
     ],
     "Tag Relationships": [
-        ("Flatten Tag Siblings", SiblingFlattenWin),
-        ("Find Implicit Parents", ImplicitParentFinderWin),
+        MenuEntry.f(SiblingFlattenWin),
+        MenuEntry.f(ImplicitParentFinderWin),
         # ("Find implicit parents Macro", macro_implicit_parents.run),
-        ("Detect Tags' Namespaced Equivalents", macro_matching_namespaced.run),
-        ("Parent Series from Character Parens", None),
+        MenuEntry.f("Detect Tags' Namespaced Equivalents", macro_matching_namespaced.run),
+        MenuEntry.f("Parent Series from Character Parens", None),
         # We really want tag relationships for these...
         # ("Detect Tag Siblings from Names", None),
         # ("Detect Tag Parents from Subsets", None),
     ],
     "Search": [
-        ("Note Search", RegexNoteSearchWin),
+        MenuEntry.f(RegexNoteSearchWin),
     ],
     "Metadata Lookup": [
-        # ("Image Lookup", None),
-        ("Image Metadata Lookup", ImageMetadataLookupWin),
-        ("Extract Creator Tags from Notes", ExtractCreatorFromNotesWin),
-        ("Import Downloader Tags In Local Repo", None),
-        ("Extract Tags from Note Regex", None),
+        MenuEntry.f(ImageMetadataLookupWin),
+        MenuEntry.f(ExtractCreatorFromNotesWin),
+        MenuEntry.f("Import Downloader Tags In Local Repo", None),
+        MenuEntry.f("Extract Tags from Note Regex", None),
     ],
     "Filename Macros": [
         # ("Extract creators from filename note", macro_creators_from_note.start),
-        ("Extract page numbers from filename note", macro_pages_from_note.add_page_tags),
+        MenuEntry.f("Extract page numbers from filename note", macro_pages_from_note.add_page_tags),
     ],
     "Unsorted and WIP": [
         # ("Tag Editor", None),
-        ("Relationship Tree Browser", TagRelationshipsTreeWin),
-        ("Mail Rules", None),
-        ("Synchronize Alternate Meta (WIP)", AlternatesSyncWin),
-        # ("Extract known creators from filename note", macro_creatortags.find_creators),
-        # ("Extract page numbers from filename note", macro_pages.add_page_tags),
+        MenuEntry.f(TagRelationshipsTreeWin),
+        MenuEntry.f("Mail Rules", None),
+        MenuEntry.f(AlternatesSyncWin),
     ],
 }
 
@@ -68,16 +124,17 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
         super().__init__(*args_, **kwargs)
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.command_list = []
+        self.command_list: list[MenuEntry] = []
         self.initwindow()
 
         if Settings.gui_last != -1:
             try:
-                command = self.command_list[Settings.gui_last]
+                entry = self.command_list[Settings.gui_last]
                 # self.logger.info(f"{command}, {Settings.gui_last} {self.command_list[Settings.gui_last]=}")
-                if command and hasattr(command, "showHelp"):
+                if entry.is_tool:
+                    assert entry.command
                     self.iconify()
-                    command()
+                    entry.command()
             except IndexError as e:
                 self.logger.error(e)
                 Settings.gui_last = -1
@@ -86,7 +143,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
         self.mainloop()
 
     def initwindow(self) -> None:
-        self.geometry("250x780")
+        self.geometry("280x780")
         self.title("Tools")
 
         self.columnconfigure(0, weight=1)
@@ -105,32 +162,33 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
                 lab = ttk.Label(frame_btns, text=group)
                 lab.grid(row=cy.inc(), column=0, columnspan=2)
 
-                for label, command in items:
-                    self.command_list.append(command)
+                for entry in items:
+                    self.command_list.append(entry)
 
-                    def _launch(label=label, command=command):
-                        if command and hasattr(command, "showHelp"):
+                    def _launch(entry=entry):
+                        if entry.is_tool:
+                            assert entry.command
                             # self.logger.info(f"Setting last as {label}, {command}")
-                            Settings.gui_last = self.command_list.index(command)
-                            command()
-                        if command:
+                            Settings.gui_last = self.command_list.index(entry)
+                            entry.command()
+                        if entry.command:
                             # taskthread = threading.Thread(target=command, daemon=True)
                             # taskthread.start()
-                            command()
+                            entry.command()
 
-                    btn = ttk.Button(frame_btns, text=label, command=_launch)
+                    btn = ttk.Button(frame_btns, text=entry.label, command=_launch)
                     cy.inc()
 
                     colspan = 1
-                    if command and hasattr(command, "showHelp"):
-                        btn_help = ttk.Button(frame_btns, text="?", command=command.showHelp, width=2) # type: ignore
+                    if entry.showHelp:
+                        btn_help = ttk.Button(frame_btns, text="?", command=entry.showHelp, width=2) # type: ignore
                         btn_help.grid(row=cy.value, column=1, pady=2)
                     else:
                         colspan = 2
 
                     btn.grid(row=cy.value, column=0, columnspan=colspan, sticky="ew", pady=2)
 
-                    if command is None:
+                    if entry.command is None:
                         btn.config(state=tk.DISABLED)
 
 
