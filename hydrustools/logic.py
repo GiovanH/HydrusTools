@@ -2,6 +2,7 @@ from collections import OrderedDict
 from collections.abc import Sequence
 import dataclasses
 import functools
+import logging
 import pprint
 import re
 from io import BytesIO
@@ -16,6 +17,9 @@ from hydrustools.component.gui_util import flatList
 from hydrustools.component.toolwindow import ToolWindow
 
 from .settings import Settings
+
+
+logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class TagInfo():
@@ -80,8 +84,12 @@ def init_client() -> None:
     local_tags_service = next(s for s in tag_services if s["name"] == "my tags")
     local_tags_service_key = local_tags_service["service_key"]
 
-    downloader_tags_service = next(s for s in tag_services if s["name"] == "downloader tags")
-    downloader_tags_service_key = downloader_tags_service["service_key"]
+    try:
+        downloader_tags_service = next(s for s in tag_services if s["name"] == "downloader tags")
+        downloader_tags_service_key = downloader_tags_service["service_key"]
+    except:
+        logger.error("Missing a 'downloader tags' tag group. Some things may break! This tool needs to be fixed to better support this case.")
+        pass
 
 
 def chunk(iterable, maxsize):
@@ -121,7 +129,7 @@ def replace_tag(original_tag: str, new_tags: list[str]) -> None:
     tagged_files = resp["file_ids"]
     # pprint.pprint(tagged_files)
 
-    print(f"Replacing {original_tag!r} with {new_tags!r} in {len(tagged_files)} files")
+    logger.info(f"Replacing {original_tag!r} with {new_tags!r} in {len(tagged_files)} files")
     client.add_tags(
         file_ids=tagged_files,
         service_keys_to_actions_to_tags={
@@ -236,14 +244,14 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
         }
     )
 
-    tool.logger.info(f"Checking differences: {[m['tags'] for m in metadata_list]=}")
+    logger.info(f"Checking differences: {[m['tags'] for m in metadata_list]=}")
 
     all_tags = set(flatList([
         local_tags(meta)
         for meta in metadata_list
     ]))
 
-    tool.logger.info("%s, %s", all_tags, set(tag_list))
+    logger.info("%s, %s", all_tags, set(tag_list))
 
     removed_tags = set(all_tags).difference(set(tag_list))
     resp = client.get_siblings_and_parents(removed_tags)
@@ -251,13 +259,13 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
         if v[local_tags_service_key]['ideal_tag'] in removed_tags:
             for s in v[local_tags_service_key]['siblings']:
                 if s not in removed_tags:
-                    tool.logger.warning(f"Also removing sibling tag {s}")
+                    logger.warning(f"Also removing sibling tag {s}")
                     removed_tags.add(s)
     # We also need to remove any siblings of these tags
 
 
     if removed_tags:
-        tool.logger.info(f"Removing tags: {removed_tags}")
+        logger.info(f"Removing tags: {removed_tags}")
         client.add_tags(
             file_ids=file_ids,
             service_keys_to_actions_to_tags={
