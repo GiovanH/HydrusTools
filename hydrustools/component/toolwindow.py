@@ -13,6 +13,7 @@ from hydrustools.util import timer
 
 from ..settings import Settings
 
+
 def recursive_widgets(w, key) -> Iterable[tk.Widget]:
     if key in 'state' in w.keys():
         yield w

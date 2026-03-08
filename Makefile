@@ -9,7 +9,7 @@ dev: venv
 
 .PHONY: release
 release: exe
-	mv -v "dist/hydrustools-launcher.exe" "dist/hydrustools-launcher-$(GIT_TAG).exe"
+	mv -v "dist/hydrustools.exe" "dist/hydrustools-$(GIT_TAG).exe"
 
 # IMPLEMENTATION
 
@@ -22,7 +22,8 @@ HOOK_SRCS=$(wildcard ${SRC_ROOT}/hooks/*)
 # SCRIPT_SRCS=${SRC_ROOT}/gui.py
 
 TARGET_EXES=\
-	$(patsubst ${SRC_ROOT}/%.py,dist/${project_name}-%.exe,${SCRIPT_SRCS})
+	dist/${project_name}.exe
+# 	$(patsubst ${SRC_ROOT}/%.py,dist/${project_name}-%.exe,${SCRIPT_SRCS})
 
 .PHONY: all
 all: lint test exe
@@ -74,7 +75,7 @@ venv/pyvenv.cfg: requirements.txt
 .PHONY: exe
 exe: venv ${TARGET_EXES}
 
-dist/${project_name}-%.exe: ${SRC_ROOT}/%.py ${MODULE_SRCS} ${SCRIPT_SRCS} ${HOOK_SRCS} Makefile
+dist/${project_name}.exe: ${SRC_ROOT}/launcher.py ${MODULE_SRCS} ${SCRIPT_SRCS} ${HOOK_SRCS} Makefile
 	mkdir -p dist build
 # 	cp icon.png build/
 	${VPYTHON} -m PyInstaller \

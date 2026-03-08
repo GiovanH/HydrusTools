@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import logging
 import tkinter as tk
+import webbrowser
+from dataclasses import dataclass
 from tkinter import messagebox, ttk
 from typing import Callable
 
@@ -21,6 +22,8 @@ from .tool.win_tag_manager import TagManagerWin
 from .tool.win_tagrel_flatten import SiblingFlattenWin
 from .tool.win_tagrel_implicit_parents import ImplicitParentFinderWin
 from .tool.win_tagrel_treebrowser import TagRelationshipsTreeWin
+
+GH_HOME = 'https://github.com/GiovanH/HydrusTools'
 
 htlogging.configure_logging()
 
@@ -116,6 +119,12 @@ MENU: dict[str, list[MenuEntry]] = {
         MenuEntry.f(TagRelationshipsTreeWin),
         MenuEntry.f("Mail Rules", None),
         MenuEntry.f(AlternatesSyncWin),
+    ],
+    "About": [
+        MenuEntry.f(
+            "by GiovanH (GitHub)",
+            lambda: webbrowser.open(GH_HOME)
+        ),
     ],
 }
 

@@ -10,7 +10,6 @@ from hydrustools.lookup.registry import MetadataActions, get_plugins, postproces
 from .. import logic
 
 plugin_registry = get_plugins()
-print("Plugins", plugin_registry)
 
 logger: logging.Logger
 
@@ -23,7 +22,7 @@ def apply_actions(actions: MetadataActions):
             file_ids=[file_id],
             service_keys_to_tags={
                 logic.downloader_tags_service_key: actions.add_downloader_tags
-            }
+            } # type: ignore
         )
         acted = True
 
@@ -33,7 +32,7 @@ def apply_actions(actions: MetadataActions):
             file_ids=[file_id],
             service_keys_to_tags={
                 logic.local_tags_service_key: actions.add_tags
-            }
+            } # type: ignore
         )
         acted = True
 
@@ -72,15 +71,15 @@ def get_tag_cache():
 
     return tag_count_cache
 
-if __name__ == '__main__':
-    htlogging.configure_logging()
+def main():
+    global logger
     logger = logging.getLogger(__name__)
 
-    print("Init")
     logic.init_client()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("query")
+    parser.add_argument("plugins", help=f"Comma-separated unordered set of plugins to use. Available options: {[*plugin_registry.keys()]} or 'all'")
+    parser.add_argument("query", help="Hydrus image query")
     parser.add_argument("--min-count-local", type=int, default=20)
     parser.add_argument("--min-count-download", type=int, default=1)
     parser.add_argument("--creator-always-local", action="store_true", default=True)
@@ -90,10 +89,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print("Cache...")
+    selected_plugins = args.plugins.split(',')
+
+    logger.info("Populating tag data...")
     tag_cache = get_tag_cache()
 
-    print("Query...")
+    logger.info(f"Querying hydrus {args.query!r}...")
     resp = logic.client.search_files(
         tags=args.query.split(' AND ') # type: ignore
     )
@@ -108,14 +109,17 @@ if __name__ == '__main__':
     for image_id in matching_files:
         metadata: list[logic.FileMetadata] = logic.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
         for image in metadata:
-            for plugin in sorted(plugin_registry.values(), key=lambda p: p.priority):
+            for plugin_name, plugin in sorted(plugin_registry.items(), key=lambda t: t[1].priority):
+                if selected_plugins != ['all'] and any(plugin_name.endswith(suffix) for suffix in selected_plugins):
+                    # print("Skipping unselected plugin", plugin_name)
+                    continue
                 match = plugin.match(image)
-                print(image["file_id"], plugin, match)
+                # print(image["file_id"], plugin, match)
                 if match:
                     try:
                         actions = plugin.suggest(image, print)
                     except Exception as e:
-                        print("Error with", plugin, e)
+                        logger.exception(f"Error running plugin {plugin} on image {image['file_id']}")
                         continue
 
                     assert actions
@@ -139,3 +143,8 @@ if __name__ == '__main__':
 
                     # os.exit()
 
+
+
+if __name__ == '__main__':
+    htlogging.configure_logging()
+    main()
