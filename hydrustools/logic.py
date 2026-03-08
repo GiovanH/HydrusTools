@@ -1,23 +1,21 @@
-from collections import OrderedDict
-from collections.abc import Sequence
 import dataclasses
 import functools
 import logging
 import pprint
 import re
+from collections import OrderedDict
+from collections.abc import Sequence
 from io import BytesIO
 from typing import Required, TypedDict
-from PIL import Image
 
-from PIL.ImageFile import ImageFile
 import hydrus_api
 from pick import pick
+from PIL import Image
 
 from hydrustools.component.gui_util import flatList
 from hydrustools.component.toolwindow import ToolWindow
 
 from .settings import Settings
-
 
 logger = logging.getLogger(__name__)
 
@@ -275,7 +273,7 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
             }
         )
 
-def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max_height: int) -> ImageFile:
+def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max_height: int) -> Image.Image:
     ratio = min(max_width/width, max_height/height)
     resp = client.get_render(
         file_id=file_id,  # type: ignore
@@ -283,11 +281,10 @@ def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max
         width=int(ratio*width)
     )
     resp.raise_for_status()
-    image = Image.open(BytesIO(resp.content))
-    return image
+    return Image.open(BytesIO(resp.content))
 
 
-def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> ImageFile:
+def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> Image.Image:
     resp = client.get_thumbnail(file_id=file_id)
     resp.raise_for_status()
     image = Image.open(BytesIO(resp.content))

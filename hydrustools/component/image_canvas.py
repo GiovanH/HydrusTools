@@ -19,7 +19,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 logger = logging.getLogger(__name__)
 
 @functools.cache
-def render_image(file_id: int, width: int, height: int, max_width: int, max_height: int) -> ImageFile.ImageFile:
+def render_image(file_id: int, width: int, height: int, max_width: int, max_height: int) -> Image.Image:
     if max_height <= 1 or max_width <= 1:
         raise ValueError(f"Invalid dimensions {width=} {height=} {max_width=} {max_height=}")
     with timer(f"Render {file_id} {width=} {height=} {max_width=} {max_height=}"):
@@ -95,7 +95,7 @@ class ContentCanvas(tk.Canvas):
         with timer(f"Configure {self.current_meta['file_id']}"):
             key = (self.current_meta['file_id'], self.winfo_width(), self.winfo_height())
 
-            self.current_photoimg = self.photoimage_cache.get(key) or ImageTk.PhotoImage(image=imagefile, master=self)
+            self.current_photoimg = self.photoimage_cache.get(key) or ImageTk.PhotoImage(image=imagefile)
             self.itemconfig(self.photoimage, image=self.current_photoimg, state="normal")
             self.photoimage_cache[key] = self.current_photoimg
 
