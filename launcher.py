@@ -29,6 +29,12 @@ class SubModules():
         import hydrustools.cli.lookup
         hydrustools.cli.lookup.main()
 
+    @staticmethod
+    def bubblegroup():
+        import hydrustools.cli.bubblegroup
+        hydrustools.cli.bubblegroup.main()
+
+
 def tryRun(cmd):
     if cmd in SubModules._allModules():
         getattr(SubModules, cmd)()
