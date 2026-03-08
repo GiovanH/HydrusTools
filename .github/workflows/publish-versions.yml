@@ -1,6 +1,9 @@
-name: Publish
+name: Publish Tagged Versions
 
-on: push
+on:
+  push:
+    tags:
+      - '*'           # Push events to every tag not containing /
 
 jobs:
   build:
@@ -37,7 +40,7 @@ jobs:
       continue-on-error: true
       run: >-
         gh release create
-        "$(date +'%Y-%m-%d')"
+        "${{ github.ref }}"
         --repo '${{ github.repository }}'
         --notes ""
     - name: Upload artifact signatures to GitHub Release
@@ -48,6 +51,6 @@ jobs:
       # sigstore-produced signatures and certificates.
       run: >-
         gh release upload
-        "$(date +'%Y-%m-%d')" dist/**
+        "${{ github.ref }}" dist/**
         --repo '${{ github.repository }}'
         --clobber
