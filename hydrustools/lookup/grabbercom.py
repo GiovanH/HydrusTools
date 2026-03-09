@@ -127,7 +127,8 @@ class grabberComMd5Plugin(registry.LookupPlugin):
         return True
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
-        all_sources: list[str] = [*metadata['known_urls']]
+        known_sources: set[str] = set(metadata['known_urls'])
+        new_sources = set()
 
         alternate_hashes = logic.client.get_file_relationships(
             file_ids=[metadata['file_id']]
@@ -154,23 +155,26 @@ class grabberComMd5Plugin(registry.LookupPlugin):
                 # if source not in Settings.grabber_sites:
                 #     continue
                 try:
-                    match = query_booru_md5(source, md5_hash)
-                    if not match:
+                    lookup = query_booru_md5(source, md5_hash)
+                    if not lookup:
                         # logger.info("%s has no results", source)
                         continue
-                    # pprint.pprint(match)
-                    page = match.get('url_page')
-                    if page and page not in all_sources:
-                        setStatus(f"Adding new URL {page} to image")
-                        all_sources.append(page)
+                    # pprint.pprint(lookup)
+                    page = lookup.get('url_page')
+                    found_new_sources = lookup.get('sources', [])
+                    if lookup.get('url_page'):
+                        found_new_sources.append(lookup.get('url_page'))
+
+                    new_sources.update(set(found_new_sources) - known_sources)
                 except Exception:
                     logger.exception(source)
                     continue
 
         return registry.MetadataActions(
+            source=self,
             file_id=metadata['file_id'],
             # add_tags=tags,
-            add_urls=list(set(all_sources))
+            add_urls=list(new_sources)
         )
 
 @registry.register
@@ -191,13 +195,14 @@ class grabberComPlugin(registry.LookupPlugin):
         )
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
-        all_sources: list[str] = [*metadata['known_urls']]
+        known_sources: set[str] = set(metadata['known_urls'])
+        new_sources = set()
 
         tags = []
 
         # pprint.pprint(metadata)
 
-        for url in [eu for eu in all_sources if self.matchurl(eu)]:
+        for url in [eu for eu in known_sources if self.matchurl(eu)]:
             if url.startswith("https://rule34.paheal.net"):
                 logger.info("%s Host %s known to not return metadata", self.__class__.__name__, url)
                 continue
@@ -216,17 +221,18 @@ class grabberComPlugin(registry.LookupPlugin):
                     *lookup.get('meta', []),
                 ]
             ]
-            new_sources = lookup.get('sources', [])
+            found_new_sources = lookup.get('sources', [])
             if lookup.get('url_page'):
-                new_sources.append(lookup.get('url_page'))
+                found_new_sources.append(lookup.get('url_page'))
 
-            all_sources += new_sources
+            new_sources.update(set(found_new_sources) - known_sources)
 
             # if len(tags) == 0:
             #     pprint.pprint(lookup)
 
         return registry.MetadataActions(
+            source=self,
             file_id=metadata['file_id'],
             add_tags=tags,
-            add_urls=list(set(all_sources))
+            add_urls=list(new_sources)
         )

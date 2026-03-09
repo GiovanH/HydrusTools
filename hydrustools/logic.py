@@ -9,7 +9,7 @@ from io import BytesIO
 from typing import Required, TypedDict
 
 import hydrus_api
-from pick import pick
+# from pick import pick
 from PIL import Image
 
 from hydrustools.component.gui_util import flatList
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 class TagInfo():
     count: int
     value: str
-
 
 @dataclasses.dataclass(frozen=True)
 class SiblingInfo():
@@ -47,7 +46,6 @@ class FileMetadata(TypedDict, total=False):
     is_local: Required[bool]
     is_trashed: Required[bool]
     hash: Required[str]
-
 
 
 def set_api_key(new_api_key):
@@ -138,8 +136,9 @@ def replace_tag(original_tag: str, new_tags: list[str]) -> None:
         }
     )
 
-def local_tags(metadata: FileMetadata, type_='display_tags') -> list[str]:
-    return metadata['tags'][local_tags_service_key][type_].get(str(hydrus_api.TagStatus.CURRENT.value), [])
+def local_tags(metadata: FileMetadata, type_='display_tags', service_key: str | None = None) -> list[str]:
+    service_key = service_key or local_tags_service_key
+    return metadata['tags'][service_key][type_].get(str(hydrus_api.TagStatus.CURRENT.value), [])
 
 def get_sibling_ideal_targets(target_tags: Sequence[str]) -> list[SiblingInfo]:
     resp = client.get_siblings_and_parents(target_tags)
@@ -161,30 +160,30 @@ def get_sibling_ideal_targets(target_tags: Sequence[str]) -> list[SiblingInfo]:
     return targets
 
 
-def search_and_flatten_siblings(target_tags: list[str]) -> None:
-    targets = get_sibling_ideal_targets(target_tags)
-    # be kind,
-    targets.sort(key=lambda si: si.tag)
+# def search_and_flatten_siblings(target_tags: list[str]) -> None:
+#     targets = get_sibling_ideal_targets(target_tags)
+#     # be kind,
+#     targets.sort(key=lambda si: si.tag)
 
-    selected_indices = pick(
-        [f'{si.tag} -> {si.ideal_tag}' for si in targets],
-        "Tags to flatten",
-        multiselect=True,
-        min_selection_count=0
-    )
+#     selected_indices = pick(
+#         [f'{si.tag} -> {si.ideal_tag}' for si in targets],
+#         "Tags to flatten",
+#         multiselect=True,
+#         min_selection_count=0
+#     )
 
-    # Calculate real operations for approval
-    selected_targets = [
-        targets[index]
-        for _, index in selected_indices  # type: ignore
-    ]
+#     # Calculate real operations for approval
+#     selected_targets = [
+#         targets[index]
+#         for _, index in selected_indices  # type: ignore
+#     ]
 
-    pprint.pprint(selected_targets)
-    confirm = input("Confirm? (y/n): ").lower() == "y"
+#     pprint.pprint(selected_targets)
+#     confirm = input("Confirm? (y/n): ").lower() == "y"
 
-    if confirm:
-        for si in selected_targets:
-            replace_tag(si.tag, [si.ideal_tag])
+#     if confirm:
+#         for si in selected_targets:
+#             replace_tag(si.tag, [si.ideal_tag])
 
 @dataclasses.dataclass
 class Namespace():

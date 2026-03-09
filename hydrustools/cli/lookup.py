@@ -16,7 +16,7 @@ logger: logging.Logger
 def apply_actions(actions: MetadataActions):
     file_id = actions.file_id
 
-    if len(actions.add_downloader_tags or []) > 0:
+    if actions.add_downloader_tags and len(actions.add_downloader_tags) > 0:
         logger.info(f"Adding {len(actions.add_downloader_tags)} tags")
         logic.client.add_tags(
             file_ids=[file_id],
@@ -24,9 +24,8 @@ def apply_actions(actions: MetadataActions):
                 logic.downloader_tags_service_key: actions.add_downloader_tags
             } # type: ignore
         )
-        acted = True
 
-    if len(actions.add_tags or []) > 0:
+    if actions.add_tags and len(actions.add_tags) > 0:
         logger.info(f"Adding {len(actions.add_tags)} tags")
         logic.client.add_tags(
             file_ids=[file_id],
@@ -34,12 +33,13 @@ def apply_actions(actions: MetadataActions):
                 logic.local_tags_service_key: actions.add_tags
             } # type: ignore
         )
-        acted = True
 
-    if len(actions.add_urls or []) > 0:
+    if actions.add_urls and len(actions.add_urls or []) > 0:
         logger.info(f"Adding {len(actions.add_urls)} source urls")
         logic.client.associate_url(file_ids=[file_id], urls_to_add=actions.add_urls)
-        acted = True
+
+    if actions.add_notes:
+        raise NotImplementedError()
 
 
 def get_tag_cache():
@@ -91,9 +91,6 @@ def main():
 
     selected_plugins = args.plugins.split(',')
 
-    logger.info("Populating tag data...")
-    tag_cache = get_tag_cache()
-
     logger.info(f"Querying hydrus {args.query!r}...")
     resp = logic.client.search_files(
         tags=args.query.split(' AND ') # type: ignore
@@ -106,13 +103,23 @@ def main():
         file_ids=matching_files
     )
 
+    plugin_list = []
+    for plugin_name, plugin in sorted(plugin_registry.items(), key=lambda t: t[1].priority):
+        if selected_plugins == ['all']:
+            plugin_list.append(plugin)
+        elif any(plugin_name.endswith(suffix) for suffix in selected_plugins):
+            logger.debug("%s has suffix in %s", plugin_name, selected_plugins)
+            plugin_list.append(plugin)
+
+    logger.info("Plugin list: %s from %s", plugin_list, selected_plugins)
+
+    logger.info("Populating tag data...")
+    # tag_cache = get_tag_cache()
+
     for image_id in matching_files:
         metadata: list[logic.FileMetadata] = logic.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
         for image in metadata:
-            for plugin_name, plugin in sorted(plugin_registry.items(), key=lambda t: t[1].priority):
-                if selected_plugins != ['all'] and any(plugin_name.endswith(suffix) for suffix in selected_plugins):
-                    # print("Skipping unselected plugin", plugin_name)
-                    continue
+            for plugin in plugin_list:
                 match = plugin.match(image)
                 # print(image["file_id"], plugin, match)
                 if match:
@@ -123,6 +130,9 @@ def main():
                         continue
 
                     assert actions
+
+                    if not actions.has_any():
+                        continue
 
                     actions = postprocessSuggestions(
                         actions,
@@ -137,9 +147,15 @@ def main():
                         underscores_to_spaces=args.underscores_to_spaces,
                     )
 
-                    pprint.pprint(actions)
 
-                    apply_actions(actions)
+                    remaining = actions.remaining_for(image)
+
+                    if not remaining.has_any():
+                        continue
+
+                    pprint.pprint(remaining)
+
+                    apply_actions(remaining)
 
                     # os.exit()
 

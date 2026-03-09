@@ -1,16 +1,13 @@
-import tqdm
 import argparse
-from collections import Counter
-from dataclasses import dataclass
-from itertools import combinations, permutations
 import logging
 import pprint
+from dataclasses import dataclass
 from typing import Any, DefaultDict
+
 import hydrus_api
-from requests.exceptions import HTTPError
+import tqdm
 
 from hydrustools import htlogging
-from hydrustools.lookup.registry import MetadataActions, get_plugins, postprocessSuggestions
 
 from .. import logic
 

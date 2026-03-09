@@ -69,7 +69,7 @@ venv/pyvenv.cfg: requirements.txt
 	${VPYTHON} -m pip install -r requirements.txt
 	${VPYTHON} -m pip install pyinstaller vulture mypy
 	-${VPYTHON} -m mypy --install-types --non-interactive
-	-${VPYTHON} -m mypy --install-types
+# 	-${VPYTHON} -m mypy --install-types
 
 # Build
 .PHONY: exe

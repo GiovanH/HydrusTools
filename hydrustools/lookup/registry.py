@@ -1,11 +1,16 @@
+from collections.abc import Sequence
 import logging
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Callable
 
+from hydrustools import logic
 from hydrustools.logic import FileMetadata
 
 logger = logging.getLogger(__name__)
+
+PRIOR_BY_URL = 10
+PRIOR_BY_HASH = 5
 
 @dataclass()
 class MetadataActions:
@@ -15,7 +20,46 @@ class MetadataActions:
     add_urls: None | list[str] = None
     add_notes: None | list[dict[str, str]] = None
     info_only: None | list[str] = None
+    source: 'LookupPlugin | None' = None
 
+    def has_any(self):
+        for list_ in [
+            self.add_tags,
+            self.add_downloader_tags,
+            self.add_urls,
+            self.add_notes,
+            self.info_only
+        ]:
+            if list_ and len(list_) > 0:
+                return True
+        return False
+
+    def remaining_for(self, image: FileMetadata):
+        if self.file_id != image['file_id']:
+            raise ValueError(f"MetadataActions {self} attempted to check image with mismatching id {image['file_id']}")
+
+        def set_subtract(a: list[str] | None, b: list[str]) -> list[str] | None:
+            return [*(
+                set(a or []) - set(b)
+            )] or None
+
+        return MetadataActions(
+            file_id=self.file_id,
+            add_tags=set_subtract(
+                self.add_tags,
+                logic.local_tags(image)
+            ),
+            add_downloader_tags=set_subtract(
+                self.add_downloader_tags,
+                logic.local_tags(image, service_key=logic.downloader_tags_service_key)
+            ),
+            add_urls=set_subtract(
+                self.add_urls,
+                image['known_urls']
+            ),
+            add_notes=self.add_notes,
+            info_only=self.info_only
+        )
 
 class LookupPlugin():
     name: str

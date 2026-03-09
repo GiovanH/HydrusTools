@@ -74,6 +74,7 @@ class e621Plugin(registry.LookupPlugin):
             sources = lookup['sources']
 
             return registry.MetadataActions(
+                source=self,
                 file_id=metadata['file_id'],
                 add_tags=tags,
                 add_urls=sources
