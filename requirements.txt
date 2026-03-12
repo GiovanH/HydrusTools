@@ -8,4 +8,6 @@ opencv-python
 pywin32
 tqdm
 frozendict
+pydantic
 charset_normalizer
+urllib3

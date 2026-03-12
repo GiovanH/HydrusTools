@@ -84,6 +84,7 @@ dist/${project_name}.exe: ${SRC_ROOT}/launcher.py ${MODULE_SRCS} ${SCRIPT_SRCS} 
 		--onefile \
 		--console \
 		--additional-hooks-dir=hooks \
+		--hiddenimport charset_normalizer \
 		--distpath dist \
 		--workpath build \
 		--specpath build \

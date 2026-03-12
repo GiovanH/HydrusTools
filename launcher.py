@@ -1,7 +1,5 @@
 import sys
 
-import charset_normalizer  # For pyinstaller+requests
-
 from hydrustools import gui
 
 
