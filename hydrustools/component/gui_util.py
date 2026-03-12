@@ -88,6 +88,8 @@ def get_selection_neighbors(widget: ttk.Treeview, prev=1, next=2) -> list[str]:
     return neighbors
 
 def mod_selection(tree, prev, next):
+    if prev and next:
+        raise ValueError(f"mod_selection can only go in one direction, got {prev=} {next=}")
     neighbors = get_selection_neighbors(tree, prev=prev, next=next)
     if not neighbors:
         return
@@ -95,6 +97,8 @@ def mod_selection(tree, prev, next):
     tree.selection_set(next_id)
     tree.focus(next_id)
     tree.see(next_id)
+    for n in get_selection_neighbors(tree, prev=1, next=1):
+        tree.see(n)
     tree.event_generate("<<TreeviewSelect>>")
 
 
