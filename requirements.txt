@@ -11,3 +11,4 @@ frozendict
 pydantic
 charset_normalizer
 urllib3
+numpy

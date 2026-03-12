@@ -13,8 +13,10 @@ plugin_registry = get_plugins()
 
 logger: logging.Logger
 
-def apply_actions(actions: MetadataActions):
+def apply_actions(actions: MetadataActions, image: logic.FileMetadata | None = None):
     file_id = actions.file_id
+
+    # TODO: If image passed, apply the actions there also
 
     if actions.add_downloader_tags and len(actions.add_downloader_tags) > 0:
         logger.info(f"Adding {len(actions.add_downloader_tags)} tags")
@@ -37,6 +39,10 @@ def apply_actions(actions: MetadataActions):
     if actions.add_urls and len(actions.add_urls or []) > 0:
         logger.info(f"Adding {len(actions.add_urls)} source urls")
         logic.client.associate_url(file_ids=[file_id], urls_to_add=actions.add_urls)
+
+        if image:
+            # TODO: This doesn't apply url transformations like hydrus does
+            image['known_urls'].extend(actions.add_urls)
 
     if actions.add_notes:
         raise NotImplementedError()
@@ -123,7 +129,7 @@ def main():
         for image in metadata:
             for plugin in plugin_list:
                 match = plugin.match(image)
-                print(image["file_id"], plugin, match)
+                logger.debug("%s %s %s", image["file_id"], plugin, match)
                 if match:
                     try:
                         actions = plugin.suggest(image, print)
@@ -159,7 +165,7 @@ def main():
 
                     pprint.pprint(remaining)
 
-                    apply_actions(remaining)
+                    apply_actions(remaining, image)
 
                     # os.exit()
 

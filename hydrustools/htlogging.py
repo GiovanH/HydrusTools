@@ -4,6 +4,8 @@ import colorama
 import os
 from colorama import Fore, Style
 
+import urllib3.connectionpool
+
 colorama.init(autoreset=True)
 
 class ColorFormatter(logging.Formatter):
@@ -28,6 +30,8 @@ def configure_logging():
 
     loglevel = os.environ.get('LOGLEVEL')
     if loglevel:
+        loglevel = logging._nameToLevel.get(loglevel.upper(), loglevel)
+        print("Setting loglevel to", loglevel)
         s_handler.setLevel(loglevel)
 
     f_handler = logging.handlers.RotatingFileHandler("debug.log")
@@ -36,6 +40,7 @@ def configure_logging():
 
     root_logger = logging.getLogger()
     root_logger.addHandler(s_handler)
-    root_logger.addHandler(hdlr=f_handler)
-    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(f_handler)
+    root_logger.setLevel(logging.DEBUG)
 
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)

@@ -1,4 +1,5 @@
 import concurrent.futures
+import logging
 import threading
 from tkinter import ttk
 
@@ -22,7 +23,8 @@ class HydrusImageTable(MultiColumnListbox):
         super().__init__(master, *args_, **kwargs)
 
         self.toolmaster: ToolWindow = toolmaster or master
-        self.logger = self.toolmaster.logger
+        self.logger: logging.Logger = self.toolmaster.logger
+
         self.setStatus = self.toolmaster.setStatus
 
         self.image_cache = []
