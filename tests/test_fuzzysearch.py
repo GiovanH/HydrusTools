@@ -295,3 +295,15 @@ class TestFuzzySearch(unittest.TestCase):
             "your fantroll",
             "fantasy",
         )
+
+    def test_optional_punctuation(self):
+        matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
+            ("high-tech",),
+            "hi-t"
+        ))
+        self.assertIn("high-tech", matches)
+        matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
+            ("low-tech",),
+            "low tech"
+        ))
+        self.assertIn("low-tech", matches)

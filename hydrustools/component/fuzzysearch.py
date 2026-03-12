@@ -42,18 +42,20 @@ def split_to_segments(q: str, query_split) -> tuple[str, ...]:
 
 
 @functools.lru_cache()
-def compare_segments(qseg, hseg, check_in=False) -> int:
+def compare_segments(qseg, hseg, query_split=None, check_in=False) -> int:
     if hseg == qseg:
         return 30
     if hseg.startswith(qseg):
         return 20
     if check_in and qseg in hseg:
         return 1
+    if query_split and query_split.match(qseg) and query_split.match(hseg):
+        return 0
     return -1
 
 
 @functools.lru_cache()
-def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...]) -> int:
+def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...], query_split=None) -> int:
     score = 0
 
     qix = 0
@@ -63,7 +65,7 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
         qseg = query_segments[qix]
         hseg = hay_segments[hix]
 
-        scoredelta = compare_segments(qseg, hseg)
+        scoredelta = compare_segments(qseg, hseg, query_split=query_split)
         logger.debug("    %s <> %s: %s", qseg, hseg, scoredelta)
 
         if scoredelta == -1:
@@ -144,10 +146,12 @@ def perfect_search(
 
         hay_segments: tuple[str, ...] = split_to_segments(hay, query_split)
 
+        logger.debug(f"{query_split.match(query)!r} and {query_split.match(hay)!r}")
+
         if query == hay:
             score += 100
         else:
-            score += score_segments(query_segments, hay_segments)
+            score += score_segments(query_segments, hay_segments, query_split=query_split)
 
         logger.debug("  scored %s", score)
         if score < 1:
