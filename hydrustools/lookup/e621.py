@@ -13,7 +13,7 @@ from joblib import memory
 import requests
 from .. import logic
 
-e621_url_pattern: re.Pattern[str] = re.compile(r'https?://e621.net/posts/(?P<id>\d+)/?')
+e621_url_pattern: re.Pattern[str] = re.compile(r'https?://e621.net/posts?/(show/)?(?P<id>\d+)/?')
 
 memory = memory.Memory("cache")
 
@@ -28,8 +28,9 @@ logger = logging.getLogger(__name__)
 @memory.cache
 def lookup_e621(e621_url):
     # time.sleep(1)
+    match = e621_url_pattern.match(e621_url)
     response = requests.get(
-        f"{e621_url}.json?login={Settings.e621_user}&api_key={Settings.e621_api_key}",
+        f"https://e621.net/posts/{match.group('id')}.json?login={Settings.e621_user}&api_key={Settings.e621_api_key}",
         headers={
             'User-Agent': 'HydrusTool/1.0 (by GiovanH)',
             'Content-Type': 'application/json'
@@ -50,6 +51,7 @@ class e621Plugin(registry.LookupPlugin):
         super().__init__()
 
     def match(self, metadata: FileMetadata) -> bool:
+        # print({u: e621_url_pattern.match(u) for u in metadata['known_urls']})
         return any(
             e621_url_pattern.match(u)
             for u in metadata['known_urls']

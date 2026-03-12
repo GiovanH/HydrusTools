@@ -42,7 +42,7 @@ def apply_actions(actions: MetadataActions):
         raise NotImplementedError()
 
 
-def get_tag_cache():
+def get_tag_cache() -> dict[str, int]:
     tag_count_cache = {}
     all_tags = logic.search_tags_re("*", subpattern=None)
     all_tags_set = {ti.value for ti in all_tags}
@@ -114,14 +114,16 @@ def main():
     logger.info("Plugin list: %s from %s", plugin_list, selected_plugins)
 
     logger.info("Populating tag data...")
-    # tag_cache = get_tag_cache()
+    tag_cache: dict | None = None # get_tag_cache()
+
+    # TODO: Plugins don't have information provided by previous plugins in the same run
 
     for image_id in matching_files:
         metadata: list[logic.FileMetadata] = logic.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
         for image in metadata:
             for plugin in plugin_list:
                 match = plugin.match(image)
-                # print(image["file_id"], plugin, match)
+                print(image["file_id"], plugin, match)
                 if match:
                     try:
                         actions = plugin.suggest(image, print)
@@ -133,6 +135,8 @@ def main():
 
                     if not actions.has_any():
                         continue
+
+                    tag_cache = tag_cache or get_tag_cache()
 
                     actions = postprocessSuggestions(
                         actions,
