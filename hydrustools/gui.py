@@ -1,5 +1,6 @@
 import logging
 import tkinter as tk
+import traceback
 import webbrowser
 from dataclasses import dataclass
 from tkinter import messagebox, ttk
@@ -133,6 +134,7 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
         super().__init__(*args_, **kwargs)
 
         self.logger = logging.getLogger(self.__class__.__name__)
+
         self.command_list: list[MenuEntry] = []
         self.initwindow()
 
@@ -179,7 +181,6 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
                             assert entry.command
                             # self.logger.info(f"Setting last as {label}, {command}")
                             Settings.gui_last = self.command_list.index(entry)
-                            entry.command()
                         if entry.command:
                             # taskthread = threading.Thread(target=command, daemon=True)
                             # taskthread.start()

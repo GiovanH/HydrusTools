@@ -1,6 +1,9 @@
 import logging
-from typing import Sequence
+import pprint
 import unittest
+from typing import Sequence
+
+from frozendict import frozendict
 
 from hydrustools import htlogging
 from hydrustools.component import fuzzysearch
@@ -64,10 +67,14 @@ class TestFuzzySearch(unittest.TestCase):
 
         self.assertIn(item1, matches)
         self.assertIn(item2, matches)
-        self.assertLess(
-            matches.index(item1),
-            matches.index(item2)
-        )
+        try:
+            self.assertLess(
+                matches.index(item1),
+                matches.index(item2)
+            )
+        except AssertionError:
+            print(matches)
+            raise
 
     def test_search_basic(self):
         matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
@@ -307,3 +314,34 @@ class TestFuzzySearch(unittest.TestCase):
             "low tech"
         ))
         self.assertIn("low-tech", matches)
+
+    def test_tiebreak(self):
+        rawmatch = fuzzysearch.perfect_search(TAGS, "ch:s")
+        matches = fuzzysearch.merge_lists(
+            rawmatch,
+            count_tiebreak=frozendict({"character:sugilite": 10})
+        )
+        try:
+            self.assertBefore(
+                matches,
+                "character:sugilite",
+                "character:stevonnie",
+            )
+        except:
+            pprint.pprint(rawmatch)
+            raise
+
+        rawmatch = fuzzysearch.perfect_search(TAGS, "ch:s")
+        matches = fuzzysearch.merge_lists(
+            rawmatch,
+            count_tiebreak=frozendict({"character:stevonnie": 10})
+        )
+        try:
+            self.assertBefore(
+                matches,
+                "character:stevonnie",
+                "character:sugilite",
+            )
+        except:
+            pprint.pprint(rawmatch)
+            raise

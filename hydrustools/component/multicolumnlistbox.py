@@ -144,7 +144,7 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
             margin = 4
             show = "tree headings"
 
-        self.logger.debug("Setting up frame with image config", self.schema.imagesize, "and headers", self.schema.headers, show, stylename)
+        self.logger.debug(f"Setting up frame with image config {self.schema.imagesize} and headers {self.schema.headers}, {show}, {stylename}")
 
         self.tree = ttk.Treeview(
             self,

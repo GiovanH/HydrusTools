@@ -5,17 +5,18 @@ import tkinter as tk
 from collections.abc import Sequence
 from tkinter import TclError, ttk
 
+from frozendict import frozendict
+
 from hydrustools import logic
 from hydrustools.component import fuzzysearch
-from hydrustools.component.fuzzysearch import MatchResults, getMatches
 from hydrustools.util import timer
 
 from .gui_util import tkwrapc
 
-def penalize_ships(tup: tuple[int, str]):
-    if tup[1].startswith("ship:"):
-        return (tup[0]-1, tup[1])
-    return tup
+# def penalize_ships(tup: tuple[fuzzysearch.Score, str]):
+#     if tup[1].startswith("ship:"):
+#         return (tup[0]-1, tup[1])
+#     return tup
 
 class ListboxNavigator:
     def __init__(self, listbox: tk.Listbox):
@@ -70,15 +71,20 @@ class TagEditorList(ttk.Frame):
         self.modified = False
 
         self.all_tags: Sequence[str] = []
+        self.all_tag_counts: frozendict[str, int]
         self.tag_context: tuple[str, ...] = ()
         self.tag_synonyms_all: dict[str, str] = {}
 
         self.last_query = ""
-        self.last_tag: str | None = None
+        # self.last_tag: str | None = None
 
         self.aggressive = tk.BooleanVar(value=True)
 
         self.initwindow()
+
+        # self.event_add("<<Modified>>")
+        # self.event_add("<<DWIM>>")
+        # self.event_add("<<TagAdd>>")
 
         self.suggestion_nav = ListboxNavigator(self.listbox_suggestion)
 
@@ -233,7 +239,9 @@ class TagEditorList(ttk.Frame):
         self.logger.info("Loading global suggestions...")
 
         self.pb['value'] = 25
-        all_tags = tuple(t.value for t in logic.search_tags_re('*', subpattern=None, display_type='display'))
+        all_tag_counts = logic.search_tags_re('*', subpattern=None, display_type='display')
+
+        all_tags = tuple(t.value for t in all_tag_counts)
 
         self.pb['value'] = 50
         self.tag_synonyms_all = {
@@ -249,6 +257,11 @@ class TagEditorList(ttk.Frame):
             *all_tags,
             *self.tag_synonyms_all.keys()
         ])
+
+        self.all_tag_counts = frozendict({
+            t.value: t.count
+            for t in all_tag_counts
+        })
 
         # pprint.pprint(self.all_tags)
 
@@ -292,6 +305,7 @@ class TagEditorList(ttk.Frame):
                 query,
                 limit=20
             )
+
         with timer("commands", min_secs=0, logger=self.logger.info):
             match_commands = fuzzysearch.perfect_search(
                 delete_commands,
@@ -309,7 +323,8 @@ class TagEditorList(ttk.Frame):
         with timer("merge", min_secs=0, logger=self.logger.info):
             matches = fuzzysearch.merge_lists(
                 match_all, match_commands, match_context,
-                edits=[penalize_ships]
+                count_tiebreak=self.all_tag_counts,
+                # edits=[penalize_ships]
             )
 
         suggestions = []
