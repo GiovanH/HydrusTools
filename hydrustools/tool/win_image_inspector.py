@@ -58,6 +58,10 @@ If tagname is attached to the image, "-tagname" will remove it.
 
         self.textvar_info = tk.StringVar(self, "No image selected")
 
+        self.tagstack: list[str] = []
+        self.tagstack_from: int = -1
+        self.textvar_tagstack = tk.StringVar(self, "")
+
         self.pref_autosave = Settings.boundTkVar(self, 'img_autosave', tk.BooleanVar)
         self.pref_dwim_archive = Settings.boundTkVar(self, 'img_dwim_archive', tk.BooleanVar)
         self.pref_dwim_advance = Settings.boundTkVar(self, 'img_dwim_advance', tk.BooleanVar)
@@ -127,6 +131,12 @@ If tagname is attached to the image, "-tagname" will remove it.
                 lab.pack(anchor=tk.N, fill=tk.BOTH, expand=True)
 
             with tkwrap(grooveframe(col)) as row:
+                row.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+                lab = ttk.Label(row, textvariable=self.textvar_tagstack, anchor=tk.NW, width=40, wraplength=250)
+                lab.pack(anchor=tk.N, fill=tk.BOTH, expand=True)
+
+            with tkwrap(grooveframe(col)) as row:
                 row.pack(side=tk.TOP, fill=tk.X)
 
                 for (var, label) in [
@@ -161,11 +171,15 @@ If tagname is attached to the image, "-tagname" will remove it.
         entry.bind("<Next>", lambda e: self.next_image())
         entry.bind("<Prior>", lambda e: self.prev_image())
 
+        entry.bind("<Control-period>", self.try_repeat)
+
         entry.bind("<Control-e>", self.toggle_keep)
         entry.bind("<Control-d>", self.toggle_delete)
 
         self.tag_editor_list.bind("<<DWIM>>", self.entry_dwim)
+        self.tag_editor_list.bind("<<TagAdd>>", self.on_add)
         self.tag_editor_list.pb = self.pb
+
 
         entry.focus()
 
@@ -189,6 +203,33 @@ If tagname is attached to the image, "-tagname" will remove it.
         if self.pref_dwim_advance.get():
             if not edited:
                 self.next_image()
+
+    def on_add(self, event: tk.Event):
+        new_tag: str = self.tag_editor_list.last_tag
+        assert isinstance(new_tag, str)
+        assert self.current_image
+        self.logger.info("Got event adding new tag %s %s", event, new_tag)
+        file_id = self.current_image['file_id']
+
+        if len(self.tagstack) == 0:
+            self.logger.debug("Attaching current image %s to empty stack", file_id)
+            self.tagstack_from = file_id
+        if self.tagstack_from != file_id:
+            self.logger.debug(f"{file_id=} != {self.tagstack_from=}, resetting stack")
+            self.tagstack.clear()
+            self.tagstack_from = file_id
+        self.logger.debug("Attaching %s to stack for %s", new_tag, file_id)
+        self.tagstack.append(new_tag)
+        self.textvar_tagstack.set('\n'.join(self.tagstack))
+
+    def try_repeat(self, event):
+        for t in self.tagstack:
+            self.logger.debug("Adding tag %s", t)
+            self.tag_editor_list.addTag(t, interactive=False)
+
+        # self.logger.debug("Finished repeat, clearing stack")
+        # self.tagstack.clear()
+        # self.textvar_tagstack.set('\n'.join(self.tagstack))
 
     def save_tag_list(self):
         if not self.current_image:

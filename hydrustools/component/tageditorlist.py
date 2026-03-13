@@ -128,11 +128,11 @@ class TagEditorList(ttk.Frame):
         self.entry_add.bind('<Down>', lambda e: self.suggestion_nav.move_down())
         self.entry_add.bind('<F5>', self.load_suggestions)
 
-        self.entry_add.bind("<Control-period>", self.try_repeat)
+    #     self.entry_add.bind("<Control-period>", self.try_repeat)
 
-    def try_repeat(self, event=None):
-        if self.last_tag:
-            self.addTag(self.last_tag)
+    # def try_repeat(self, event=None):
+    #     if self.last_tag:
+    #         self.addTag(self.last_tag)
 
     def validate(self):
         box_list = self.listbox_taglist.get(0, self.listbox_taglist.size())
@@ -151,18 +151,21 @@ class TagEditorList(ttk.Frame):
         self.tag_list.clear()
 
         for tag in logic.sort_tags(tag_list):
-            self.addTag(tag)
+            self.addTag(tag, interactive=False)
             # self.listbox_taglist.insert(tk.END, tag)
 
         self.load_context_suggestions()
         self.validate()
 
-    def addTag(self, new_tag: str):
+    def addTag(self, new_tag: str, interactive=True):
         if new_tag not in self.tag_list:
             self.tag_list.append(new_tag)
             self.listbox_taglist.insert(tk.END, new_tag)
             self.modified = True
             self.event_generate("<<Modified>>")
+        if interactive:
+            self.last_tag = new_tag
+            self.event_generate("<<TagAdd>>")
 
         # print(self.listbox_taglist.itemconfig(len(self.tag_list)))
 
@@ -211,7 +214,7 @@ class TagEditorList(ttk.Frame):
                 self.removeTag(selected_suggestion[1:])
             else:
                 self.addTag(selected_suggestion)
-                self.last_tag = selected_suggestion
+                # self.last_tag = selected_suggestion
             widget.delete(0, tk.END)
             self.validate()
             return
@@ -219,7 +222,7 @@ class TagEditorList(ttk.Frame):
         entry_value = widget.get()
         if entry_value:
             self.addTag(entry_value)
-            self.last_tag = entry_value
+            # self.last_tag = entry_value
             widget.delete(0, tk.END)
             self.validate()
             return
