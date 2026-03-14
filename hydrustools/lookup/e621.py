@@ -1,17 +1,19 @@
-from collections import Counter
-from dataclasses import dataclass
 import logging
-from pathlib import Path
 import pprint
 import re
+import time
+from collections import Counter
+from dataclasses import dataclass
+from pathlib import Path
+
+import requests
+from joblib import memory
+
 from hydrustools.inisettings import IniSettings
 from hydrustools.logic import FileMetadata
-from . import registry
 
-import time
-from joblib import memory
-import requests
 from .. import logic
+from . import registry
 
 e621_url_pattern: re.Pattern[str] = re.compile(r'https?://e621.net/posts?/(show/)?(?P<id>\d+)/?')
 
@@ -29,6 +31,7 @@ logger = logging.getLogger(__name__)
 def lookup_e621(e621_url):
     # time.sleep(1)
     match = e621_url_pattern.match(e621_url)
+    assert isinstance(match, re.Match)
     response = requests.get(
         f"https://e621.net/posts/{match.group('id')}.json?login={Settings.e621_user}&api_key={Settings.e621_api_key}",
         headers={

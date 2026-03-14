@@ -100,7 +100,7 @@ def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
     imageData = io.BytesIO(resp.content)
 
     result = None
-    while not result:
+    while not (result and result.get('status') == 0):
         try:
             resp = requests.post(
                 "http://saucenao.com/search.php",
@@ -113,10 +113,13 @@ def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
                 },
                 files={'file': ("image.png", imageData.getvalue())}
             )
-            resp.raise_for_status()
             result = resp.json()
+            resp.raise_for_status()
         except requests.exceptions.HTTPError as e:
             logger.error(e)
+            logger.error(result)
+            if result and "Daily Search Limit Exceeded." in result.get('header', {}).get('message', ''):
+                raise ConnectionRefusedError(result)
             logger.info("Waiting...")
             time.sleep(30)
     return result
@@ -129,12 +132,13 @@ class sauceNaoPlugin(registry.LookupPlugin):
     def __init__(self) -> None:
         super().__init__()
 
+        self.refused = False
         # self.client = pysaucenao.SauceNao(
         #     api_key=Settings.api_key,
         # )
 
     def match(self, metadata: FileMetadata) -> bool:
-        return bool(Settings.api_key)
+        return bool(Settings.api_key) and (not self.refused)
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
 
@@ -145,12 +149,20 @@ class sauceNaoPlugin(registry.LookupPlugin):
             add_urls=[]
         )
 
-        result = sauce_from_hydrus(
-            metadata,
-            bitmask=get_bitmask(Settings.enabled_sites),
-            minsim=Settings.minsim,
-            numres=Settings.numres
-        )
+        assert isinstance(act.add_tags, list)
+
+        try:
+            result = sauce_from_hydrus(
+                metadata,
+                bitmask=get_bitmask(Settings.enabled_sites),
+                minsim=Settings.minsim,
+                numres=Settings.numres
+            )
+        except ConnectionRefusedError:
+            self.refused = True
+            raise
+
+        # TODO: if short_remaining == 0, self.refused = true but continue
 
         # pprint.pprint(result)
 
