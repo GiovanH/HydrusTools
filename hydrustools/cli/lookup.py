@@ -83,15 +83,30 @@ def main():
 
     logic.init_client()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("plugins", help=f"Comma-separated unordered set of plugins to use. Available options: {[*plugin_registry.keys()]} or 'all'")
+    parser = argparse.ArgumentParser(
+        epilog=f"Available plugins:\n {nl.join(plugin_registry.keys())}\n or 'all'",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("plugins", help="Comma-separated unordered set of plugins to use.")
     parser.add_argument("query", help="Hydrus image query")
-    parser.add_argument("--min-count-local", type=int, default=20)
-    parser.add_argument("--min-count-download", type=int, default=1)
-    parser.add_argument("--creator-always-local", action="store_true", default=True)
-    parser.add_argument("--character-always-local", action="store_true", default=True)
-    parser.add_argument("--no-downloader-tags", action="store_true")
-    parser.add_argument("--underscores_to_spaces", action="store_true", default=True)
+
+    parser.add_argument("--min-count-local", type=int, default=20,
+        help="Number of times this tag must already exist in tag repo to be added")
+    parser.add_argument("--min-count-download", type=int, default=1,
+        help="Number of times this tag must already exist in tag repo to be added")
+
+    parser.add_argument("--creator-always-local",
+        action=argparse.BooleanOptionalAction, default=True,
+        help="Always include creator: tags regardless of count")
+    parser.add_argument("--character-always-local",
+        action=argparse.BooleanOptionalAction, default=True,
+        help="Always include characters: tags regardless of count")
+    parser.add_argument("--downloader-tags",
+        action=argparse.BooleanOptionalAction, default=False,
+        help="Move all downloader tags to info-only")
+    parser.add_argument("--underscores-to-spaces",
+        action=argparse.BooleanOptionalAction, default=True,
+        help="Convert underscores to spaces in tags")
 
     args = parser.parse_args()
 

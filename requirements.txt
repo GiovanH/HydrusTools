@@ -1,5 +1,4 @@
 pillow
-PyInstaller
 hydrus_api
 joblib
 pick
@@ -9,6 +8,13 @@ pywin32
 tqdm
 frozendict
 pydantic
-charset_normalizer
-urllib3
 numpy
+# Requests weirdness
+requests >= 2.32.5
+charset_normalizer > 2.0.0, <= 4.0.0
+chardet >= 3.0.2, < 6.0.0
+urllib3 >= 1.21.1
+# Build/dev
+pyinstaller
+vulture
+mypy
