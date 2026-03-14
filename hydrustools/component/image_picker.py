@@ -1,7 +1,7 @@
-from collections import OrderedDict
 import dataclasses
 import pprint
 import tkinter as tk
+from collections import OrderedDict
 from tkinter import ttk
 from typing import ClassVar
 
@@ -12,17 +12,17 @@ from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewS
 from hydrustools.component.relationship_adder import RelationshipAction
 
 from .. import logic
-from ..logic import FileMetadata
-
 from ..component.gui_util import (
     Increment,
     SearchQueryEntry,
     TreeviewHeadings,
+    flatList,
     pb_iter,
     tkwrap,
     tkwrapc,
 )
 from ..component.toolwindow import ToolWindow
+from ..logic import FileMetadata
 from ..settings import Settings
 
 
@@ -115,6 +115,7 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
 
         self.result: list[FileMetadata] | None = None
         self.textvar_query: tk.StringVar = Settings.boundTkVar(self, name='imagesearch_query')
+        self.boolvar_alts: tk.BooleanVar = Settings.boundTkVar(self, 'imagesearch_alts', tk.BooleanVar)
 
         self.initwindow()
 
@@ -148,6 +149,13 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             # self.query_history.grid(column=cx.value, row=1, sticky="ew")
 
             cx.inc()
+            tk.Label(frame_top, text="Add all related")\
+                .grid(column=cx.value, row=0, sticky="w")
+
+            check_alts = ttk.Checkbutton(frame_top, variable=self.boolvar_alts)
+            check_alts.grid(column=cx.value, row=1, sticky="ew")
+
+            cx.inc()
             btn_search = ttk.Button(frame_top, text="Search", command=self.startTaskCurry(self.doSearch, False))
             btn_search.grid(column=cx.value, row=1, sticky="ew")
 
@@ -173,7 +181,7 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             btn_open = ttk.Button(frame_bottom, text="Pick selected images", command=self.confirm)
             btn_open.grid(column=cx.inc(), row=0, sticky="nse")
 
-    def search_get_ids(self):
+    def search_get_ids(self) -> list[int] | None:
         try:
             tag_query = self.entry_search.get_query()
         except ValueError:
@@ -183,18 +191,26 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
             self.setStatus(e)
             return
 
+        self.pb['value'] = 10
         self.setStatus(f"Searching for query {tag_query!r}")
         self.search_frame.delete_all()
 
         try:
             resp = logic.client.search_files(
-                tags=tag_query # type: ignore
+                tags=tag_query, # type: ignore
+                tag_service_key=logic.local_tags_service_key
             )
-            matching_files = resp['file_ids']
+            matching_files: list[int] = resp['file_ids']
         except hydrus_api.APIError as e:
             self.setStatus(str(e))
             return
 
+        if self.boolvar_alts.get():
+            self.pb['value'] = 90
+            self.setStatus(f"Bundling in relationships...")
+            matching_files = logic.addAltsToList(matching_files)
+
+        self.pb['value'] = 0
         return matching_files
 
     def doSearch(self, event=None, load_thumbnails=True):
