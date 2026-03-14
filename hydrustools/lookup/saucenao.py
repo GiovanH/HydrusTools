@@ -20,7 +20,14 @@ memory = memory.Memory("cache", verbose=False)
 
 class SauceNaoSettings(IniSettings):
     api_key: str = ""
-    enabled_sites: list[str] = ['pixiv', 'danbooru', 'yandere', 'gelbooru', 'konachan', 'e621']  # noqa: RUF012
+    enabled_sites: list[str] = [
+        'pixiv',
+        'danbooru',
+        'yandere',
+        'gelbooru',
+        'konachan',
+        # 'e621'
+    ]  # noqa: RUF012
     numres: int = 1
     minsim: int = 90
 
@@ -88,7 +95,7 @@ def get_bitmask(enabled_sites: list[str]):
     return db_bitmask
 
 
-@memory.cache()
+@memory.cache
 def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
     with timer("thumbnail"):
         resp = logic.client.get_thumbnail(file_id=metadata['file_id'])
@@ -98,20 +105,25 @@ def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
 
     result = None
     retries = 0
-    while not (result and result.get('status') == 0):
+    while (not result) or (result.get('header', {}).get('status') != 0):
+        logger.debug(pprint.pformat(result))
+        if result:
+            logger.debug(f"{result.get('header', {}).get('status')=!r}")
         try:
             resp = requests.post(
                 "http://saucenao.com/search.php",
                 params={
                     "output_type": 2,
                     "numres": numres,
-                    "minsim": f"{minsim}!",
-                    "dbmask": str(bitmask),
+                    "minimum_similarity": f"{minsim}",
+                    # "dbmask": str(bitmask),
+                    "db": 999,
                     "api_key": Settings.api_key
                 },
                 timeout=10,
                 files={'file': ("image.png", imageData.getvalue())}
             )
+            logger.debug(resp)
             result = resp.json()
             resp.raise_for_status()
         except requests.exceptions.HTTPError as e:
@@ -175,10 +187,13 @@ class sauceNaoPlugin(registry.LookupPlugin):
 
         for entry in result['results']:
             if float(entry['header']['similarity']) > Settings.minsim:
-                pprint.pprint(entry)
+                logger.debug(pprint.pformat(entry))
                 act.add_urls += entry['data']['ext_urls']
                 if entry['data'].get('member_name'):
                     act.add_tags.append(f"creator:{entry['data']['member_name']}")
+                if entry['data'].get('material'):
+                    entry_tags: list[str] = entry['data'].get('material').split(", ")
+                    act.add_tags.extend(entry_tags)
                 # raise NotImplementedError
             else:
                 logger.debug("Discarding insufficiently similar match %s", entry['header'])

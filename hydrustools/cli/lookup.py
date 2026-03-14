@@ -88,9 +88,22 @@ def main():
 
     logic.init_client()
 
+    plugin_repr_list = [
+        f"{k} ({v.name})"
+        for k, v in plugin_registry.items()
+    ]
+
     nl = "\n"
     parser = argparse.ArgumentParser(
-        epilog=f"Available plugins: \n{nl.join(plugin_registry.keys())}",
+        usage="lookup PLUGINS QUERY [FLAGS]...",
+        description="""Use lookup plugins to merge discovered metadata into hydrus files. Takes a hydrus query and plugin list and merges metadata into hydrus according to passed options. Some plugins may have additional ini configuration.
+
+Example invocations:
+> lookup 'Saucenao' 'system:no urls AND system:limit=100'
+> lookup 'grabberComMd5Plugin,grabberComPlugin' 'system:no urls AND system:limit=100'
+> lookup 'all' '-character:* AND -series:* AND system:no urls'
+""",
+        epilog=f"Available plugins: \n{nl.join(plugin_repr_list)}",
         formatter_class=partial(formatter, max_help_position=10)
     )
     parser.add_argument("plugins", help="Comma-separated unordered set of plugins to use, or 'all'.")
@@ -106,7 +119,7 @@ def main():
         help="Always include creator: tags regardless of count")
     parser.add_argument("--character-always-local",
         action=argparse.BooleanOptionalAction, default=True,
-        help="Always include characters: tags regardless of count")
+        help="Always include character: tags regardless of count")
     parser.add_argument("--downloader-tags",
         action=argparse.BooleanOptionalAction, default=False,
         help="Move all downloader tags to info-only")
@@ -131,11 +144,11 @@ def main():
     )
 
     plugin_list = []
-    for plugin_name, plugin in sorted(plugin_registry.items(), key=lambda t: t[1].priority):
+    for plugin_key, plugin in sorted(plugin_registry.items(), key=lambda t: t[1].priority):
         if selected_plugins == ['all']:
             plugin_list.append(plugin)
-        elif any(plugin_name.endswith(suffix) for suffix in selected_plugins):
-            logger.debug("%s has suffix in %s", plugin_name, selected_plugins)
+        elif any(plugin.name == s for s in selected_plugins) or any(plugin_key.endswith(suffix) for suffix in selected_plugins):
+            logger.debug("%s has suffix in %s", plugin_key, selected_plugins)
             plugin_list.append(plugin)
 
     logger.info("Plugin list: %s from %s", plugin_list, selected_plugins)
@@ -153,7 +166,7 @@ def main():
                 logger.debug("%s %s %s", image["file_id"], plugin, match)
                 if match:
                     try:
-                        with timer(f"{plugin}: get suggestions"):
+                        with timer(f"{plugin.name}: get suggestions"):
                             actions = plugin.suggest(image, print)
                     except Exception:
                         logger.exception(f"Error running plugin {plugin} on image {image['file_id']}")
@@ -185,7 +198,7 @@ def main():
                     if not remaining.has_any():
                         continue
 
-                    pprint.pprint(remaining)
+                    logger.info(pprint.pformat(remaining))
 
                     apply_actions(remaining, image)
 

@@ -1,8 +1,11 @@
 from contextlib import contextmanager
 from typing import Callable
+import logging
+
+logger = logging.getLogger(__name__)
 
 @contextmanager
-def timer(label="task", logger: Callable[[str], None] = print, min_secs=1):
+def timer(label="task", logger: Callable[[str], None] = logger.info, min_secs=1):
     """Times a code block and prints time taken to screen
 
     Args:

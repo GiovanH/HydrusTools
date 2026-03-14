@@ -40,6 +40,7 @@ def query_booru_md5(source, md5_hash) -> None | dict:
     ]
     stdout = None
     stderr = None
+    logger.debug(cmd)
     try:
         proc: subprocess.CompletedProcess = subprocess.run(cmd, cwd=cwd, capture_output=True)  # noqa: PLW1510
         stdout = proc.stdout
@@ -50,6 +51,8 @@ def query_booru_md5(source, md5_hash) -> None | dict:
         logger.error(stdout)
         logger.error(stderr)
         raise
+    logger.debug(stdout)
+    logger.debug(stderr)
     result = json.loads(stdout)
     if len(result) == 0:
         # raise ValueError("Matched no images")
@@ -137,7 +140,7 @@ class grabberComMd5Plugin(registry.LookupPlugin):
         md5_hashes = [*resp['hashes'].values()]
 
         for md5_hash in md5_hashes:
-            logger.info("searching hash %s of image %s", md5_hash, metadata['file_id'])
+            logger.debug("searching hash %s of image %s", md5_hash, metadata['file_id'])
             for source in [
                 'rule34.paheal.net',
                 # "gelbooru.com",
@@ -201,7 +204,7 @@ class grabberComPlugin(registry.LookupPlugin):
             #     logger.info("%s Host %s known to not return metadata", self.__class__.__name__, url)
             #     continue
 
-            logger.info("%s Looking up post %s", self.__class__.__name__, url)
+            logger.debug("%s Looking up post %s", self.__class__.__name__, url)
             source = urllib.parse.urlparse(url).netloc
             source = Settings.grabber_aliases.get(source, source)
             lookup = query_booru_url(source, url)

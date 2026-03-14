@@ -60,8 +60,9 @@ if 'cli' in sys.argv:
     for launcher_module in launcher.SubModules._allModules():
         print(f"  {launcher_module}", file=sys.stderr)
         print(f"### `{launcher_module}`\n")
-        command = f"python3 launcher.py {launcher_module}"
-        print(f"`{command}`\n")
+        print(f"`./HydrusTools {launcher_module}` (compiled)  ")
+        print(f"`(venv) python3 launcher.py {launcher_module}` (dev)  ")
+        print()
 
         sys.argv = [launcher_module, '--help']
         os.environ['COLUMNS'] = '110'

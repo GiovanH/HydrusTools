@@ -150,7 +150,10 @@ def apply_groups(groups):
 def main():
     logic.init_client()
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="WIP!",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("query", help="Hydrus image query")
     parser.add_argument("--ignore-namespaces", type=list, default=[
         'source', 'directory'

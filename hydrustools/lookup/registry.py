@@ -1,7 +1,7 @@
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 from hydrustools import logic
 from hydrustools.logic import FileMetadata
@@ -33,7 +33,7 @@ class MetadataActions:
                 return True
         return False
 
-    def remaining_for(self, image: FileMetadata):
+    def remaining_for(self, image: FileMetadata) -> 'MetadataActions':
         if self.file_id != image['file_id']:
             raise ValueError(f"MetadataActions {self} attempted to check image with mismatching id {image['file_id']}")
 
@@ -42,23 +42,27 @@ class MetadataActions:
                 set(a or []) - set(b)
             )] or None
 
-        return MetadataActions(
-            file_id=self.file_id,
-            add_tags=set_subtract(
+        merged = {
+            **asdict(self),
+            # file_id=self.file_id,
+            # add_notes=self.add_notes,
+            # info_only=self.info_only,
+            # source=self.source,
+            "add_tags": set_subtract(
                 self.add_tags,
                 logic.local_tags(image)
             ),
-            add_downloader_tags=set_subtract(
+            "add_downloader_tags": set_subtract(
                 self.add_downloader_tags,
                 logic.local_tags(image, service_key=logic.downloader_tags_service_key)
             ),
-            add_urls=set_subtract(
+            "add_urls": set_subtract(
                 self.add_urls,
                 image['known_urls']
-            ),
-            add_notes=self.add_notes,
-            info_only=self.info_only
-        )
+            )
+        }
+
+        return MetadataActions(**merged) # type: ignore
 
 class LookupPlugin():
     name: str
