@@ -139,7 +139,7 @@ class NSVar(tk.StringVar):
 
 
 class QueryHistory(ttk.Combobox):
-    def __init__(self, master, hist_store: str | None = None, history_length=10, *args, **kwargs):
+    def __init__(self, master, hist_store: str | None = None, history_length=25, *args, **kwargs):
         kwargs['width'] = 0
         super().__init__(master, *args, **kwargs)
 

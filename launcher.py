@@ -18,9 +18,9 @@ class SubModules():
         print("Other available scripts:")
         print(cls._allModules())
 
-    @staticmethod
-    def gui():
-        gui.main()
+    # @staticmethod
+    # def gui():
+    #     gui.main()
 
     @staticmethod
     def lookup():

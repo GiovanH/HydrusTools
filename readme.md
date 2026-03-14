@@ -12,7 +12,12 @@ Work in progress!
 
 ## Documentation
 
-Each tool has built-in documentation. Press the ? button next to the menu entry (or the F1 key within a tool) for the documentation, or see [ToolDocumentation](./ToolDocumentation.md) for an online list.
+Each tool has built-in documentation. Press the ? button next to the menu entry (or the F1 key within a tool) for the documentation.
+
+There are also automatically generated online list:
+
+- [Tools](./Docs_Tools.md)
+- [CLI](./Docs_CLI.md)
 
 ## Setup
 

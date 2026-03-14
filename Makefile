@@ -16,7 +16,7 @@ release: exe
 VPYTHON=venv/Scripts/python.exe
 
 SRC_ROOT=.
-MODULE_SRCS=$(wildcard ${SRC_ROOT}/*/*.py)
+MODULE_SRCS=$(shell find ${project_name} -type f -name '*.py')
 SCRIPT_SRCS=$(wildcard ${SRC_ROOT}/*.py)
 HOOK_SRCS=$(wildcard ${SRC_ROOT}/hooks/*)
 # SCRIPT_SRCS=${SRC_ROOT}/gui.py
@@ -37,10 +37,13 @@ watch:
 check: venv lint test
 
 .PHONY: docs
-docs: ToolDocumentation.md
+docs: Docs_Tools.md Docs_CLI.md
 
-ToolDocumentation.md: venv autodoc.py ${MODULE_SRCS}
-	${VPYTHON} autodoc.py > ToolDocumentation.md
+Docs_Tools.md: venv autodoc.py launcher.py ${MODULE_SRCS}
+	${VPYTHON} autodoc.py tools > $@
+
+Docs_CLI.md: venv autodoc.py launcher.py ${MODULE_SRCS}
+	${VPYTHON} autodoc.py cli > $@
 
 .PHONY: lint
 lint: venv
