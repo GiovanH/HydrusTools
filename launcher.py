@@ -38,6 +38,8 @@ def tryRun(cmd):
         getattr(SubModules, cmd)()
     else:
         print(f"Command {cmd!r} not supported. Options are: {SubModules._allModules()}")
+        print("Invoke with (venv) ./HydrusTools [module] or")
+        print("Invoke with (venv) python3 launcher.py [module] (dev)")
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
