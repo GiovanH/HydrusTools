@@ -293,6 +293,72 @@ def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> Image.Ima
     return image
 
 
+def get_hash_to_id_from_rels(file_relationships) -> dict[str, int]:
+    all_hashes = set()
+    all_hashes.update(file_relationships.keys())
+    all_hashes.update([r['king'] for r in file_relationships.values()])
+    all_hashes.update(flatList([
+        v for r in file_relationships.values()
+        for v in r.values()
+        if isinstance(v, list)
+    ]))
+
+    return {
+        file["hash"]: file["file_id"]
+        for file in
+        client.get_file_metadata(
+            hashes=[*all_hashes]
+        )['metadata']
+    }
+
+def addAltsToList(image_id_list: list[int]) -> list[int]:
+    file_relationships = client.get_file_relationships(
+        file_ids=image_id_list
+    )['file_relationships']
+
+    # pprint.pprint(file_relationships)
+
+    hash_to_id = get_hash_to_id_from_rels(file_relationships)
+    moved = set()
+    for image_hash, rel_data in file_relationships.items():
+        image_id = hash_to_id[image_hash]
+        if image_id in moved:
+            logger.debug(f"{image_id} alts: Already touched self, skipping")
+            continue
+        try:
+            image_index: int = image_id_list.index(image_id)
+        except ValueError:
+            logger.warning("Somehow, %s is in the relationships list but not the search list", image_hash)
+            continue
+
+        for rel_kind in [
+            str(enum.value)
+            for enum in hydrus_api.DuplicateStatus
+        ]:
+            rel_group = rel_data[rel_kind]
+            for rel_hash in rel_group:
+                rel_id = hash_to_id[rel_hash]
+                if rel_id in moved:
+                    logger.debug(f"{image_id} alts: Already touched {rel_id}, skipping")
+                    continue
+
+                logger.debug(f"{rel_id!r}, {image_id_list!r}")
+                if rel_id in image_id_list:
+                    # Relocate
+                    logger.debug(f"{image_id} alts: Moving {rel_id} to index {image_index+1}")
+                    image_id_list.remove(rel_id)
+                    image_id_list.insert(image_index+1, rel_id)
+                else:
+                    # Add
+                    logger.debug(f"{image_id} alts: Adding new {rel_id} to index {image_index+1}")
+                    image_id_list.insert(image_index+1, rel_id)
+
+                logger.debug(f"New list: {image_id_list}")
+                logger.debug(f"{image_id} alts: adding {rel_id} to moved set {moved}")
+                moved.add(rel_id)
+    return image_id_list
+
+
 
 def has_note(notename: str, max_n: int = 4) -> list[str]:
     return [
