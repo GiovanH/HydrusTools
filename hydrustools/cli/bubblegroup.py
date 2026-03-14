@@ -1,13 +1,13 @@
 import argparse
 import logging
-import pprint
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, DefaultDict
+from typing import Any
 
 import hydrus_api
-import tqdm
 
 from hydrustools import htlogging
+from hydrustools.component import querylang
 
 from .. import logic
 
@@ -29,7 +29,7 @@ def reset_groups():
 def find_similar_keys(query_tagset: frozenset, groups: dict[frozenset, Any]):
     similar: list[tuple[tuple[int, ...], frozenset]] = []
 
-    for tagset in groups.keys():
+    for tagset in groups:
         if tagset is query_tagset:
             continue
 
@@ -58,7 +58,7 @@ def bubble_group(
     min_size: int,
     max_size: int,
 ) -> dict[frozenset[Any], list[BubbleItem]]:
-    groups: dict[frozenset, list[BubbleItem]] = DefaultDict(list)
+    groups: dict[frozenset, list[BubbleItem]] = defaultdict(list)
 
     for file in all_images:
         groups[file.tags].append(file)
@@ -168,7 +168,7 @@ def main():
 
     logger.info(f"Querying hydrus {args.query!r}...")
     resp = logic.client.search_files(
-        tags=args.query.split(' AND ') # type: ignore
+        tags=querylang.parse_sl_query(args.query) # type: ignore
     )
     matching_files = resp['file_ids']
     logger.info(f"Got {len(matching_files)} ids")

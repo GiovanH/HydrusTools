@@ -1,16 +1,19 @@
-from abc import abstractmethod
-from functools import lru_cache, partial
-from io import BytesIO
+import functools
 import tkinter as tk
+from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
+from functools import partial
+from io import BytesIO
 from tkinter import ttk
-from typing import Any, ClassVar, Generator, Generic, Iterable, NamedTuple, Required, Sequence, TypeVar, TypedDict
-from PIL import Image, ImageTk
+from typing import Any, Generic, NamedTuple, TypeVar
 
 import requests
 import win32clipboard
+from PIL import Image, ImageTk
 
-from hydrustools.settings import Settings
+from ..settings import Settings
+from . import querylang
+
 
 class Increment():
     def __init__(self):
@@ -58,7 +61,7 @@ def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
         pb['value'] = 100*i/total
     pb['value'] = 0
 
-@lru_cache(maxsize=None)
+@functools.cache
 def resp_to_photoimage(master: tk.Widget, resp: requests.Response) -> ImageTk.PhotoImage:
     image = Image.open(BytesIO(resp.content))
     return ImageTk.PhotoImage(image=image, master=master)
@@ -198,13 +201,13 @@ class SearchQueryEntry(QueryHistory):
             pass
 
     def load_query(self, value):
-        return value.replace("\n", " AND ")
+        return querylang.serialize_query_sl(querylang.parse_ml_query(value))
 
-    def get_query(self) -> list[str | list[str]]:
+    def get_query(self) -> querylang.Query:
         tag_query = self.textvar_query.get()
         if not tag_query:
             raise ValueError("Empty search query")
-        return tag_query.split(' AND ') # type: ignore
+        return querylang.parse_sl_query(tag_query)
 
 
 class RegexEntry(QueryHistory):
@@ -268,7 +271,7 @@ class TextCopyWindow(tk.Tk):
         self.columnconfigure(index=0, weight=1)
         self.rowconfigure(index=0, weight=1)
 
-        with tkwrapc(ttk.Frame(self, padding=4)) as (frame, cx, cy):
+        with tkwrapc(ttk.Frame(self, padding=4)) as (frame, cx, __):
             frame.grid(row=1)
 
             btn = ttk.Button(frame, text="Copy", command=self.copy)

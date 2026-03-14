@@ -1,8 +1,7 @@
 import os
-import subprocess
 import sys
 import textwrap
-from typing import DefaultDict
+from collections import defaultdict
 
 import launcher
 from hydrustools import gui
@@ -10,7 +9,7 @@ from hydrustools.component.toolwindow import ToolWindow
 
 problems = []
 
-duplicates = DefaultDict(list)
+duplicates = defaultdict(list)
 
 if 'tools' in sys.argv:
     for group, items in gui.MENU.items():

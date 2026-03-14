@@ -1,7 +1,6 @@
 import dataclasses
 import functools
 import logging
-import pprint
 import re
 from collections import OrderedDict
 from collections.abc import Sequence
@@ -9,6 +8,7 @@ from io import BytesIO
 from typing import Required, TypedDict
 
 import hydrus_api
+
 # from pick import pick
 from PIL import Image
 
@@ -85,7 +85,6 @@ def init_client() -> None:
         downloader_tags_service_key = downloader_tags_service["service_key"]
     except:
         logger.error("Missing a 'downloader tags' tag group. Some things may break! This tool needs to be fixed to better support this case.")
-        pass
 
 
 def chunk(iterable, maxsize):

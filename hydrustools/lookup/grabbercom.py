@@ -2,17 +2,11 @@ import glob
 import json
 import logging
 import os
-import pprint
-import re
 import subprocess
-import time
 import urllib.parse
-from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
 
 import hydrus_api
-import requests
 from joblib import memory
 
 from hydrustools.inisettings import IniSettings
@@ -26,7 +20,7 @@ memory = memory.Memory("cache", verbose=False)
 class GrabberComSettings(IniSettings):
     grabber_dir: str = ""
     grabber_sites: list[str] = []
-    grabber_aliases: dict[str, str] = {
+    grabber_aliases: dict[str, str] = {  # noqa: RUF012
         'Gelbooru': 'gelbooru.com'
     }
 
@@ -47,7 +41,7 @@ def query_booru_md5(source, md5_hash) -> None | dict:
     stdout = None
     stderr = None
     try:
-        proc: subprocess.CompletedProcess = subprocess.run(cmd, cwd=cwd, capture_output=True)
+        proc: subprocess.CompletedProcess = subprocess.run(cmd, cwd=cwd, capture_output=True)  # noqa: PLW1510
         stdout = proc.stdout
         stderr = proc.stderr
         proc.check_returncode()
@@ -82,7 +76,7 @@ def query_booru_url(source, url):
     stdout = None
     stderr = None
     try:
-        proc: subprocess.CompletedProcess = subprocess.run(cmd, cwd=cwd, capture_output=True)
+        proc: subprocess.CompletedProcess = subprocess.run(cmd, cwd=cwd, capture_output=True)  # noqa: PLW1510
         stdout = proc.stdout
         stderr = proc.stderr
         proc.check_returncode()
@@ -162,8 +156,8 @@ class grabberComMd5Plugin(registry.LookupPlugin):
                     # pprint.pprint(lookup)
                     page = lookup.get('url_page')
                     found_new_sources = lookup.get('sources', [])
-                    if lookup.get('url_page'):
-                        found_new_sources.append(lookup.get('url_page'))
+                    if page:
+                        found_new_sources.append(page)
 
                     new_sources.update(set(found_new_sources) - known_sources)
                 except Exception:
@@ -203,9 +197,9 @@ class grabberComPlugin(registry.LookupPlugin):
         # pprint.pprint(metadata)
 
         for url in [eu for eu in known_sources if self.matchurl(eu)]:
-            if url.startswith("https://rule34.paheal.net"):
-                logger.info("%s Host %s known to not return metadata", self.__class__.__name__, url)
-                continue
+            # if url.startswith("https://rule34.paheal.net"):
+            #     logger.info("%s Host %s known to not return metadata", self.__class__.__name__, url)
+            #     continue
 
             logger.info("%s Looking up post %s", self.__class__.__name__, url)
             source = urllib.parse.urlparse(url).netloc

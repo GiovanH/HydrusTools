@@ -48,8 +48,8 @@ Docs_CLI.md: venv autodoc.py launcher.py ${MODULE_SRCS}
 .PHONY: lint
 lint: venv
 # 	-${VPYTHON} -m mypy ${SRC_ROOT}/${module_name}
-	-${VPYTHON} -m mypy *.py
-	-vulture ${SRC_ROOT}/*.py
+	-${VPYTHON} -m mypy --check-untyped-defs *.py
+	-vulture ${SRC_ROOT}/**/*.py
 
 .PHONY: test
 test: venv

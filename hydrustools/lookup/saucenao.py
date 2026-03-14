@@ -1,13 +1,8 @@
-import asyncio
 import io
 import logging
 import pprint
 import time
-import typing
-from io import BytesIO
 from pathlib import Path
-
-import hydrus_api
 
 # from pysaucenao.results import SauceNaoResults
 import requests
@@ -18,6 +13,7 @@ from hydrustools.inisettings import IniSettings
 from hydrustools.logic import FileMetadata
 
 from .. import logic
+from ..util import timer
 from . import registry
 
 memory = memory.Memory("cache", verbose=False)
@@ -94,12 +90,14 @@ def get_bitmask(enabled_sites: list[str]):
 
 @memory.cache()
 def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
-    resp = logic.client.get_thumbnail(file_id=metadata['file_id'])
-    resp.raise_for_status()
+    with timer("thumbnail"):
+        resp = logic.client.get_thumbnail(file_id=metadata['file_id'])
+        resp.raise_for_status()
 
     imageData = io.BytesIO(resp.content)
 
     result = None
+    retries = 0
     while not (result and result.get('status') == 0):
         try:
             resp = requests.post(
@@ -111,6 +109,7 @@ def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
                     "dbmask": str(bitmask),
                     "api_key": Settings.api_key
                 },
+                timeout=10,
                 files={'file': ("image.png", imageData.getvalue())}
             )
             result = resp.json()
@@ -118,10 +117,18 @@ def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
         except requests.exceptions.HTTPError as e:
             logger.error(e)
             logger.error(result)
+
             if result and "Daily Search Limit Exceeded." in result.get('header', {}).get('message', ''):
                 raise ConnectionRefusedError(result)
-            logger.info("Waiting...")
-            time.sleep(30)
+
+            if result and "Search Rate Too High." in result.get('header', {}).get('message', ''):
+                logger.info("Waiting 35 secs...")
+                time.sleep(35)
+                retries += 1
+                if retries < 2:
+                    continue
+
+            raise ConnectionRefusedError(result)
     return result
 
 @registry.register

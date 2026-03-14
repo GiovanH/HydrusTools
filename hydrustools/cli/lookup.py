@@ -1,14 +1,15 @@
 
 import argparse
-from functools import partial
 import logging
 import pprint
-from requests.exceptions import HTTPError
+from functools import partial
 
 from hydrustools import htlogging
+from hydrustools.component import querylang
 from hydrustools.lookup.registry import MetadataActions, get_plugins, postprocessSuggestions
 
 from .. import logic
+from ..util import timer
 
 plugin_registry = get_plugins()
 
@@ -119,13 +120,13 @@ def main():
 
     logger.info(f"Querying hydrus {args.query!r}...")
     resp = logic.client.search_files(
-        tags=args.query.split(' AND ') # type: ignore
+        tags=querylang.parse_sl_query(args.query) # type: ignore
     )
     matching_files = resp['file_ids']
 
     logic.client.add_popup(
         "lookup",
-        files_label="Files",
+        files_label=repr(args.query),
         file_ids=matching_files
     )
 
@@ -152,8 +153,9 @@ def main():
                 logger.debug("%s %s %s", image["file_id"], plugin, match)
                 if match:
                     try:
-                        actions = plugin.suggest(image, print)
-                    except Exception as e:
+                        with timer(f"{plugin}: get suggestions"):
+                            actions = plugin.suggest(image, print)
+                    except Exception:
                         logger.exception(f"Error running plugin {plugin} on image {image['file_id']}")
                         continue
 
@@ -173,7 +175,7 @@ def main():
                         creator_tags_always_local=args.creator_always_local,
                         character_tags_always_local=args.character_always_local,
 
-                        no_downloader_tags=args.no_downloader_tags,
+                        no_downloader_tags=(not args.downloader_tags),
                         underscores_to_spaces=args.underscores_to_spaces,
                     )
 

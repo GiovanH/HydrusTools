@@ -1,10 +1,9 @@
 import logging
 import tkinter as tk
-import traceback
 import webbrowser
+from collections.abc import Callable
 from dataclasses import dataclass
 from tkinter import messagebox, ttk
-from typing import Callable
 
 import hydrus_api
 
@@ -129,7 +128,7 @@ MENU: dict[str, list[MenuEntry]] = {
     ],
 }
 
-class ToolsListWindow(tk.Tk):  # noqa: PLR0904
+class ToolsListWindow(tk.Tk):
     def __init__(self, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
 
@@ -149,7 +148,6 @@ class ToolsListWindow(tk.Tk):  # noqa: PLR0904
             except IndexError as e:
                 self.logger.error(e)
                 Settings.gui_last = -1
-                pass
 
         self.mainloop()
 

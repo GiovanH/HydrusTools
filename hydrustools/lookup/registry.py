@@ -1,8 +1,7 @@
-from collections.abc import Sequence
 import logging
 from abc import abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from hydrustools import logic
 from hydrustools.logic import FileMetadata
@@ -72,7 +71,6 @@ class LookupPlugin():
         Returns:
             bool: True if this plugin can provide information about the file, else False
         """
-        pass
 
     @abstractmethod
     def suggest(self, metadata: FileMetadata, setStatus: Callable[[str], None]) -> MetadataActions | None:

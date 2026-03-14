@@ -1,4 +1,3 @@
-import dataclasses
 import pprint
 import tkinter as tk
 from collections import OrderedDict
@@ -9,14 +8,11 @@ import hydrus_api
 
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
-from hydrustools.component.relationship_adder import RelationshipAction
 
 from .. import logic
 from ..component.gui_util import (
     Increment,
     SearchQueryEntry,
-    TreeviewHeadings,
-    flatList,
     pb_iter,
     tkwrap,
     tkwrapc,
@@ -49,7 +45,7 @@ class ImageFileSchema(TreeviewSchema[FileMetadata]):
         }
 
 
-class ImageListFrame(ttk.Frame):  # noqa: PLR0904
+class ImageListFrame(ttk.Frame):
     helpstr = """"""
     def __init__(self, master: ToolWindow, toolmaster=None, *args_,  **kwargs) -> None:
         super().__init__(master, *args_, **kwargs)
@@ -85,7 +81,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
         self.table.delete_all()
 
 
-# class ImageSearchWindow(ToolWindow):  # noqa: PLR0904
+# class ImageSearchWindow(ToolWindow):
 #     helpstr = """TODO"""
 #     def __init__(self, *args_, **kwargs) -> None:
 #         super().__init__(*args_, **kwargs)
@@ -104,7 +100,7 @@ class ImageListFrame(ttk.Frame):  # noqa: PLR0904
 #         self.logger.info("Loop")
 #         self.mainloop()
 
-class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
+class ImagePickerWindow(ToolWindow):
     helpstr = """TODO"""
     def __init__(self, include_notes=False, *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)
@@ -207,7 +203,7 @@ class ImagePickerWindow(ToolWindow):  # noqa: PLR0904
 
         if self.boolvar_alts.get():
             self.pb['value'] = 90
-            self.setStatus(f"Bundling in relationships...")
+            self.setStatus("Bundling in relationships...")
             matching_files = logic.addAltsToList(matching_files)
 
         self.pb['value'] = 0

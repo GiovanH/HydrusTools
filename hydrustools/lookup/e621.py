@@ -1,9 +1,5 @@
 import logging
-import pprint
 import re
-import time
-from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
 
 import requests
@@ -12,12 +8,11 @@ from joblib import memory
 from hydrustools.inisettings import IniSettings
 from hydrustools.logic import FileMetadata
 
-from .. import logic
 from . import registry
 
 e621_url_pattern: re.Pattern[str] = re.compile(r'https?://e621.net/posts?/(show/)?(?P<id>\d+)/?')
 
-memory = memory.Memory("cache")
+memory = memory.Memory("cache", verbose=False)
 
 class e621Settings(IniSettings):
     e621_user: str = ""
@@ -62,7 +57,7 @@ class e621Plugin(registry.LookupPlugin):
 
     def suggest(self, metadata: FileMetadata, setStatus = logger.info) -> registry.MetadataActions | None:
         for eu in [eu for eu in metadata['known_urls'] if e621_url_pattern.match(eu)]:
-            setStatus("Looking up e621 post %s" % eu)
+            setStatus(f"Looking up e621 post {eu}")
             lookup = lookup_e621(eu)
 
             tags = []
