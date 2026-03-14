@@ -4,7 +4,7 @@ from io import BytesIO
 import tkinter as tk
 from contextlib import contextmanager
 from tkinter import ttk
-from typing import Any, ClassVar, Generator, Generic, NamedTuple, Required, Sequence, TypeVar, TypedDict
+from typing import Any, ClassVar, Generator, Generic, Iterable, NamedTuple, Required, Sequence, TypeVar, TypedDict
 from PIL import Image, ImageTk
 
 import requests
@@ -39,7 +39,9 @@ def tkwrapc(w: T) -> Generator[CoordFrame[T], Any, None]:
     yield CoordFrame(w, Increment(), Increment())
 
 
-def flatList(lst):
+V = TypeVar("V")
+
+def flatList(lst: Iterable[Iterable[V]]) -> list[V]:
     """Turn a (one-level) nested list into one list.
     >>> flatList([[1, 2], [3, 4]])
     [1, 2, 3, 4]
@@ -47,8 +49,6 @@ def flatList(lst):
     return [item for sublist in lst for item in sublist]
 
 grooveframe: partial[ttk.Frame] = partial(ttk.Frame, relief=tk.GROOVE, padding=4)
-
-V = TypeVar("V")
 
 def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
     pb['value'] = 0

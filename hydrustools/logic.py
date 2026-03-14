@@ -272,6 +272,7 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
             }
         )
 
+@functools.cache
 def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max_height: int) -> Image.Image:
     ratio = min(max_width/width, max_height/height)
     resp = client.get_render(
@@ -282,7 +283,7 @@ def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max
     resp.raise_for_status()
     return Image.open(BytesIO(resp.content))
 
-
+@functools.cache
 def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> Image.Image:
     resp = client.get_thumbnail(file_id=file_id)
     resp.raise_for_status()

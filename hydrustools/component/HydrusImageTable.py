@@ -24,6 +24,7 @@ class HydrusImageTable(MultiColumnListbox):
 
         self.toolmaster: ToolWindow = toolmaster or master
         self.logger: logging.Logger = self.toolmaster.logger
+        self.abort_threads = False
 
         self.setStatus = self.toolmaster.setStatus
 
@@ -33,6 +34,7 @@ class HydrusImageTable(MultiColumnListbox):
         image_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
         pb['value'] = 0
 
+        self.abort_threads = False
         lock = threading.Lock()
 
         file_id_index = self.schema.columns.index(self.file_id_key)
@@ -58,7 +60,7 @@ class HydrusImageTable(MultiColumnListbox):
         self.logger.info(f"Queued {total} thumbnail jobs")
 
     def addItemThumb(self, file_id, tkid):
-        if self.toolmaster.abort_threads is True:
+        if self.abort_threads is True:
             self.logger.debug("Aborting thumbnail %s %s", file_id, tkid)
             return
         if self.schema.imagesize is None:
@@ -72,6 +74,6 @@ class HydrusImageTable(MultiColumnListbox):
         self.logger.debug(f"Applying image {tkimg} to tkid {tkid}")
 
         def commititem(tkid=tkid, tkimg=tkimg):
-            if not self.toolmaster.abort_threads:
+            if not self.abort_threads:
                 self.tree.item(tkid, image=tkimg)
         self.after('idle', commititem)
