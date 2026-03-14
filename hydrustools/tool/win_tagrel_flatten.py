@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from tkinter import messagebox, ttk
 from typing import ClassVar
 
-from .. import logic
-from ..component.gui_util import Increment, QueryHistory, RegexEntry, pb_iter, tkwrap, tkwrapc
+from ..utils import hydrus
+from ..utils.gui_util import Increment, QueryHistory, RegexEntry, pb_iter, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
-from ..logic import SiblingInfo, TagInfo
+from ..utils.hydrus import SiblingInfo, TagInfo
 from ..settings import Settings
 
 
@@ -129,7 +129,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         # self.tree_tags.delete(*self.tree_tags.get_children())
 
         try:
-            results: list[TagInfo] = logic.search_tags_re(search_query, search_refinement)
+            results: list[TagInfo] = hydrus.search_tags_re(search_query, search_refinement)
         except re.error as e:  # noqa: F821
             messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_refinement!r}\n{e}")
             return
@@ -140,7 +140,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         }
 
         self.pb['value'] += 25
-        targets: list[SiblingInfo] = logic.get_sibling_ideal_targets([ti.value for ti in results])
+        targets: list[SiblingInfo] = hydrus.get_sibling_ideal_targets([ti.value for ti in results])
         targets = [t for t in targets if t.tag != t.ideal_tag]
 
         self.pb['value'] += 25
@@ -179,7 +179,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             with self.lock():
                 for row in pb_iter(self.pb, selection):
                     source_tag, ideal_tag = row
-                    logic.replace_tag(source_tag, [ideal_tag])
+                    hydrus.replace_tag(source_tag, [ideal_tag])
             # self.enable()
 
             self.startTask(self.doSearch)

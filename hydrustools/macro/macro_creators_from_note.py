@@ -5,18 +5,18 @@ import threading
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
-from hydrustools import htlogging
+from ..utils import querylang
 
-from .. import logic
 from ..component.tag_adder_window import TagAction, TagAdderWindow
+from ..utils import hydrus
 
 logger = logging.getLogger(__name__)
 
 
 def all_creator_names(min_count=2):
-    creator_tags = logic.client.search_tags(
+    creator_tags = hydrus.client.search_tags(
         search="creator:*",
-        tag_service_key=logic.local_tags_service_key,
+        tag_service_key=hydrus.local_tags_service_key,
         tag_display_type="display"
     )['tags']  # type: ignore
     creator_names = [
@@ -54,13 +54,13 @@ def find_creators(tk=True):
 
     notename = "filename"
 
-    tag_query: list[str | list[str]] = [] # type: ignore
+    tag_query: querylang.Query = []
 
-    tag_query.append(logic.has_note(notename))
+    tag_query.append(hydrus.has_note(notename))
     tag_query.append("-creator:*")
 
-    file_ids_with_note = logic.client.search_files(
-        tags=tag_query  # type: ignore
+    file_ids_with_note = hydrus.client.search_files(
+        tags=tag_query
     )['file_ids']
 
     logger.info(f"Found {len(file_ids_with_note)} files matching {tag_query!r}...")
@@ -69,14 +69,14 @@ def find_creators(tk=True):
 
     iterable.close()
     iterable = tqdm_iterator(
-        [*logic.chunk(file_ids_with_note, 200)],
+        [*hydrus.chunk(file_ids_with_note, 200)],
         desc=f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames",
         unit="page",
         leave=False
     )
 
     for id_chunk in iterable:
-        resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
+        resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
         for metadata in resp['metadata']:
             note_body = metadata['notes'].get(notename)
@@ -105,5 +105,5 @@ def start():
     thread.start()
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     find_creators(tk=False)

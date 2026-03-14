@@ -5,16 +5,16 @@ import threading
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
-from hydrustools import htlogging
+from hydrustools.utils import htlogging
 
 from ..component.relationship_adder import RelationshipAction, RelationshipAdderWindow
 
-from .. import logic
+from ..utils import hydrus
 
 logger = logging.getLogger(__name__)
 
 
-def tiformat(ti: logic.TagInfo):
+def tiformat(ti: hydrus.TagInfo):
     return f"{ti.value} ({ti.count})"
 
 def run(tk=True):
@@ -27,13 +27,13 @@ def run(tk=True):
 
     # max_page_size = 20
 
-    all_tags = logic.search_tags_re("*", subpattern=None)
+    all_tags = hydrus.search_tags_re("*", subpattern=None)
     all_tags_set = {ti.value for ti in all_tags}
     all_tags_map = {ti.value: ti for ti in all_tags}
 
     unnamespaced_tags = [t for t in all_tags_set if ':' not in t]
-    sibling_resp = logic.get_sibling_ideal_targets(unnamespaced_tags)
-    all_relationships: dict[str, logic.SiblingInfo] = {
+    sibling_resp = hydrus.get_sibling_ideal_targets(unnamespaced_tags)
+    all_relationships: dict[str, hydrus.SiblingInfo] = {
          **{
             s: si
             for si in
@@ -81,5 +81,5 @@ def start():
 
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     run(tk=False)

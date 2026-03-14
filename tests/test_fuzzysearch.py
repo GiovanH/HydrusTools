@@ -5,8 +5,8 @@ from typing import Sequence
 
 from frozendict import frozendict
 
-from hydrustools import htlogging
-from hydrustools.component import fuzzysearch
+from hydrustools.utils import htlogging
+from hydrustools.utils import fuzzysearch
 
 TAGS = (
     "steven universe",
@@ -177,7 +177,7 @@ class TestFuzzySearch(unittest.TestCase):
             "st u"
         ))
 
-        print(matches)
+        # print(matches)
 
         self.assertIn("character:steven quartz universe", matches)
 

@@ -48,8 +48,8 @@ Docs_CLI.md: venv autodoc.py launcher.py ${MODULE_SRCS}
 .PHONY: lint
 lint: venv
 # 	-${VPYTHON} -m mypy ${SRC_ROOT}/${module_name}
-	-${VPYTHON} -m mypy --check-untyped-defs *.py
-	-vulture ${SRC_ROOT}/**/*.py
+	-${VPYTHON} -m mypy --install-types --non-interactive --check-untyped-defs --follow-untyped-imports ${SCRIPT_SRCS}
+	-vulture ${SCRIPT_SRCS} ${MODULE_SRCS}
 
 .PHONY: test
 test: venv
@@ -71,7 +71,7 @@ venv/pyvenv.cfg: requirements.txt
 	python3 -m venv ./venv
 	${VPYTHON} -m pip install -r requirements.txt
 	${VPYTHON} -m pip install pyinstaller vulture mypy
-	-${VPYTHON} -m mypy --install-types --non-interactive
+# 	-${VPYTHON} -m mypy --install-types --non-interactive
 # 	-${VPYTHON} -m mypy --install-types
 
 # Build

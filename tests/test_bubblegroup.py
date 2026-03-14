@@ -3,7 +3,7 @@ import pprint
 import unittest
 from typing import Any
 
-from hydrustools import htlogging
+from hydrustools.utils import htlogging
 from hydrustools.cli import bubblegroup
 from hydrustools.cli.bubblegroup import BubbleItem as BI
 from hydrustools.cli.bubblegroup import bubble_group

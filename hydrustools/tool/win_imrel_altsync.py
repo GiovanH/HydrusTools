@@ -8,15 +8,15 @@ import cv2
 import hydrus_api
 import numpy as np
 
-from .. import logic
-from ..component.gui_util import Increment, flatList, tkwrapc
+from ..utils import hydrus
+from ..utils.gui_util import Increment, flatList, tkwrapc
 from ..component.tageditorlist import TagEditorList
 from ..component.toolwindow import ToolWindow
 
 
 @functools.lru_cache
 def alternatesOfHash(file_hash):
-    file_relationships = logic.client.get_file_relationships(
+    file_relationships = hydrus.client.get_file_relationships(
         hashes=[file_hash]
     )['file_relationships']
     return file_relationships[file_hash][str(hydrus_api.DuplicateStatus.ALTERNATES.value)]
@@ -98,7 +98,7 @@ Clicking merge will add the specified tags to all images in the set.
 
 
     def loadIdsWithAlternates(self, event=None):
-        all_file_hashes = logic.client.search_files(
+        all_file_hashes = hydrus.client.search_files(
             tags=["system:num file relationships > 0 alternates"],
             return_hashes=True
         )['hashes']
@@ -121,14 +121,14 @@ Clicking merge will add the specified tags to all images in the set.
 
     def getTagsOfHashes(self, hash_list):
         if not all(h in self.tag_cache for h in hash_list):
-            metadata = logic.client.get_file_metadata(
+            metadata = hydrus.client.get_file_metadata(
                 hashes=hash_list
             )['metadata']
             # pprint.pprint(metadata)
 
             for file_metadata in metadata:
                 try:
-                    tags = logic.local_tags(file_metadata)
+                    tags = hydrus.local_tags(file_metadata)
                     # pprint.pprint(tags)
                     self.tag_cache[file_metadata['hash']] = [t for t in tags if not t.startswith("source:")]
                 except:
@@ -197,7 +197,7 @@ Clicking merge will add the specified tags to all images in the set.
     def previewSelectedImages(self):
         self.setStatus(f"Loading preview of {len(self.selected_group_hashes)} files")
         for i, file_hash in enumerate(self.selected_group_hashes):
-            resp = logic.client.get_render(
+            resp = hydrus.client.get_render(
                 hash_=file_hash,
                 width=400, height=400
             )
@@ -213,10 +213,10 @@ Clicking merge will add the specified tags to all images in the set.
 
     def mergeSelectedTags(self, event=None):
         self.setStatus("Adding new tags...")
-        logic.client.add_tags(
+        hydrus.client.add_tags(
             hashes=self.selected_group_hashes,
             service_keys_to_tags={
-                logic.local_tags_service_key: self.tag_editor_list.tag_list,
+                hydrus.local_tags_service_key: self.tag_editor_list.tag_list,
             }
         )
         self.setStatus("Pruning removed tags...")
@@ -230,10 +230,10 @@ Clicking merge will add the specified tags to all images in the set.
 
         self.setStatus(f"Removing tags: {removed_tags}")
         if removed_tags:
-            logic.client.add_tags(
+            hydrus.client.add_tags(
                 hashes=self.selected_group_hashes,
                 service_keys_to_actions_to_tags={
-                    logic.local_tags_service_key: {
+                    hydrus.local_tags_service_key: {
                         hydrus_api.TagAction.DELETE: [*removed_tags]
                     }
                 }

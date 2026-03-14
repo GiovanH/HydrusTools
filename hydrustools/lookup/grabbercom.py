@@ -9,10 +9,10 @@ from pathlib import Path
 import hydrus_api
 from joblib import memory
 
-from hydrustools.inisettings import IniSettings
-from hydrustools.logic import FileMetadata
+from hydrustools.utils.hydrus import FileMetadata
+from hydrustools.utils.inisettings import IniSettings
 
-from .. import logic
+from ..utils import hydrus
 from . import registry
 
 memory = memory.Memory("cache", verbose=False)
@@ -127,11 +127,11 @@ class grabberComMd5Plugin(registry.LookupPlugin):
         known_sources: set[str] = set(metadata['known_urls'])
         new_sources = set()
 
-        alternate_hashes = logic.client.get_file_relationships(
+        alternate_hashes = hydrus.client.get_file_relationships(
             file_ids=[metadata['file_id']]
         )['file_relationships'][metadata['hash']][str(hydrus_api.DuplicateStatus.ALTERNATES)]
 
-        resp = logic.client.get_file_hashes(
+        resp = hydrus.client.get_file_hashes(
             hashes=[metadata['hash'], *alternate_hashes],
             desired_hash_type='md5',
         )

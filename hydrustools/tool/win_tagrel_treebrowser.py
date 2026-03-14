@@ -2,11 +2,11 @@ import re
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
-from .. import logic
-from ..component.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
+from ..utils import hydrus
+from ..utils.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
-from ..logic import TagInfo
+from ..utils.hydrus import TagInfo
 from ..settings import Settings
 
 # HEAD_TAG = "Tag"
@@ -76,13 +76,13 @@ class TagRelationshipsTreeWin(ToolWindow):  # noqa: PLR0904
 
     def doSearch(self, event=None):
         self.setStatus("Getting tag list")
-        all_tags = logic.search_tags_re("b*", subpattern=None)
+        all_tags = hydrus.search_tags_re("b*", subpattern=None)
         all_tags_set = {ti.value for ti in all_tags}
         # all_tags_map = {ti.value: ti for ti in all_tags}
 
         self.setStatus(f"Getting relationships among {len(all_tags)} tags")
         unnamespaced_tags = [t for t in all_tags_set if ':' not in t]
-        sibling_resp = logic.get_sibling_ideal_targets(unnamespaced_tags)
+        sibling_resp = hydrus.get_sibling_ideal_targets(unnamespaced_tags)
         all_relationships_list = sibling_resp
         # all_relationships_map: dict[str, logic.SiblingInfo] = {
         #     **{

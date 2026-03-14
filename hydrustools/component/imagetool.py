@@ -8,14 +8,14 @@ from ..component.image_picker import ImagePickerWindow
 from ..component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
 
-from .. import logic
-from ..component.gui_util import (
+from ..utils import hydrus
+from ..utils.gui_util import (
     mod_selection,
     pb_iter,
     tkwrapc,
 )
 
-from ..logic import FileMetadata
+from ..utils.hydrus import FileMetadata
 
 DEBUG_FAST_PICK = False
 
@@ -33,13 +33,13 @@ class ImageIconSchema(TreeviewSchema[FileMetadata]):
         }
 
 def debug_get_selection():
-    resp = logic.client.search_files(
+    resp = hydrus.client.search_files(
         # tags=["meta:sfw", "source:e621"] # type: ignore
         tags=["-creator:*", "system:has url with class e621 file page", "system:limit=50"]
     )
     matching_files = resp['file_ids']
     # print(matching_files)
-    resp = logic.client.get_file_metadata(file_ids=matching_files, include_notes=True)
+    resp = hydrus.client.get_file_metadata(file_ids=matching_files, include_notes=True)
     return resp['metadata']
 
 
@@ -118,8 +118,8 @@ class ImageTool(ToolWindow):
     def fetch_all_metadata(self):
         all_ids = map(int, self.image_list.getAllIds())
 
-        for id_chunk in pb_iter(self.pb, [*logic.chunk(all_ids, 200)]):
-            resp = logic.client.get_file_metadata(file_ids=id_chunk, **self.get_file_metadata_kwargs)
+        for id_chunk in pb_iter(self.pb, [*hydrus.chunk(all_ids, 200)]):
+            resp = hydrus.client.get_file_metadata(file_ids=id_chunk, **self.get_file_metadata_kwargs)
 
             def commit(resp=resp):
                 for metadata in resp['metadata']:
@@ -139,11 +139,11 @@ class ImageTool(ToolWindow):
         self.setStatus("Refreshed metadata from server")
         self.set_image(self.known_metadata[image_id])
 
-    def set_image(self, metadata: logic.FileMetadata):
+    def set_image(self, metadata: hydrus.FileMetadata):
         self.current_image = metadata
 
     def fetch_metadata_for_image(self, image_id):
-        new_metadata = logic.client.get_file_metadata(
+        new_metadata = hydrus.client.get_file_metadata(
             file_ids=[image_id],
             include_notes=True
         )['metadata'][0]

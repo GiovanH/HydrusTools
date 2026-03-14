@@ -7,13 +7,10 @@ from tkinter import messagebox, ttk
 
 import hydrus_api
 
-from hydrustools.component.toolwindow import ToolWindow
-from hydrustools.tool.win_image_extract_creator_from_notes import ExtractCreatorFromNotesWin
-
-from . import htlogging, logic
-from .component.gui_util import tkwrapc
+from .component.toolwindow import ToolWindow
 from .macro import macro_localize_char_names, macro_matching_namespaced, macro_pages_from_note
 from .settings import Settings
+from .tool.win_image_extract_creator_from_notes import ExtractCreatorFromNotesWin
 from .tool.win_image_inspector import ImageInspectorWin
 from .tool.win_image_lookup import ImageMetadataLookupWin
 from .tool.win_imrel_altsync import AlternatesSyncWin
@@ -22,6 +19,8 @@ from .tool.win_tag_manager import TagManagerWin
 from .tool.win_tagrel_flatten import SiblingFlattenWin
 from .tool.win_tagrel_implicit_parents import ImplicitParentFinderWin
 from .tool.win_tagrel_treebrowser import TagRelationshipsTreeWin
+from .utils import htlogging, hydrus
+from .utils.gui_util import tkwrapc
 
 GH_HOME = 'https://github.com/GiovanH/HydrusTools'
 
@@ -202,7 +201,7 @@ class ToolsListWindow(tk.Tk):
 
 def main():
     try:
-        logic.init_client()
+        hydrus.init_client()
     except hydrus_api.ConnectionError as e:
         messagebox.showerror(
             "Error connecting",

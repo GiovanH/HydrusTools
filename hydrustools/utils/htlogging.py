@@ -8,7 +8,7 @@ from colorama import Fore, Style
 
 colorama.init(autoreset=True)
 
-@functools.lru_cache()
+@functools.lru_cache
 def fmtRecordName(name: str) -> str:
     return name.replace("hydrustools.", "")
 
@@ -39,7 +39,7 @@ def configure_logging():
 
     loglevel = os.environ.get('LOGLEVEL')
     if loglevel:
-        loglevel = logging._nameToLevel.get(loglevel.upper(), loglevel)
+        loglevel: int | str = logging._nameToLevel.get(loglevel.upper(), loglevel)
         print("Setting loglevel to", loglevel)
         s_handler.setLevel(loglevel)
 

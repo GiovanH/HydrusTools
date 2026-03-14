@@ -5,10 +5,9 @@ from tkinter import ttk
 
 from PIL import ImageTk
 
-from .. import logic
-
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict
 from ..component.toolwindow import ToolWindow
+from ..utils import hydrus
 
 
 class HydrusImageTable(MultiColumnListbox):
@@ -67,8 +66,8 @@ class HydrusImageTable(MultiColumnListbox):
             self.logger.debug("Can't add thumbnail when schema has no imagesize")
             return
 
-        thumb = logic.get_thumb_scaled(file_id, *self.schema.imagesize)
-        tkimg = ImageTk.PhotoImage(image=thumb, master=self)
+        thumb = hydrus.get_thumb_scaled(file_id, *self.schema.imagesize)
+        tkimg = ImageTk.PhotoImage(image=thumb)
         self.image_cache.append(tkimg)
 
         self.logger.debug(f"Applying image {tkimg} to tkid {tkid}")

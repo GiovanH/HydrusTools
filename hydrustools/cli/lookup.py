@@ -4,43 +4,40 @@ import logging
 import pprint
 from functools import partial
 
-from hydrustools import htlogging
-from hydrustools.component import querylang
-from hydrustools.lookup.registry import MetadataActions, get_plugins, postprocessSuggestions
-
-from .. import logic
-from ..util import timer
+from ..lookup.registry import MetadataActions, get_plugins, postprocessSuggestions
+from ..utils import htlogging, hydrus, querylang
+from ..utils.util import timer
 
 plugin_registry = get_plugins()
 
 logger: logging.Logger
 
-def apply_actions(actions: MetadataActions, image: logic.FileMetadata | None = None):
+def apply_actions(actions: MetadataActions, image: hydrus.FileMetadata | None = None):
     file_id = actions.file_id
 
     # TODO: If image passed, apply the actions there also
 
     if actions.add_downloader_tags and len(actions.add_downloader_tags) > 0:
         logger.info(f"Adding {len(actions.add_downloader_tags)} tags")
-        logic.client.add_tags(
+        hydrus.client.add_tags(
             file_ids=[file_id],
             service_keys_to_tags={
-                logic.downloader_tags_service_key: actions.add_downloader_tags
+                hydrus.downloader_tags_service_key: actions.add_downloader_tags
             } # type: ignore
         )
 
     if actions.add_tags and len(actions.add_tags) > 0:
         logger.info(f"Adding {len(actions.add_tags)} tags")
-        logic.client.add_tags(
+        hydrus.client.add_tags(
             file_ids=[file_id],
             service_keys_to_tags={
-                logic.local_tags_service_key: actions.add_tags
+                hydrus.local_tags_service_key: actions.add_tags
             } # type: ignore
         )
 
     if actions.add_urls and len(actions.add_urls or []) > 0:
         logger.info(f"Adding {len(actions.add_urls)} source urls")
-        logic.client.associate_url(file_ids=[file_id], urls_to_add=actions.add_urls)
+        hydrus.client.associate_url(file_ids=[file_id], urls_to_add=actions.add_urls)
 
         if image:
             # TODO: This doesn't apply url transformations like hydrus does
@@ -52,13 +49,13 @@ def apply_actions(actions: MetadataActions, image: logic.FileMetadata | None = N
 
 def get_tag_cache() -> dict[str, int]:
     tag_count_cache = {}
-    all_tags = logic.search_tags_re("*", subpattern=None)
+    all_tags = hydrus.search_tags_re("*", subpattern=None)
     all_tags_set = {ti.value for ti in all_tags}
     tag_count_cache = {ti.value: ti.count for ti in all_tags}
 
-    sibling_resp = logic.get_sibling_ideal_targets([*all_tags_set])
+    sibling_resp = hydrus.get_sibling_ideal_targets([*all_tags_set])
 
-    all_relationships: dict[str, logic.SiblingInfo] = {
+    all_relationships: dict[str, hydrus.SiblingInfo] = {
         **{
             s: si
             for si in
@@ -86,7 +83,7 @@ def main():
     global logger
     logger = logging.getLogger(__name__)
 
-    logic.init_client()
+    hydrus.init_client()
 
     plugin_repr_list = [
         f"{k} ({v.name})"
@@ -132,12 +129,12 @@ Example invocations:
     selected_plugins = args.plugins.split(',')
 
     logger.info(f"Querying hydrus {args.query!r}...")
-    resp = logic.client.search_files(
-        tags=querylang.parse_sl_query(args.query) # type: ignore
+    resp = hydrus.client.search_files(
+        tags=querylang.parse_sl_query(args.query)
     )
     matching_files = resp['file_ids']
 
-    logic.client.add_popup(
+    hydrus.client.add_popup(
         "lookup",
         files_label=repr(args.query),
         file_ids=matching_files
@@ -159,7 +156,7 @@ Example invocations:
     # TODO: Plugins don't have information provided by previous plugins in the same run
 
     for image_id in matching_files:
-        metadata: list[logic.FileMetadata] = logic.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
+        metadata: list[hydrus.FileMetadata] = hydrus.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
         for image in metadata:
             for plugin in plugin_list:
                 match = plugin.match(image)

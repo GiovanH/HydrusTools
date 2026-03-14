@@ -5,19 +5,24 @@ import re
 from collections import OrderedDict
 from collections.abc import Sequence
 from io import BytesIO
-from typing import Required, TypedDict
+from typing import Any, Required, TypedDict
 
 import hydrus_api
 
 # from pick import pick
 from PIL import Image
 
-from hydrustools.component.gui_util import flatList
 from hydrustools.component.toolwindow import ToolWindow
+from hydrustools.utils import querylang
+from hydrustools.utils.gui_util import flatList
 
-from .settings import Settings
+from ..settings import Settings
 
 logger = logging.getLogger(__name__)
+
+class TypedClient(hydrus_api.Client):
+    def search_files(self, tags: querylang.Query, **kwargs) -> dict[str, Any]:  # type: ignore[override]
+        return super().search_files(tags=tags, **kwargs)  # type: ignore[arg-type]
 
 @dataclasses.dataclass
 class TagInfo():
@@ -63,7 +68,7 @@ def get_api_credentials() -> tuple[str, str]:
     return (Settings.hydrus_api_key, Settings.hydrus_api_url)
 
 
-client: hydrus_api.Client = None  # type: ignore
+client: TypedClient = None  # type: ignore
 local_tags_service_key: str = None  # type: ignore
 downloader_tags_service_key: str = None  # type: ignore
 
@@ -74,7 +79,7 @@ def init_client() -> None:
     global downloader_tags_service_key
 
     api_key, api_url = get_api_credentials()
-    client = hydrus_api.Client(api_key, api_url)
+    client = TypedClient(api_key, api_url)
 
     tag_services = client.get_services()["local_tags"]
     local_tags_service = next(s for s in tag_services if s["name"] == "my tags")
@@ -359,7 +364,7 @@ def addAltsToList(image_id_list: list[int]) -> list[int]:
 
 
 
-def has_note(notename: str, max_n: int = 4) -> list[str]:
+def has_note(notename: str, max_n: int = 4) -> querylang.OrQuery:
     return [
         *[f'system:has note with name "{notename}"'],
         *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]

@@ -4,11 +4,11 @@ from tkinter import ttk
 import tkinter as tk
 
 
-from ..component.gui_util import pb_iter, tkwrapc
+from ..utils.gui_util import pb_iter, tkwrapc
 from ..component.relationship_adder import RelationshipAction, RelationshipAdderFrame
 from ..component.toolwindow import ToolWindow
 
-from .. import logic
+from ..utils import hydrus
 from ..settings import Settings
 
 
@@ -130,12 +130,12 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
         self.pb['value'] += 25
         self.setStatus(f"Looking up all tags matching {namespace_a!r}")
-        all_characters = logic.search_tags_re(f"{namespace_a}", subpattern=None)
+        all_characters = hydrus.search_tags_re(f"{namespace_a}", subpattern=None)
 
         self.pb['value'] += 25
         self.setStatus(f"Looking up relationships for {len(all_characters)} tags")
-        sibling_resp = logic.get_sibling_ideal_targets([t.value for t in all_characters])
-        all_relationships: dict[str, logic.SiblingInfo] = {
+        sibling_resp = hydrus.get_sibling_ideal_targets([t.value for t in all_characters])
+        all_relationships: dict[str, hydrus.SiblingInfo] = {
             **{
                 s: si
                 for si in
@@ -203,15 +203,15 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             log_debug(f"No parent series for {char!r} in {si}. Searching...")
 
-            resp = logic.client.search_files(
+            resp = hydrus.client.search_files(
                 tags=[char]
             )
             file_ids = resp['file_ids']
-            metadata = logic.client.get_file_metadata(file_ids=file_ids)['metadata']
+            metadata = hydrus.client.get_file_metadata(file_ids=file_ids)['metadata']
 
             for file in metadata:
                 try:
-                    local_display_tags = file['tags'][logic.local_tags_service_key]['display_tags']
+                    local_display_tags = file['tags'][hydrus.local_tags_service_key]['display_tags']
                     if local_display_tags == {}:
                         continue
 
@@ -264,5 +264,5 @@ Parent factor defines how much more common a parent tag needs to be than other p
         self.setStatus("Done!")
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     ImplicitParentFinderWin()

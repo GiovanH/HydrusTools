@@ -53,7 +53,7 @@ def flatList(lst: Iterable[Iterable[V]]) -> list[V]:
 
 grooveframe: partial[ttk.Frame] = partial(ttk.Frame, relief=tk.GROOVE, padding=4)
 
-def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
+def pb_iter(pb: ttk.Progressbar | dict, seq: Sequence[V]) -> Generator[V, Any, None]:
     pb['value'] = 0
     total = len(seq)
     for i, item in enumerate(seq):
@@ -64,7 +64,7 @@ def pb_iter(pb: ttk.Progressbar, seq: Sequence[V]) -> Generator[V, Any, None]:
 @functools.cache
 def resp_to_photoimage(master: tk.Widget, resp: requests.Response) -> ImageTk.PhotoImage:
     image = Image.open(BytesIO(resp.content))
-    return ImageTk.PhotoImage(image=image, master=master)
+    return ImageTk.PhotoImage(image=image)
 
 
 def get_selection_neighbors(widget: ttk.Treeview, prev=1, next=2) -> list[str]:
@@ -204,7 +204,7 @@ class SearchQueryEntry(QueryHistory):
         return querylang.serialize_query_sl(querylang.parse_ml_query(value))
 
     def get_query(self) -> querylang.Query:
-        tag_query = self.textvar_query.get()
+        tag_query = querylang.SLQuery(self.textvar_query.get())
         if not tag_query:
             raise ValueError("Empty search query")
         return querylang.parse_sl_query(tag_query)

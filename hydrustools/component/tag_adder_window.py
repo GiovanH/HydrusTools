@@ -1,18 +1,19 @@
-from collections import OrderedDict
 import dataclasses
-from functools import partial
 import logging
 import tkinter as tk
+from collections import OrderedDict
 from dataclasses import dataclass
+from functools import partial
 from tkinter import messagebox, ttk
 from typing import ClassVar
 
-from hydrustools import logic
 from hydrustools.component.HydrusImageTable import HydrusImageTable
+from hydrustools.utils import hydrus
 
-from .gui_util import Increment, pb_iter, tkwrap
+from ..utils.gui_util import Increment, pb_iter, tkwrap
 from .multicolumnlistbox import TreeListItemDict, TreeviewSchema
 from .toolwindow import ToolWindow
+
 
 @dataclass
 class TagAction():
@@ -76,7 +77,7 @@ class TagAdderFrame(ttk.Frame):
 
         # Right
         counter_main_row.inc()
-        self.tree_tags = HydrusImageTable(self, toolmaster=self.toolmaster, schema=TagActionSchema)  # noqa: F821
+        self.tree_tags = HydrusImageTable(self, toolmaster=self.toolmaster, schema=TagActionSchema)
 
         with tkwrap(self.tree_tags) as tree:
             # assert isinstance(tree, ttk.Treeview)
@@ -138,11 +139,11 @@ class TagAdderFrame(ttk.Frame):
             message=f"{explaination}\n\nAdd tags to files?"
         )
         if user_confirmed:
-            for ta in pb_iter(self.pb or self.toolmaster.pb or {}, actions):
-                logic.client.add_tags(
+            for ta in pb_iter(self.pb or getattr(self.toolmaster, 'pb', None) or {}, actions):
+                hydrus.client.add_tags(
                     file_ids=[ta.file_id],
                     service_keys_to_tags={
-                        logic.local_tags_service_key: ta.new_tags,
+                        hydrus.local_tags_service_key: ta.new_tags,
                     }
                 )
                 self.toolmaster.setStatus(f"Added tags {ta.new_tags!r} to {ta.file_id}")
@@ -157,12 +158,12 @@ class TagAdderFrame(ttk.Frame):
             self.tag_actions[int(i)].file_id
             for i in selection
         ]
-        logic.client.add_popup("Tag Search", files_label="Selected Images", file_ids=matching_ids) # type: ignore
+        hydrus.client.add_popup("Tag Search", files_label="Selected Images", file_ids=matching_ids) # type: ignore
 
     def deleteSelected(self, event=None):
         self.tree_tags.tree.delete(*self.tree_tags.tree.selection())
 
-class TagAdderWindow(ToolWindow):  # noqa: PLR0904
+class TagAdderWindow(ToolWindow):
     helpstr = """"""
     def __init__(self, tag_actions: list[TagAction], *args_, **kwargs) -> None:
         super().__init__(*args_, **kwargs)

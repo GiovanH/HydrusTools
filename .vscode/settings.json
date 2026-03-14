@@ -2,10 +2,20 @@
     "python.testing.unittestEnabled": true,
     "python.testing.unittestArgs": [
         "-v",
-        "-t", ".",      // Project root: This adds the root to sys.path
+        "-t", ".",
         "-s",
         "tests",
         "-p",
         "test*.py"
-    ]
+    ],
+    "python.analysis.exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        ".git",
+        "**/*cache*/",
+        "**/.*",
+        "**/venv",
+        "**/*.log"
+    ],
+    "python.analysis.stubPath": "stubs",
 }

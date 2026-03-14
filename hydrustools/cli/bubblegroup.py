@@ -6,10 +6,9 @@ from typing import Any
 
 import hydrus_api
 
-from hydrustools import htlogging
-from hydrustools.component import querylang
+from hydrustools.utils import htlogging, querylang
 
-from .. import logic
+from ..utils import hydrus
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +21,9 @@ class BubbleItem:
 
 
 def reset_groups():
-    for tag in logic.search_tags_re(f"{group_namespace}:*", subpattern=None):
+    for tag in hydrus.search_tags_re(f"{group_namespace}:*", subpattern=None):
         # logger.info(f"Deleting tag {tag.value} from {tag.count} images")
-        logic.replace_tag(tag.value, new_tags=[])
+        hydrus.replace_tag(tag.value, new_tags=[])
 
 def find_similar_keys(query_tagset: frozenset, groups: dict[frozenset, Any]):
     similar: list[tuple[tuple[int, ...], frozenset]] = []
@@ -137,10 +136,10 @@ def apply_groups(groups):
         if len(tagset) == 0:
             tagname = f"{group_namespace}:emptyset"
         logger.debug(f"Adding tag {tagname} for group {tagset} with {len(items)} images")
-        logic.client.add_tags(
+        hydrus.client.add_tags(
             file_ids=[bi.value['file_id'] for bi in items],
             service_keys_to_actions_to_tags={
-                logic.local_tags_service_key: {
+                hydrus.local_tags_service_key: {
                     hydrus_api.TagAction.ADD: [tagname]
                 }
             }
@@ -148,7 +147,7 @@ def apply_groups(groups):
 
 
 def main():
-    logic.init_client()
+    hydrus.init_client()
 
     parser = argparse.ArgumentParser(
         description="WIP!",
@@ -170,20 +169,20 @@ def main():
     reset_groups()
 
     logger.info(f"Querying hydrus {args.query!r}...")
-    resp = logic.client.search_files(
-        tags=querylang.parse_sl_query(args.query) # type: ignore
+    resp = hydrus.client.search_files(
+        tags=querylang.parse_sl_query(querylang.SLQuery(args.query))
     )
     matching_files = resp['file_ids']
     logger.info(f"Got {len(matching_files)} ids")
 
-    all_images: list[logic.FileMetadata] = logic.client.get_file_metadata(file_ids=matching_files, include_notes=True)['metadata']
+    all_images: list[hydrus.FileMetadata] = hydrus.client.get_file_metadata(file_ids=matching_files, include_notes=True)['metadata']
     logger.info(f"Got {len(matching_files)} metadata sets")
 
     bubble_list: list[BubbleItem] = [
         BubbleItem(
             value=file,
             tags=frozenset(
-                t for t in logic.local_tags(file)
+                t for t in hydrus.local_tags(file)
                 if not any(t.startswith(ns) for ns in args.ignore_namespaces)
             )
         )

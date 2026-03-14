@@ -8,8 +8,7 @@ from contextlib import contextmanager
 from tkinter import messagebox
 from typing import Any, Callable, Generator, Iterable
 
-from hydrustools import htlogging
-from hydrustools.util import timer
+from hydrustools.utils.util import timer
 
 from ..settings import Settings
 

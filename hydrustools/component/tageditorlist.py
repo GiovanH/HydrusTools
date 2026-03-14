@@ -7,11 +7,11 @@ from tkinter import TclError, ttk
 
 from frozendict import frozendict
 
-from hydrustools import logic
-from hydrustools.component import fuzzysearch
-from hydrustools.util import timer
+from hydrustools.utils import hydrus
+from hydrustools.utils import fuzzysearch
+from hydrustools.utils.util import timer
 
-from .gui_util import tkwrapc
+from ..utils.gui_util import tkwrapc
 
 # def penalize_ships(tup: tuple[fuzzysearch.Score, str]):
 #     if tup[1].startswith("ship:"):
@@ -58,7 +58,7 @@ class TagList(tk.Listbox):
         for value in elements:
             super().insert(index, value)
             self.itemconfig(tk.END,
-                foreground=logic.get_tag_color(value),
+                foreground=hydrus.get_tag_color(value),
             )
 
 
@@ -156,7 +156,7 @@ class TagEditorList(ttk.Frame):
         # self.tag_list = tag_list
         self.tag_list.clear()
 
-        for tag in logic.sort_tags(tag_list):
+        for tag in hydrus.sort_tags(tag_list):
             self.addTag(tag, interactive=False)
             # self.listbox_taglist.insert(tk.END, tag)
 
@@ -239,14 +239,14 @@ class TagEditorList(ttk.Frame):
         self.logger.info("Loading global suggestions...")
 
         self.pb['value'] = 25
-        all_tag_counts = logic.search_tags_re('*', subpattern=None, display_type='display')
+        all_tag_counts = hydrus.search_tags_re('*', subpattern=None, display_type='display')
 
         all_tags = tuple(t.value for t in all_tag_counts)
 
         self.pb['value'] = 50
         self.tag_synonyms_all = {
             sib: si.ideal_tag
-            for si in logic.get_sibling_ideal_targets(all_tags)
+            for si in hydrus.get_sibling_ideal_targets(all_tags)
             for sib in si.siblings
             if sib != si.ideal_tag
         }
@@ -272,10 +272,10 @@ class TagEditorList(ttk.Frame):
         self.logger.info("Loading context suggestions for %s", self.tag_list)
 
         self.pb['value'] = 20
-        sib_info = logic.get_sibling_ideal_targets(self.tag_list)
+        sib_info = hydrus.get_sibling_ideal_targets(self.tag_list)
 
         self.pb['value'] = 90
-        self.tag_context = tuple(logic.flatList(
+        self.tag_context = tuple(hydrus.flatList(
             [*si.descendants]
             for si in sib_info
             if si.ideal_tag in self.tag_list
@@ -338,7 +338,7 @@ class TagEditorList(ttk.Frame):
                 continue
             self.listbox_suggestion.insert(tk.END, tag)
             self.listbox_suggestion.itemconfig(tk.END,
-                foreground=logic.get_tag_color(tag),
+                foreground=hydrus.get_tag_color(tag),
             )
             suggestions.append(tag)
 

@@ -9,11 +9,11 @@ import requests
 from joblib import memory
 
 # import pysaucenao
-from hydrustools.inisettings import IniSettings
-from hydrustools.logic import FileMetadata
+from hydrustools.utils.inisettings import IniSettings
+from hydrustools.utils.hydrus import FileMetadata
 
-from .. import logic
-from ..util import timer
+from ..utils import hydrus
+from ..utils.util import timer
 from . import registry
 
 memory = memory.Memory("cache", verbose=False)
@@ -98,7 +98,7 @@ def get_bitmask(enabled_sites: list[str]):
 @memory.cache
 def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
     with timer("thumbnail"):
-        resp = logic.client.get_thumbnail(file_id=metadata['file_id'])
+        resp = hydrus.client.get_thumbnail(file_id=metadata['file_id'])
         resp.raise_for_status()
 
     imageData = io.BytesIO(resp.content)

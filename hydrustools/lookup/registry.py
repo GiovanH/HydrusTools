@@ -3,8 +3,8 @@ from abc import abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, asdict
 
-from hydrustools import logic
-from hydrustools.logic import FileMetadata
+from hydrustools.utils import hydrus
+from hydrustools.utils.hydrus import FileMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +50,11 @@ class MetadataActions:
             # source=self.source,
             "add_tags": set_subtract(
                 self.add_tags,
-                logic.local_tags(image)
+                hydrus.local_tags(image)
             ),
             "add_downloader_tags": set_subtract(
                 self.add_downloader_tags,
-                logic.local_tags(image, service_key=logic.downloader_tags_service_key)
+                hydrus.local_tags(image, service_key=hydrus.downloader_tags_service_key)
             ),
             "add_urls": set_subtract(
                 self.add_urls,

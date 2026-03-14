@@ -5,8 +5,8 @@ from pathlib import Path
 import requests
 from joblib import memory
 
-from hydrustools.inisettings import IniSettings
-from hydrustools.logic import FileMetadata
+from hydrustools.utils.inisettings import IniSettings
+from hydrustools.utils.hydrus import FileMetadata
 
 from . import registry
 

@@ -15,11 +15,12 @@ from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from hydrustools.component.tageditorlist import TagEditorList, TagList
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
+from ..utils import hydrus
 from hydrustools.settings import Settings
-from hydrustools.util import timer
+from hydrustools.utils.util import timer
 
-from .. import logic, lookup
-from ..component.gui_util import (
+from .. import lookup
+from ..utils.gui_util import (
     Increment,
     get_selection_neighbors,
     grooveframe,
@@ -29,7 +30,7 @@ from ..component.gui_util import (
     tkwrapc,
 )
 from ..component.toolwindow import ToolWindow
-from ..logic import FileMetadata, TagInfo
+from ..utils.hydrus import FileMetadata, TagInfo
 
 plugin_registry: dict[str, LookupPlugin] = None # type: ignore
 
@@ -89,7 +90,7 @@ Heavy work-in-progress"""
         self.checkbuttons: dict[str, ttk.Checkbutton] = {}
 
         self.tag_count_cache: dict[str, int] = {}
-        self.all_relationships: dict[str, logic.SiblingInfo]
+        self.all_relationships: dict[str, hydrus.SiblingInfo]
 
         self.listbox_taglist: TagList
         self.action_table: MultiColumnListbox
@@ -277,7 +278,7 @@ Heavy work-in-progress"""
     def bind_controls(self):
         pass
 
-    def set_image(self, metadata: logic.FileMetadata):
+    def set_image(self, metadata: hydrus.FileMetadata):
         refreshing = False
         if self.current_image and metadata['file_id'] == self.current_image.get('file_id'):
             refreshing = True
@@ -289,14 +290,14 @@ Heavy work-in-progress"""
 
         assert self.current_image
 
-        tag_list = logic.local_tags(self.current_image)
+        tag_list = hydrus.local_tags(self.current_image)
 
         self.var_id.set(str(self.current_image['file_id']))
         self.var_urls.set('\n'.join(self.current_image['known_urls']))
 
         self.listbox_taglist.delete(0, self.listbox_taglist.size())
 
-        for tag in logic.sort_tags(tag_list):
+        for tag in hydrus.sort_tags(tag_list):
             self.listbox_taglist.insert(tk.END, tag)
 
         for (id_, var) in self.plugin_enabled.items():
@@ -322,12 +323,12 @@ Heavy work-in-progress"""
         self.addSuggestions(plugin, actions)
 
     def update_tag_cache(self, event=None):
-        all_tags = logic.search_tags_re("*", subpattern=None)
+        all_tags = hydrus.search_tags_re("*", subpattern=None)
         all_tags_set = {ti.value for ti in all_tags}
         self.tag_count_cache = {ti.value: ti.count for ti in all_tags}
 
-        sibling_resp = logic.get_sibling_ideal_targets([*all_tags_set])
-        self.all_relationships: dict[str, logic.SiblingInfo] = {
+        sibling_resp = hydrus.get_sibling_ideal_targets([*all_tags_set])
+        self.all_relationships: dict[str, hydrus.SiblingInfo] = {
             **{
                 s: si
                 for si in
@@ -381,9 +382,9 @@ Heavy work-in-progress"""
 
         for tag_value in actions.add_tags or []:
 
-            if tag_value in logic.local_tags(self.current_image):
+            if tag_value in hydrus.local_tags(self.current_image):
                 continue
-            if tag_value in self.all_relationships and self.all_relationships[tag_value].ideal_tag in logic.local_tags(self.current_image):
+            if tag_value in self.all_relationships and self.all_relationships[tag_value].ideal_tag in hydrus.local_tags(self.current_image):
                 continue
 
             # TODO: Siblings
@@ -399,7 +400,7 @@ Heavy work-in-progress"""
 
         for tag_value in actions.add_downloader_tags or []:
             # TODO: Siblings
-            if tag_value in logic.local_tags(self.current_image):
+            if tag_value in hydrus.local_tags(self.current_image):
                 continue
 
             # TODO: Siblings
@@ -516,27 +517,27 @@ Heavy work-in-progress"""
 
         if len(all_downloader_tags) > 0:
             self.setStatus(f"Adding {len(all_downloader_tags)} tags")
-            logic.client.add_tags(
+            hydrus.client.add_tags(
                 file_ids=[file_id],
                 service_keys_to_tags={
-                    logic.downloader_tags_service_key: all_downloader_tags
+                    hydrus.downloader_tags_service_key: all_downloader_tags
                 }
             )
             acted = True
 
         if len(all_tags) > 0:
             self.setStatus(f"Adding {len(all_tags)} tags")
-            logic.client.add_tags(
+            hydrus.client.add_tags(
                 file_ids=[file_id],
                 service_keys_to_tags={
-                    logic.local_tags_service_key: all_tags
+                    hydrus.local_tags_service_key: all_tags
                 }
             )
             acted = True
 
         if len(all_urls) > 0:
             self.setStatus(f"Adding {len(all_urls)} source urls")
-            logic.client.associate_url(file_ids=[file_id], urls_to_add=all_urls)
+            hydrus.client.associate_url(file_ids=[file_id], urls_to_add=all_urls)
             acted = True
 
         if acted:

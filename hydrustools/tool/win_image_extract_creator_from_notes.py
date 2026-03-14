@@ -1,21 +1,20 @@
 import re
-from tkinter import ttk
 import tkinter as tk
+from tkinter import ttk
 
-from hydrustools.component.tag_adder_window import TagAction, TagAdderFrame
+from hydrustools.utils import querylang
 
-
-from ..component.gui_util import SearchQueryEntry, pb_iter, tkwrapc
+from ..component.tag_adder_window import TagAction, TagAdderFrame
 from ..component.toolwindow import ToolWindow
-
-from .. import logic
 from ..settings import Settings
+from ..utils import hydrus
+from ..utils.gui_util import SearchQueryEntry, pb_iter, tkwrapc
 
 
 def all_creator_names(min_count=2):
-    creator_tags = logic.client.search_tags(
+    creator_tags = hydrus.client.search_tags(
         search="creator:*",
-        tag_service_key=logic.local_tags_service_key,
+        tag_service_key=hydrus.local_tags_service_key,
         tag_display_type="display"
     )['tags']  # type: ignore
     creator_names = [
@@ -139,31 +138,31 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
 
         notename = self.var_notename.get()
 
-        tag_query: list[str | list[str]] = self.entry_search.get_query()
+        tag_query: querylang.Query = self.entry_search.get_query()
 
         self.entry_search.add_history(self.var_search.get())
 
-        tag_query.append(logic.has_note(notename))
+        tag_query.append(hydrus.has_note(notename))
         tag_query.append("-creator:*")
 
         self.frame_ta.delete_all()
 
         self.pb['value'] += 25
         self.setStatus(f"Searching for files with note {notename!r} and no creator...")
-        file_ids_with_note = logic.client.search_files(
-            tags=tag_query  # type: ignore
+        file_ids_with_note = hydrus.client.search_files(
+            tags=tag_query
         )['file_ids']
 
         self.setStatus(f"Found {len(file_ids_with_note)} files matching {tag_query!r}...")
 
         self.setStatus(f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames")
 
-        for id_chunk in pb_iter(self.pb, [*logic.chunk(file_ids_with_note, 200)]):
+        for id_chunk in pb_iter(self.pb, [*hydrus.chunk(file_ids_with_note, 200)]):
             if self.abort_threads:
                 self.setStatus("Aborted")
                 return
 
-            resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
+            resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
             for metadata in resp['metadata']:
                 note_body = metadata['notes'].get(notename)
@@ -188,5 +187,5 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
         self.setStatus("Done!")
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     ExtractCreatorFromNotesWin()

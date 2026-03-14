@@ -8,10 +8,13 @@ from typing import Any, Callable
 # import PyTaskbar
 import hydrus_api
 
-from .. import logic
-from ..component.gui_util import Increment, RegexEntry, SearchQueryEntry, tkwrap, tkwrapc
+from hydrustools.utils import querylang
+
 from ..component.toolwindow import ToolWindow
 from ..settings import Settings
+from ..utils import hydrus
+from ..utils.gui_util import Increment, RegexEntry, SearchQueryEntry, tkwrap, tkwrapc
+
 
 class RegexNoteSearchWin(ToolWindow):
     label = "Regex Note Search"
@@ -108,20 +111,20 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             # progress.init()
             # progress.setState('loading')
 
-            tag_query: list[str | list[str]] = []
+            tag_query: querylang.Query = []
 
             tag_query.extend(self.entry_search.get_query())
 
             # TODO: Option to configure " (n)" suffix
-            tag_query.append(logic.has_note(notename))
+            tag_query.append(hydrus.has_note(notename))
 
             if self.textvar_prequery.get():
                 tag_query.append(self.textvar_prequery.get())
 
             self.setStatus(f"Searching for query {tag_query!r}")
             try:
-                resp = logic.client.search_files(
-                    tags=tag_query # type: ignore
+                resp = hydrus.client.search_files(
+                    tags=tag_query
                 )
                 file_ids_with_note = resp['file_ids']
             except hydrus_api.APIError as e:
@@ -135,8 +138,8 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             start_time = time.time()
 
             try:
-                for id_chunk in logic.chunk(file_ids_with_note, 1000):
-                    resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
+                for id_chunk in hydrus.chunk(file_ids_with_note, 1000):
+                    resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
                     for metadata in resp['metadata']:
                         # TODO: Search alternates of notes, not just direct lookups
@@ -158,7 +161,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
                 return
 
             elapsed = time.time() - start_time
-            logic.client.add_popup("Regex search complete", files_label=f"{notename}: {pattern!r}", file_ids=matching_ids)
+            hydrus.client.add_popup("Regex search complete", files_label=f"{notename}: {pattern!r}", file_ids=matching_ids)
 
             # self.pb.stop()
             # progress.setState('done')

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from hydrustools.logic import FileMetadata
+from hydrustools.utils.hydrus import FileMetadata
 from . import registry
 
 @registry.register

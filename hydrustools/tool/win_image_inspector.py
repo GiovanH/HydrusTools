@@ -14,8 +14,8 @@ from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewS
 from hydrustools.component.tageditorlist import TagEditorList
 from hydrustools.settings import Settings
 
-from .. import logic
-from ..component.gui_util import (
+from ..utils import hydrus
+from ..utils.gui_util import (
     Increment,
     get_selection_neighbors,
     grooveframe,
@@ -25,7 +25,7 @@ from ..component.gui_util import (
     tkwrapc,
 )
 from ..component.toolwindow import ToolWindow
-from ..logic import FileMetadata
+from ..utils.hydrus import FileMetadata
 
 
 class ImageInspectorWin(ImageTool):
@@ -236,7 +236,7 @@ If tagname is attached to the image, "-tagname" will remove it.
             self.logger.error("Can't set tags, no image selected")
             return
         try:
-            logic.set_tag_list_of_images(
+            hydrus.set_tag_list_of_images(
                 tag_list=self.tag_editor_list.tag_list,
                 tool=self,
                 metadata_list=[self.current_image]
@@ -248,7 +248,7 @@ If tagname is attached to the image, "-tagname" will remove it.
             raise e
 
 
-    def set_image(self, metadata: logic.FileMetadata):
+    def set_image(self, metadata: hydrus.FileMetadata):
         super().set_image(metadata)
 
         self.update_text_info()
@@ -256,7 +256,7 @@ If tagname is attached to the image, "-tagname" will remove it.
         self.canvas.set_image(metadata)
 
         self.refreshing = True
-        tag_list = logic.local_tags(metadata)
+        tag_list = hydrus.local_tags(metadata)
         self.tag_editor_list.setTagList(tag_list)
 
         self.tag_editor_list.modified = False
@@ -337,10 +337,10 @@ If tagname is attached to the image, "-tagname" will remove it.
         file_id = metadata['file_id']
 
         if metadata['is_inbox']:
-            logic.client.archive_files(file_ids=[file_id])
+            hydrus.client.archive_files(file_ids=[file_id])
             self.setStatus(f"Moved file {file_id} to archive")
         else:
-            logic.client.unarchive_files(file_ids=[file_id])
+            hydrus.client.unarchive_files(file_ids=[file_id])
             self.setStatus(f"Moved file {file_id} to inbox")
 
         if self.tag_editor_list.modified:
@@ -357,10 +357,10 @@ If tagname is attached to the image, "-tagname" will remove it.
         file_id = metadata['file_id']
 
         if metadata['is_trashed']:
-            logic.client.undelete_files(file_ids=[file_id])
+            hydrus.client.undelete_files(file_ids=[file_id])
             self.setStatus(f"Removed file {file_id} from trash")
         else:
-            logic.client.delete_files(file_ids=[file_id])
+            hydrus.client.delete_files(file_ids=[file_id])
             self.setStatus(f"Moved file {file_id} to trash")
 
         if self.tag_editor_list.modified:

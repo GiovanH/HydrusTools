@@ -4,11 +4,13 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 from typing import ClassVar
 
-from .. import logic
-from ..component.gui_util import QueryHistory, RegexEntry, TextCopyWindow, tkwrap, tkwrapc
+from hydrustools.utils import querylang
+
+from ..utils import hydrus
+from ..utils.gui_util import QueryHistory, RegexEntry, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
-from ..logic import TagInfo
+from ..utils.hydrus import TagInfo
 from ..settings import Settings
 
 
@@ -126,7 +128,7 @@ AND/OR opens search page for all images with the selected tags.
         self.tree_tags.delete_all()
 
         try:
-            results: list[TagInfo] = logic.search_tags_re(search_query, search_refinement, display_type="display")
+            results: list[TagInfo] = hydrus.search_tags_re(search_query, search_refinement, display_type="display")
         except re.error as e:  # noqa: F821
             messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_refinement!r}\n{e}")
             return
@@ -153,26 +155,27 @@ AND/OR opens search page for all images with the selected tags.
         return self.openPage(OR=True)
 
     def openPage(self, OR=False):
-        selection: list[str] = [d["name"] for d in self.tree_tags.getSelectionDicts()]
+        selection = [d["name"] for d in self.tree_tags.getSelectionDicts()]
         self.setStatus(f"Gathered {len(selection)} tags")
 
         tag_domain = None
         if self.boolvar_localonly.get():
-            tag_domain = logic.local_tags_service_key
+            tag_domain = hydrus.local_tags_service_key
 
-        query = selection
         if OR:
-            query = [query]
+            query: querylang.AndQuery = [selection]
+        else:
+            query = selection
 
-        matching_ids = logic.client.search_files(
-            tags=query,  # type: ignore
+        matching_ids = hydrus.client.search_files(
+            tags=query,
             tag_service_key=tag_domain,
             return_file_ids=True,
         )["file_ids"]
         self.logger.info(matching_ids)
         self.setStatus(f"Got {len(matching_ids)} from search")
 
-        logic.client.add_popup("Tag Search", files_label=f"{selection!r}", file_ids=matching_ids)
+        hydrus.client.add_popup("Tag Search", files_label=f"{selection!r}", file_ids=matching_ids)
 
     def addNamespace(self, OR=False):
         selection: list[str] = [d["name"] for d in self.tree_tags.getSelectionDicts()]
@@ -201,6 +204,6 @@ AND/OR opens search page for all images with the selected tags.
         if user_confirmed:
             with self.lock():
                 for tag_name in selection:
-                    logic.replace_tag(tag_name, [])
+                    hydrus.replace_tag(tag_name, [])
 
             self.startTask(self.doSearch)

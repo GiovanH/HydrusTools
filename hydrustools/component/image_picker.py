@@ -9,8 +9,8 @@ import hydrus_api
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
 
-from .. import logic
-from ..component.gui_util import (
+from ..utils import hydrus
+from ..utils.gui_util import (
     Increment,
     SearchQueryEntry,
     pb_iter,
@@ -18,7 +18,7 @@ from ..component.gui_util import (
     tkwrapc,
 )
 from ..component.toolwindow import ToolWindow
-from ..logic import FileMetadata
+from ..utils.hydrus import FileMetadata
 from ..settings import Settings
 
 
@@ -33,7 +33,7 @@ class ImageFileSchema(TreeviewSchema[FileMetadata]):
 
     @staticmethod
     def to_tree_item(item: FileMetadata) -> TreeListItemDict:
-        taglist = logic.local_tags(item)
+        taglist = hydrus.local_tags(item)
         return {
             "id": item['file_id'],
             "values": [
@@ -192,9 +192,9 @@ class ImagePickerWindow(ToolWindow):
         self.search_frame.delete_all()
 
         try:
-            resp = logic.client.search_files(
-                tags=tag_query, # type: ignore
-                tag_service_key=logic.local_tags_service_key
+            resp = hydrus.client.search_files(
+                tags=tag_query,
+                tag_service_key=hydrus.local_tags_service_key
             )
             matching_files: list[int] = resp['file_ids']
         except hydrus_api.APIError as e:
@@ -204,12 +204,12 @@ class ImagePickerWindow(ToolWindow):
         if self.boolvar_alts.get():
             self.pb['value'] = 90
             self.setStatus("Bundling in relationships...")
-            matching_files = logic.addAltsToList(matching_files)
+            matching_files = hydrus.addAltsToList(matching_files)
 
         self.pb['value'] = 0
         return matching_files
 
-    def doSearch(self, event=None, load_thumbnails=True):
+    def doSearch(self, event=None, load_thumbnails=True) -> None:
         matching_files = self.search_get_ids()
         if not matching_files:
             return
@@ -219,10 +219,10 @@ class ImagePickerWindow(ToolWindow):
         self.entry_search.add_history(self.textvar_query.get())
         self.setStatus(f"Getting metadata for {len(matching_files)} files")
 
-        for id_chunk in pb_iter(self.pb, [*logic.chunk(matching_files, 200)]):
-            resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=self.include_notes)
+        for id_chunk in pb_iter(self.pb, [*hydrus.chunk(matching_files, 200)]):
+            resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=self.include_notes)
 
-            def commit(resp=resp):
+            def commit(resp=resp) -> None:
                 for metadata in resp['metadata']:
                     # pprint.pprint(metadata)
                     file_id: int = metadata['file_id']
@@ -235,7 +235,7 @@ class ImagePickerWindow(ToolWindow):
             self.setStatus("Loading thumbnails")
             self.search_frame.table.load_thumbnails(self.pb)
 
-    def confirm(self, event=None):
+    def confirm(self, event=None) -> None:
         ids = self.search_frame.table.getSelectionIDs()
         try:
             self.result = [
@@ -247,7 +247,7 @@ class ImagePickerWindow(ToolWindow):
         self.logger.info(f"Returning result {len(self.result)=}")
         self.destroy()
 
-    def confirm_all(self, event=None):
+    def confirm_all(self, event=None) -> None:
         if len(self.search_frame.table.getAllIds()) == 0:
             self.doSearch(load_thumbnails=False)
             self.update_idletasks()
@@ -265,12 +265,12 @@ class ImagePickerWindow(ToolWindow):
         self.destroy()
 
     @classmethod
-    def pick(cls):
+    def pick(cls) -> list[FileMetadata] | None:
         print("Starting new instance")
         instance = cls()
         print("Instance concluded, returning result")
         return instance.result
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     print("value:", ImagePickerWindow.pick())

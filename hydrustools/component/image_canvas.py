@@ -1,17 +1,17 @@
 import concurrent.futures
 import functools
-import tkinter as tk
-from PIL import Image, ImageDraw, ImageFile, ImageTk
 import logging
+import tkinter as tk
+from collections import OrderedDict, UserDict
+from typing import Generic, TypeVar
 
-from collections import UserDict, OrderedDict
-from typing import Mapping, TypeVar, Generic
+from PIL import Image, ImageDraw, ImageFile, ImageTk
+
+from ..utils import hydrus
+from ..utils.util import timer
 
 K = TypeVar('K')
 V = TypeVar('V')
-
-from hydrustools import htlogging, logic
-from hydrustools.util import timer
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -24,9 +24,9 @@ def render_image(file_id: int, width: int, height: int, max_width: int, max_heig
         raise ValueError(f"Invalid dimensions {width=} {height=} {max_width=} {max_height=}")
     with timer(f"Render {file_id} {width=} {height=} {max_width=} {max_height=}"):
         try:
-            return logic.get_render_scaled(file_id, width, height, max_width, max_height)
+            return hydrus.get_render_scaled(file_id, width, height, max_width, max_height)
         except:  # noqa: E722
-            return logic.get_thumb_scaled(
+            return hydrus.get_thumb_scaled(
                 file_id,  # type: ignore
                 max_width=max_width,
                 max_height=max_height
@@ -60,7 +60,7 @@ class ContentCanvas(tk.Canvas):
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
         self.current_photoimg: ImageTk.PhotoImage | None = None
-        self.current_meta: logic.FileMetadata | None = None
+        self.current_meta: hydrus.FileMetadata | None = None
 
         self.photoimage_cache: UserDict[tuple, ImageTk.PhotoImage] = LRUDict(30)
 
@@ -76,7 +76,7 @@ class ContentCanvas(tk.Canvas):
 
         self.bind("<Configure>", lambda e: self.after(100, self.configure_image))
 
-    def set_image(self, image: logic.FileMetadata):
+    def set_image(self, image: hydrus.FileMetadata):
         self.current_meta = image
         try:
             self.configure_image()
@@ -99,7 +99,7 @@ class ContentCanvas(tk.Canvas):
             self.itemconfig(self.photoimage, image=self.current_photoimg, state="normal")
             self.photoimage_cache[key] = self.current_photoimg
 
-    def preload_image(self, image: logic.FileMetadata):
+    def preload_image(self, image: hydrus.FileMetadata):
         self.thread_pool.submit(
             render_image,
             image['file_id'],

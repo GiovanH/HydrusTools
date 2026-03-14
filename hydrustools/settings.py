@@ -1,4 +1,4 @@
-from .inisettings import IniSettings
+from .utils.inisettings import IniSettings
 
 import tkinter as tk
 import hydrus_api
@@ -50,7 +50,7 @@ class HTSettings(IniSettings):
     imagesearch_query_hl: list[str] = []
     imagesearch_alts: bool = True
 
-    def boundTkVar(self, master, name, constructor: Type[V] = tk.StringVar) -> V:
+    def boundTkVar(self, master, name, constructor: type[V] = tk.StringVar) -> V:
         var: V = constructor(master)
 
         var.set(self.__getattribute__(name))

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from tkinter import ttk
 
 
-from .gui_util import Increment, ScrollableFrame, TextCopyWindow, tkwrap, tkwrapc
+from ..utils.gui_util import Increment, ScrollableFrame, TextCopyWindow, tkwrap, tkwrapc
 from .toolwindow import ToolWindow
 
 

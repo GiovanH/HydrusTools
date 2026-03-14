@@ -3,11 +3,11 @@ import pprint
 import re
 import threading
 
-from hydrustools import htlogging
+from hydrustools.utils import htlogging
 
 from ..component.sibling_adder_window import SiblingAction, SiblingAdderWindow
 
-from .. import logic
+from ..utils import hydrus
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ def find_localchars(tk=True):
     """
     char_parser = re.compile(r'^character:(?P<first>[a-z]+) (?P<last>[a-z]+)(?P<suffix> \([a-z]+\))?$')
 
-    chars_with_spaces = logic.search_tags_re("character:*", r'.+ .+')
+    chars_with_spaces = hydrus.search_tags_re("character:*", r'.+ .+')
 
     matches = [
         f for f in
@@ -36,8 +36,8 @@ def find_localchars(tk=True):
 
     sibling_actions: list[SiblingAction] = []
 
-    sibling_resp = logic.get_sibling_ideal_targets([f"{m.string}" for m in matches])
-    sibling_info: dict[str, logic.SiblingInfo] = {
+    sibling_resp = hydrus.get_sibling_ideal_targets([f"{m.string}" for m in matches])
+    sibling_info: dict[str, hydrus.SiblingInfo] = {
         **{
             si.tag: si
             for si in
@@ -73,7 +73,7 @@ def find_localchars(tk=True):
 
             group = ""
 
-            si: logic.SiblingInfo | None = sibling_info.get(tag)
+            si: hydrus.SiblingInfo | None = sibling_info.get(tag)
             if si:
                 # print(si)
                 current_sibling = sibling_options.index(si.ideal_tag)
@@ -104,5 +104,5 @@ def start():
 
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     find_localchars(tk=False)

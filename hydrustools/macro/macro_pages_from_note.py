@@ -5,19 +5,19 @@ import threading
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
-from hydrustools import htlogging
+from hydrustools.utils import htlogging, querylang
 
 from ..component.tag_adder_window import TagAction, TagAdderWindow
 
-from .. import logic
+from ..utils import hydrus
 
 logger = logging.getLogger(__name__)
 
 
-def has_note(max_n: int = 4) -> list[str]:
+def has_note(max_n: int = 4) -> querylang.OrQuery:
     return [
-        *logic.has_note('filename', max_n),
-        *logic.has_note('filepath', max_n),
+        *hydrus.has_note('filename', max_n),
+        *hydrus.has_note('filepath', max_n),
     ]
 
 
@@ -48,13 +48,13 @@ def getFilenameInfo(metadata: dict) -> dict[str, str] | None:
 def add_page_tags(tk=True):
     """Macro: Searches filename and filepath notes for something that looks like a page number, then proposes adding the appropriate page: tag.
     """
-    tag_query: list[str | list[str]] = [] # type: ignore
+    tag_query: querylang.Query = []
 
     tag_query.append(has_note())
     tag_query.append("-page:*")
 
-    resp = logic.client.search_files(
-        tags=tag_query # type: ignore
+    resp = hydrus.client.search_files(
+        tags=tag_query
     )
     file_ids_with_note = resp['file_ids']
 
@@ -65,7 +65,7 @@ def add_page_tags(tk=True):
     tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
     # iterator: tqdm.tqdm = (tqdmtk if tk else tqdm.tqdm)
     iterable = tqdm_iterator(
-        [*logic.chunk(file_ids_with_note, 1000)],
+        [*hydrus.chunk(file_ids_with_note, 1000)],
         desc="Searching for page names in filenames",
         unit="chunk",
         leave=False
@@ -74,7 +74,7 @@ def add_page_tags(tk=True):
 
         # pw.pb['value'] = 100*i/len(chunk_list)
 
-        resp = logic.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
+        resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
         for metadata in resp['metadata']:
             groupdict = getFilenameInfo(metadata)
@@ -101,5 +101,5 @@ def start():
 
 
 if __name__ == "__main__":
-    logic.init_client()
+    hydrus.init_client()
     add_page_tags(tk=False)

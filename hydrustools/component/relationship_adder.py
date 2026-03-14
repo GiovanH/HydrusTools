@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from tkinter import ttk
 from typing import ClassVar
 
-from .gui_util import Increment, tkwrap
+from ..utils.gui_util import Increment, tkwrap
 from .multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from .toolwindow import ToolWindow
 from ..settings import Settings
-from .gui_util import TextCopyWindow
+from ..utils.gui_util import TextCopyWindow
 
 
 
