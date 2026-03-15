@@ -323,6 +323,9 @@ Heavy work-in-progress"""
         self.addSuggestions(plugin, actions)
 
     def update_tag_cache(self, event=None):
+        if event:
+            self.setStatus("Updating tag cache...")
+
         all_tags = hydrus.search_tags_re("*", subpattern=None)
         all_tags_set = {ti.value for ti in all_tags}
         self.tag_count_cache = {ti.value: ti.count for ti in all_tags}

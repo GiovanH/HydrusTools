@@ -38,7 +38,7 @@ Score = namedtuple("Score", ["accuracy", "distance", "tagcount"], defaults=[0, 0
 def mzs(t1: Score, t2: Score) -> Score:
     return Score(*map(sum, zip(t1, t2)))
 
-@functools.lru_cache()
+@functools.lru_cache(maxsize=80000)
 def split_to_segments(q: str, query_split) -> tuple[str, ...]:
     # logger.info(re.split(query_split, q))
     return tuple(
@@ -48,7 +48,7 @@ def split_to_segments(q: str, query_split) -> tuple[str, ...]:
     )
 
 
-@functools.lru_cache()
+@functools.lru_cache(maxsize=8000000)
 def compare_segments(qseg, hseg, query_split=None, check_in=False) -> int:
     if hseg == qseg:
         return 30
@@ -61,7 +61,7 @@ def compare_segments(qseg, hseg, query_split=None, check_in=False) -> int:
     return -1
 
 
-@functools.lru_cache()
+@functools.lru_cache(maxsize=8000000)
 def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...], query_split=None) -> Score:
     accuracy = 0
     distance = 0
@@ -119,10 +119,15 @@ def merge_lists(
 
     results.sort(key=lambda l: l[0], reverse=True)
 
+    logger.debug(perfect_search.cache_info())
+    logger.debug(split_to_segments.cache_info())
+    logger.debug(compare_segments.cache_info())
+    logger.debug(score_segments.cache_info())
+
     return [val for score, val in results]
 
 
-@functools.lru_cache(maxsize=2048)
+@functools.lru_cache(maxsize=8000)
 def perfect_search(
     collection: tuple[str, ...],
     query: str,

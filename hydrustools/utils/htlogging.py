@@ -37,9 +37,9 @@ def configure_logging():
         datefmt='%H:%M:%S'
     ))
 
-    loglevel = os.environ.get('LOGLEVEL')
-    if loglevel:
-        loglevel: int | str = logging._nameToLevel.get(loglevel.upper(), loglevel)
+    loglevel_envar: str | None = os.environ.get('LOGLEVEL')
+    if loglevel_envar:
+        loglevel: int | str = logging._nameToLevel.get(loglevel_envar.upper(), loglevel_envar)
         print("Setting loglevel to", loglevel)
         s_handler.setLevel(loglevel)
 

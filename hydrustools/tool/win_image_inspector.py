@@ -173,6 +173,7 @@ If tagname is attached to the image, "-tagname" will remove it.
 
         entry.bind("<Control-period>", self.try_repeat)
 
+        entry.bind("<Control-f>", self.toggle_favorite)
         entry.bind("<Control-e>", self.toggle_keep)
         entry.bind("<Control-d>", self.toggle_delete)
 
@@ -201,7 +202,7 @@ If tagname is attached to the image, "-tagname" will remove it.
                     return
 
         if self.pref_dwim_advance.get():
-            if not edited:
+            # if not edited:
                 self.next_image()
 
     def on_add(self, event: tk.Event):
@@ -328,6 +329,8 @@ If tagname is attached to the image, "-tagname" will remove it.
         # self.text_current_urls.insert(tk.END, '\n'.join(metadata['known_urls']))
         # self.text_current_urls.configure(state=tk.DISABLED)
 
+
+
     def toggle_keep(self, event=None):
         metadata = self.current_image
         if not metadata:
@@ -366,3 +369,7 @@ If tagname is attached to the image, "-tagname" will remove it.
         if self.tag_editor_list.modified:
             self.save_tag_list()
         self.refresh_current()
+
+    def toggle_favorite(self, event=None):
+        raise NotImplementedError()
+        # TODO

@@ -241,7 +241,7 @@ class TagEditorList(ttk.Frame):
         self.pb['value'] = 25
         all_tag_counts = hydrus.search_tags_re('*', subpattern=None, display_type='display')
 
-        all_tags = tuple(t.value for t in all_tag_counts)
+        all_tags = tuple(t.value for t in all_tag_counts if t.count > 0)
 
         self.pb['value'] = 50
         self.tag_synonyms_all = {
@@ -299,20 +299,20 @@ class TagEditorList(ttk.Frame):
 
         delete_commands = tuple(f"-{t}" for t in self.tag_list)
 
-        with timer("all", min_secs=0, logger=self.logger.info):
+        with timer(f"all {len(self.all_tags)}", min_secs=0, logger=self.logger.info):
             match_all = fuzzysearch.perfect_search(
                 self.all_tags,
                 query,
                 limit=20
             )
 
-        with timer("commands", min_secs=0, logger=self.logger.info):
+        with timer(f"commands {len(delete_commands)}", min_secs=0, logger=self.logger.info):
             match_commands = fuzzysearch.perfect_search(
                 delete_commands,
                 query
             )
 
-        with timer("context", min_secs=0, logger=self.logger.info):
+        with timer(f"context {len(self.tag_context)}", min_secs=0, logger=self.logger.info):
             match_context = fuzzysearch.perfect_search(
                 self.tag_context,
                 query,
