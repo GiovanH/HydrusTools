@@ -4,13 +4,11 @@ import pprint
 import time
 from pathlib import Path
 
-# from pysaucenao.results import SauceNaoResults
 import requests
 from joblib import memory
 
-# import pysaucenao
-from hydrustools.utils.inisettings import IniSettings
 from hydrustools.utils.hydrus import FileMetadata
+from hydrustools.utils.inisettings import IniSettings
 
 from ..utils import hydrus
 from ..utils.util import timer
@@ -96,12 +94,20 @@ def get_bitmask(enabled_sites: list[str]):
 
 
 @memory.cache
-def sauce_from_hydrus(metadata: FileMetadata, bitmask, minsim, numres):
-    with timer("thumbnail"):
-        resp = hydrus.client.get_thumbnail(file_id=metadata['file_id'])
-        resp.raise_for_status()
+def sauce_from_hydrus(metadata: FileMetadata, minsim, numres, thumbnail=True):
+    if thumbnail:
+        with timer("thumbnail"):
+            resp = hydrus.client.get_thumbnail(file_id=metadata['file_id'])
+            resp.raise_for_status()
 
-    imageData = io.BytesIO(resp.content)
+        imageData = io.BytesIO(resp.content)
+    else:
+        with timer("render"):
+            resp = hydrus.client.get_render(file_id=metadata['file_id'])
+            resp.raise_for_status()
+
+        imageData = io.BytesIO(resp.content)
+
 
     result = None
     retries = 0
@@ -173,7 +179,6 @@ class sauceNaoPlugin(registry.LookupPlugin):
         try:
             result = sauce_from_hydrus(
                 metadata,
-                bitmask=get_bitmask(Settings.enabled_sites),
                 minsim=Settings.minsim,
                 numres=Settings.numres
             )
@@ -183,7 +188,7 @@ class sauceNaoPlugin(registry.LookupPlugin):
 
         # TODO: if short_remaining == 0, self.refused = true but continue
 
-        # pprint.pprint(result)
+        logger.debug(pprint.pformat(result))
 
         for entry in result['results']:
             if float(entry['header']['similarity']) > Settings.minsim:
