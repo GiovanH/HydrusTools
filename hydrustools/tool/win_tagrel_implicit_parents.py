@@ -41,7 +41,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
         self.initwindow()
         self.bind("<Escape>", self.abort)
 
-        self.startTask(self.doSearch)
+        self.startTask(self.doSearch, lock=False)
         self.mainloop()
 
     def abort(self, event=None):
@@ -63,7 +63,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             entry_search = ttk.Entry(frame, textvariable=self.textvar_ns_parent)
             entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
 
             cx.inc()
             tk.Label(frame, text="Child Tag Query:")\
@@ -71,7 +71,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             entry_search = ttk.Entry(frame, textvariable=self.textvar_ns_child)
             entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
 
             cx.inc()
             tk.Label(frame, text="Minimum count:")\
@@ -79,7 +79,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             entry_search = ttk.Spinbox(frame, textvariable=self.var_min_count, from_=1, to=500)
             entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
 
             cx.inc()
             tk.Label(frame, text="Parent factor:")\
@@ -87,13 +87,13 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             entry_search = ttk.Spinbox(frame, textvariable=self.var_tag_factor, from_=1, to=500)
             entry_search.grid(column=cx.value, row=1, sticky="ew")
-            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch))
+            entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))
 
             cx.inc()
             frame.columnconfigure(cx.value, weight=1)
 
             cx.inc()
-            btn_search = ttk.Button(frame, text="Search", command=self.startTaskCurry(self.doSearch))
+            btn_search = ttk.Button(frame, text="Search", command=self.startTaskCurry(self.doSearch, lock=False))
             btn_search.grid(column=cx.value, row=1, sticky="ew")
 
         self.frame_ra = RelationshipAdderFrame(self, pack_buttons=False)
@@ -111,6 +111,9 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             ttk.Label(frame, textvariable=self.textvar_status).grid(column=cx.inc(), row=0, sticky="nsew")
             frame.columnconfigure(index=cx.value, weight=1)
+
+            btn = self.frame_ra.btn_search(frame)
+            btn.grid(column=cx.inc(), row=0, sticky="nse")
 
             btn = self.frame_ra.btn_selected(frame)
             btn.grid(column=cx.inc(), row=0, sticky="nse")
@@ -231,6 +234,11 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
             new_tags = []
 
+            if len(my_counter.keys()) == 0:
+                # Don't even log this case.
+                self.logger.debug(f"{char} has empty counter {my_counter}, skipping")
+                continue
+
             self.logger.info(f"Should we suggest adding a parent to {char} from {my_counter}?")
             if len(my_counter.keys()) == 0:
                 self.logger.info("No, empty.")
@@ -252,6 +260,10 @@ Parent factor defines how much more common a parent tag needs to be than other p
                     continue
 
             for new_tag in new_tags:
+                if all(c < min_char_count for t, c in my_counter.items()):
+                    self.logger.info(f"No tags in {my_counter} pass min threshhold of {min_char_count}")
+                    continue
+
                 ra = RelationshipAction(
                     char,
                     new_tag,
@@ -262,6 +274,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
         self.winfo_toplevel().after(10, self.frame_ra.tree_tags.resize_cols)
         self.setStatus("Done!")
+
 
 if __name__ == "__main__":
     hydrus.init_client()

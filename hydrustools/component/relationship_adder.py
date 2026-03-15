@@ -13,6 +13,9 @@ from .toolwindow import ToolWindow
 from ..settings import Settings
 from ..utils.gui_util import TextCopyWindow
 
+from ..utils import hydrus
+
+from ..utils import querylang
 
 
 @dataclass
@@ -67,8 +70,9 @@ class RelationshipAdderFrame(ttk.Frame):
             tree.grid(column=0, row=counter_main_row.value, sticky="nsew")
             self.rowconfigure(counter_main_row.value, weight=1)
 
-        self.btn_selected: partial[ttk.Button] = partial(ttk.Button, text="Copy Import for selected", command=self.copyImport, width=40)
-        self.btn_all: partial[ttk.Button] = partial(ttk.Button, text="Copy Import for all", command=self.copyImportAll, width=40)
+        self.btn_search: partial[ttk.Button] = partial(ttk.Button, text="OR search selected", command=self.openPage)
+        self.btn_selected: partial[ttk.Button] = partial(ttk.Button, text="Copy Import for selected", command=self.copyImport, width=30)
+        self.btn_all: partial[ttk.Button] = partial(ttk.Button, text="Copy Import for all", command=self.copyImportAll, width=30)
 
         if pack_buttons:
             with tkwrap(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as frame_btns:
@@ -77,6 +81,9 @@ class RelationshipAdderFrame(ttk.Frame):
                 ttk.Label(frame_btns, textvariable=self.toolmaster.textvar_status).grid(column=0, row=0, sticky="nsew")
 
                 frame_btns.columnconfigure(0, weight=1)
+
+                btn = self.btn_search(frame_btns)
+                btn.grid(column=1, row=0, sticky="nse")
 
                 btn = self.btn_selected(frame_btns)
                 btn.grid(column=1, row=0, sticky="nse")
@@ -118,6 +125,31 @@ class RelationshipAdderFrame(ttk.Frame):
 
     def deleteSelected(self, event=None):
         self.tree_tags.tree.delete(*self.tree_tags.tree.selection())
+
+
+    def openPage(self, OR=True):
+        selection: list[str] = [
+            d['target_tag']
+            for d in self.tree_tags.getSelectionDicts()
+        ]
+        self.toolmaster.setStatus(f"Gathered {len(selection)} tags")
+
+        tag_domain = None
+
+        if OR:
+            query: querylang.AndQuery = [selection]
+        else:
+            query = selection  # type: ignore
+
+        matching_ids = hydrus.client.search_files(
+            tags=query,
+            tag_service_key=tag_domain,
+            return_file_ids=True,
+        )["file_ids"]
+        self.logger.info(matching_ids)
+        self.toolmaster.setStatus(f"Got {len(matching_ids)} from search")
+
+        hydrus.client.add_popup("Tag Search", files_label=f"{selection!r}", file_ids=matching_ids)
 
 
 class RelationshipAdderWindow(ToolWindow):  # noqa: PLR0904
