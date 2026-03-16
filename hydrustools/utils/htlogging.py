@@ -31,17 +31,11 @@ class ColorFormatter(logging.Formatter):
 
 def configure_logging():
     s_handler = logging.StreamHandler()
-    s_handler.setLevel(level=logging.INFO)
+    s_handler.setLevel(level=logging.DEBUG)
     s_handler.setFormatter(ColorFormatter(
         '%(asctime)s [%(name)s] %(message)s',
         datefmt='%H:%M:%S'
     ))
-
-    loglevel_envar: str | None = os.environ.get('LOGLEVEL')
-    if loglevel_envar:
-        loglevel: int | str = logging._nameToLevel.get(loglevel_envar.upper(), loglevel_envar)
-        print("Setting loglevel to", loglevel)
-        s_handler.setLevel(loglevel)
 
     f_handler = logging.handlers.RotatingFileHandler("debug.log")
     f_handler.setLevel(logging.DEBUG)
@@ -51,5 +45,12 @@ def configure_logging():
     root_logger.addHandler(s_handler)
     root_logger.addHandler(f_handler)
     root_logger.setLevel(logging.DEBUG)
+
+    loglevel_envar: str | None = os.environ.get('LOGLEVEL')
+    if loglevel_envar:
+        loglevel: int | str = logging._nameToLevel.get(loglevel_envar.upper(), loglevel_envar)
+        print("Setting loglevel to", loglevel)
+        # s_handler.setLevel(loglevel)
+        root_logger.setLevel(loglevel)
 
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
