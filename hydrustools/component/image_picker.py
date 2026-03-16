@@ -166,7 +166,7 @@ class ImagePickerWindow(ToolWindow):
         self.search_frame.grid(column=0, row=counter_main_row.inc(), sticky="nsew")
         self.rowconfigure(counter_main_row.value, weight=1)
 
-        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (frame_bottom, cx, cy):
+        with tkwrapc(ttk.Frame(self, relief=tk.GROOVE, padding=2)) as (frame_bottom, cx, _):
             frame_bottom.grid(row=counter_main_row.inc(), sticky="ew")
 
             self.pb = ttk.Progressbar(frame_bottom, orient='vertical',

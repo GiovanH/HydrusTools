@@ -1,36 +1,22 @@
-import pprint
 import tkinter as tk
-import traceback
 from collections import OrderedDict
 from dataclasses import dataclass
 from tkinter import ttk
 from typing import ClassVar
 
-import hydrus_api
-
-from hydrustools.component.HydrusImageTable import HydrusImageTable
-from hydrustools.component.image_canvas import ContentCanvas
-from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
-from hydrustools.component.tageditorlist import TagEditorList, TagList
+from hydrustools.component.tageditorlist import TagList
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
-from hydrustools.settings import HTSettings, settings_section
-from hydrustools.utils.util import timer
 
 from .. import lookup
-from ..component.toolwindow import ToolWindow
 from ..utils import hydrus
 from ..utils.gui_util import (
-    Increment,
-    get_selection_neighbors,
     grooveframe,
-    mod_selection,
     pb_iter,
     tkwrap,
     tkwrapc,
 )
-from ..utils.hydrus import FileMetadata, TagInfo
 
 plugin_registry: dict[str, LookupPlugin] = None # type: ignore
 
@@ -258,7 +244,7 @@ Heavy work-in-progress"""
         with tkwrap(ttk.PanedWindow(self, orient="horizontal")) as window:
             window.pack(expand=True, fill=tk.BOTH)
 
-            with tkwrapc(ttk.Frame(master=window)) as (left_frame, cx, cy):
+            with tkwrapc(ttk.Frame(master=window)) as (left_frame, cx, _):
                 # Fixed-width image frame
                 self.fac_image_list_frame(left_frame).grid(column=cx.inc(), row=0, sticky="ns")
 
@@ -363,6 +349,16 @@ Heavy work-in-progress"""
     def addSuggestions(self, plugin: LookupPlugin, actions: MetadataActions):
         assert self.current_image
 
+        # TODO configurability
+        always_local_namespaces = [
+            'title', 'series', 'rating'
+        ]
+
+        if self.pref_character_tags_always_local.get():
+            always_local_namespaces.append('character')
+        if self.pref_creator_tags_always_local.get():
+            always_local_namespaces.append('creator')
+
         actions = postprocessSuggestions(
             actions,
 
@@ -373,8 +369,7 @@ Heavy work-in-progress"""
             # no_downloader_tags=self.pref_no_dltags.get(),
             underscores_to_spaces=self.pref_replace_underscores.get(),
 
-            character_tags_always_local=self.pref_character_tags_always_local.get(),
-            creator_tags_always_local=self.pref_creator_tags_always_local.get()
+            always_local_namespaces=always_local_namespaces,
         )
 
         for url in actions.add_urls or []:
@@ -443,7 +438,7 @@ Heavy work-in-progress"""
 
     def applyAll(self, event=None):
         cur_selection: tuple[str, ...] = self.image_list.tree.selection()
-        prev_selection: tuple[str, ...] = tuple()
+        prev_selection: tuple[str, ...] = ()
 
         while (cur_selection != prev_selection):
             if self.abort_threads:

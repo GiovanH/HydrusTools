@@ -19,7 +19,7 @@ from .tool.win_tag_manager import TagManagerWin
 from .tool.win_tagrel_flatten import SiblingFlattenWin
 from .tool.win_tagrel_implicit_parents import ImplicitParentFinderWin
 from .tool.win_tagrel_treebrowser import TagRelationshipsTreeWin
-from .utils import htlogging, hydrus
+from .utils import hydrus
 from .utils.gui_util import tkwrapc
 
 GH_HOME = 'https://github.com/GiovanH/HydrusTools'
@@ -205,8 +205,6 @@ class ToolsListWindow(tk.Tk):
 
 
 def main():
-    htlogging.configure_logging()
-
     try:
         hydrus.init_client()
     except hydrus_api.ConnectionError as e:

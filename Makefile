@@ -7,6 +7,11 @@ dev: venv
 # 	(cd src && ../${VPYTHON} gui.py)
 	${VPYTHON} ${SRC_ROOT}/launcher.py
 
+.PHONY: devdebug
+devdebug: venv
+# 	(cd src && ../${VPYTHON} gui.py)
+	LOGLEVEL=DEBUG ${VPYTHON} ${SRC_ROOT}/launcher.py
+
 .PHONY: release
 release: exe
 	mv -v "dist/hydrustools.exe" "dist/hydrustools-$(GIT_TAG).exe"

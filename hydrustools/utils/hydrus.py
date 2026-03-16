@@ -2,14 +2,12 @@ import dataclasses
 import functools
 import logging
 import re
-import typing as T
-from collections import OrderedDict, abc
+from collections import OrderedDict
 from collections.abc import Sequence
 from io import BytesIO
-from typing import Any, Required, TypedDict
+from typing import Required, TypedDict
 
 import hydrus_api
-from hydrus_api import FileSortType
 
 # from pick import pick
 from PIL import Image
@@ -18,6 +16,7 @@ from hydrustools.component.toolwindow import ToolWindow
 from hydrustools.utils import querylang
 from hydrustools.utils.gui_util import flatList
 from hydrustools.utils.inisettings import IniSettings
+from hydrustools.utils.typedclient import TypedClient
 
 from ..settings import settings_section
 
@@ -28,33 +27,6 @@ class HyApiSettings(IniSettings):
     hydrus_api_key: str = "CHANGEME"
     hydrus_api_url: str = hydrus_api.DEFAULT_API_URL
 
-
-class TypedClient(hydrus_api.Client):
-    def search_files( # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-        tags: querylang.Query,
-        file_service_keys: T.Optional[abc.Iterable[T.Union[str, abc.Iterable[str]]]] = None,
-        deleted_file_service_keys: T.Optional[abc.Iterable[str]] = None,
-        tag_service_key: T.Optional[str] = None,
-        file_sort_type: T.Optional[T.Union[int, FileSortType]] = None,
-        file_sort_asc: T.Optional[bool] = None,
-        return_file_ids: T.Optional[bool] = None,
-        return_hashes: T.Optional[bool] = None,
-        include_current_tags: T.Optional[bool] = None,
-        include_pending_tags: T.Optional[bool] = None,
-    ) -> dict[str, T.Any]:
-        return super().search_files(
-            tags=tags, # type: ignore
-            file_service_keys=file_service_keys,
-            deleted_file_service_keys=deleted_file_service_keys,
-            tag_service_key=tag_service_key,
-            file_sort_type=file_sort_type,
-            file_sort_asc=file_sort_asc,
-            return_file_ids=return_file_ids,
-            return_hashes=return_hashes,
-            include_current_tags=include_current_tags,
-            include_pending_tags=include_pending_tags
-        )
 
 @dataclasses.dataclass
 class TagInfo():
@@ -371,10 +343,11 @@ def addAltsToList(image_id_list: list[int]) -> list[int]:
             continue
 
         for rel_kind in [
-            str(enum.value)
-            for enum in hydrus_api.DuplicateStatus
+            hydrus_api.DuplicateStatus.ALTERNATES,
+            hydrus_api.DuplicateStatus.DUPLICATES,
+            hydrus_api.DuplicateStatus.POTENTIAL_DUPLICATES,
         ]:
-            rel_group = rel_data[rel_kind]
+            rel_group = rel_data[str(rel_kind.value)]
             for rel_hash in rel_group:
                 rel_id = hash_to_id[rel_hash]
                 if rel_id in moved:

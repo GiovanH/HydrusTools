@@ -1,6 +1,7 @@
 import sys
 
 from hydrustools import gui
+from hydrustools.utils import htlogging
 
 
 class SubModules():
@@ -42,6 +43,8 @@ def tryRun(cmd):
         print("Invoke with (venv) python3 launcher.py [module] (dev)")
 
 if __name__ == '__main__':
+    htlogging.configure_logging()
+
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
         sys.argv.pop(0)

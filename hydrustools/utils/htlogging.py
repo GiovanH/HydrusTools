@@ -37,14 +37,14 @@ def configure_logging():
         datefmt='%H:%M:%S'
     ))
 
-    f_handler = logging.handlers.RotatingFileHandler("debug.log")
+    f_handler = logging.handlers.RotatingFileHandler("debug.log", encoding='utf-8')
     f_handler.setLevel(logging.DEBUG)
     f_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s %(message)s [%(filename)s:%(lineno)d in %(funcName)s]'))
 
     root_logger = logging.getLogger()
     root_logger.addHandler(s_handler)
     root_logger.addHandler(f_handler)
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)
 
     loglevel_envar: str | None = os.environ.get('LOGLEVEL')
     if loglevel_envar:

@@ -56,16 +56,21 @@ positional arguments:
 options:
   -h, --help
           show this help message and exit
-  --min-count-local MIN_COUNT_LOCAL
+
+Config Overrides:
+  Overrides for specific postprocessing parameters. Default values come from your INI configuration under "[Lookup]".
+
+  [--mcl | --min-count-local] MIN_COUNT_LOCAL
           Number of times this tag must already exist in tag repo to be added (default: 20)
-  --min-count-download MIN_COUNT_DOWNLOAD
+  [--mcd | --min-count-download] MIN_COUNT_DOWNLOAD
           Number of times this tag must already exist in tag repo to be added (default: 1)
-  --creator-always-local, --no-creator-always-local
-          Always include creator: tags regardless of count (default: True)
-  --character-always-local, --no-character-always-local
-          Always include character: tags regardless of count (default: True)
-  --downloader-tags, --no-downloader-tags
-          Move all downloader tags to info-only (default: False)
+  [--aln | --always-local-namespaces] ALWAYS_LOCAL_NAMESPACES
+          Always apply these tags to the local tag repo regardless of count (default:
+          creator,character,title,series,rating)
+  [--nsw | --tag-namespace-whitelist] TAG_NAMESPACE_WHITELIST
+          Only add tags that lookup plugins report as having these namespaces (default: )
+  [--btl | --blacklist-tags-from-local] BLACKLIST_TAGS_FROM_LOCAL
+          Always apply these tags to the local tag repo regardless of count (default: anthro,balls,butt)
   --underscores-to-spaces, --no-underscores-to-spaces
           Convert underscores to spaces in tags (default: True)
 

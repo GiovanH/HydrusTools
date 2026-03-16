@@ -49,8 +49,10 @@ def query_booru_md5(source, md5_hash) -> None | dict:
         logger.error(stdout)
         logger.error(stderr)
         raise
-    logger.debug(stdout)
-    logger.debug(stderr)
+    logger.debug(stdout.decode('utf-8') if len(stdout) > 6 else stdout)
+    if stderr:
+        logger.debug(stderr.decode('utf-8'))
+
     result = json.loads(stdout)
     if len(result) == 0:
         # raise ValueError("Matched no images")
@@ -106,7 +108,8 @@ def try_get_sites():
                     yield line.strip()
 
 
-if not Settings.grabber_sites:
+if Settings.grabber_dir and not Settings.grabber_sites:
+    logger.warning(f"grabber_sites setting not set, trying to populate from {Settings.grabber_dir=!r}")
     Settings.grabber_sites = [*set(try_get_sites())]
     print(Settings.grabber_sites)
 
@@ -127,7 +130,7 @@ class grabberComMd5Plugin(registry.LookupPlugin):
 
         alternate_hashes = hydrus.client.get_file_relationships(
             file_ids=[metadata['file_id']]
-        )['file_relationships'][metadata['hash']][str(hydrus_api.DuplicateStatus.ALTERNATES)]
+        )['file_relationships'][metadata['hash']][str(hydrus_api.DuplicateStatus.DUPLICATES)]
 
         resp = hydrus.client.get_file_hashes(
             hashes=[metadata['hash'], *alternate_hashes],
@@ -155,8 +158,8 @@ class grabberComMd5Plugin(registry.LookupPlugin):
                         # logger.info("%s has no results", source)
                         continue
                     # pprint.pprint(lookup)
+                    found_new_sources: list[str] = lookup.get('sources', [])
                     page = lookup.get('url_page')
-                    found_new_sources = lookup.get('sources', [])
                     if page:
                         found_new_sources.append(page)
 

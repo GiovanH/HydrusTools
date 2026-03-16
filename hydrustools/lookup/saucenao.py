@@ -191,8 +191,12 @@ class sauceNaoPlugin(registry.LookupPlugin):
 
         for entry in result['results']:
             if float(entry['header']['similarity']) > Settings.minsim:
-                logger.debug(pprint.pformat(entry))
+                logger.debug("Good match: %s", entry)
+
                 act.add_urls += entry['data']['ext_urls']
+
+                if entry['data'].get('title'):
+                    act.add_tags.append(f"title:{entry['data']['title']}")
                 if entry['data'].get('member_name'):
                     act.add_tags.append(f"creator:{entry['data']['member_name']}")
                 if entry['data'].get('material'):
@@ -200,6 +204,6 @@ class sauceNaoPlugin(registry.LookupPlugin):
                     act.add_tags.extend(entry_tags)
                 # raise NotImplementedError
             else:
-                logger.debug("Discarding insufficiently similar match %s", entry['header'])
+                logger.warning("Discarding insufficiently similar match %s", entry)
 
         return act

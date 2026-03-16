@@ -166,7 +166,7 @@ def perfect_search(
     visited = set()
     # TODO: Always process extras and context ignoring limit. Then count the limit on collection
     for hay in collection:
-        if limit and len(results) > limit:
+        if limit and len(results) >= limit:
             break
 
         visited.add(hay)

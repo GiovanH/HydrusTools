@@ -7,6 +7,7 @@ from typing import Any
 import hydrus_api
 
 from hydrustools.utils import htlogging, querylang
+from hydrustools.utils.argparse_formatter import HTApFmtCls
 
 from ..utils import hydrus
 
@@ -135,7 +136,8 @@ def apply_groups(groups):
         tagname = f"{group_namespace}:{', '.join(tagset)}"
         if len(tagset) == 0:
             tagname = f"{group_namespace}:emptyset"
-        logger.debug(f"Adding tag {tagname} for group {tagset} with {len(items)} images")
+
+        logger.info(f"Adding tag {tagname} for group {tagset} with {len(items)} images")
         hydrus.client.add_tags(
             file_ids=[bi.value['file_id'] for bi in items],
             service_keys_to_actions_to_tags={
@@ -151,7 +153,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="WIP!",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=HTApFmtCls
     )
     parser.add_argument("query", help="Hydrus image query")
     parser.add_argument("--ignore-namespaces", type=list, default=[

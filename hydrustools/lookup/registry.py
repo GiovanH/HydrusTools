@@ -1,8 +1,9 @@
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils import hydrus
 from hydrustools.utils.hydrus import FileMetadata
 
@@ -10,6 +11,22 @@ logger = logging.getLogger(__name__)
 
 PRIOR_BY_URL = 10
 PRIOR_BY_HASH = 5
+
+@settings_section(section="Lookup", file="Lookup")
+class LookupSettings(HTSettings):
+    min_count_local: int = 20
+    min_count_download: int = 1
+    underscores_to_spaces: bool = True
+    blacklist_tags_from_local: list[str] = []
+    tag_namespace_whitelist: list[str] = []
+    always_local_namespaces: list[str] = [
+        'creator',
+        'character',
+        'title',
+        'series',
+        'rating'
+    ]
+
 
 @dataclass()
 class MetadataActions:
@@ -102,10 +119,11 @@ def postprocessSuggestions(
     tags_min_count_download: None | int = None,
     tag_count_cache: dict[str, int] = {},
 
-    creator_tags_always_local: bool = True,
-    character_tags_always_local: bool = True,
+    always_local_namespaces: list[str] = [],
 
-    no_downloader_tags: bool = False,
+    blacklist_tags_from_local: list[str] = [],
+
+    # no_downloader_tags: bool = False,
     underscores_to_spaces: bool = False,
 ) -> MetadataActions:
 
@@ -128,12 +146,16 @@ def postprocessSuggestions(
             # If there's a minimum count, move tags to dltags
             if tags_min_count_local:
                 # ...unless creator tags are always local
-                if tag_value.startswith("creator:") and creator_tags_always_local:
-                    pass
-                elif tag_value.startswith("character:") and character_tags_always_local:
-                    pass
+                never_move = False
+                for ns in always_local_namespaces:
+                    if tag_value.startswith(f"{ns}:"):
+                        never_move = True
 
-                elif tag_count_cache.get(tag_value, 0) < tags_min_count_local:
+                # Downgrade because...?
+                dg_bc_list: bool = tag_value in blacklist_tags_from_local
+                dg_bc_threshhold: bool = never_move is False and tag_count_cache.get(tag_value, 0) < tags_min_count_local
+
+                if dg_bc_threshhold or dg_bc_list:
                     actions.add_tags.remove(tag_value)
                     if not actions.add_downloader_tags:
                         actions.add_downloader_tags = []
@@ -141,8 +163,11 @@ def postprocessSuggestions(
 
     if actions.add_downloader_tags:
         # Remove all downloader tags?
-        if no_downloader_tags:
-            actions.add_downloader_tags = []
+        # if no_downloader_tags:
+        #     if not actions.info_only:
+        #         actions.info_only = []
+        #         actions.info_only.extend(actions.add_downloader_tags)
+        #     actions.add_downloader_tags = []
 
         for tag_value in [*actions.add_downloader_tags]:
             # If there's a minimum count, move tags to dltags

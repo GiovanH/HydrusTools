@@ -304,7 +304,7 @@ class TagEditorList(ttk.Frame):
             match_all = fuzzysearch.perfect_search(
                 self.all_tags,
                 query,
-                limit=20
+                limit=40
             )
 
         with timer(f"commands {len(delete_commands)}", min_secs=0, logger=self.logger.info):

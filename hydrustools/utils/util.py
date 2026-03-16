@@ -15,7 +15,7 @@ def timer(label="task", logger: Callable[[str], None] = logger.info, min_secs: f
     start_time = time.time()
 
     try:
-        yield None
+        yield
     finally:
         time_taken = time.time() - start_time
         if time_taken > min_secs:
