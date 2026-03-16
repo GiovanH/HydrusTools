@@ -85,6 +85,9 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
 
             # logger.debug("    score %s -= %s (hix)", accuracy, hix)
             accuracy -= hix
+            # Reverse distance for namespaces
+            if ":" in hay_segments:
+                accuracy += hay_segments.index(":") + 1
 
             qix += 1
             hix += 1
@@ -93,9 +96,16 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
         # Didn't consume query
         return Score()
 
-    len_pen = len([h for h in hay_segments if len(h) > 1])
+    if ":" in hay_segments:
+        len_pen = len([
+            h for h in
+            hay_segments[hay_segments.index(":"):]
+            if len(h) > 1
+        ])
+    else:
+        len_pen = len([h for h in hay_segments if len(h) > 1])
     # logger.debug("    distance %s (length)", len_pen)
-    distance = len_pen
+    distance = -len_pen
 
     return Score(accuracy=accuracy, distance=distance, tagcount=0)
 
@@ -119,10 +129,11 @@ def merge_lists(
 
     results.sort(key=lambda l: l[0], reverse=True)
 
-    logger.debug(perfect_search.cache_info())
-    logger.debug(split_to_segments.cache_info())
-    logger.debug(compare_segments.cache_info())
-    logger.debug(score_segments.cache_info())
+    # logger.debug(perfect_search.cache_info())
+    # logger.debug(split_to_segments.cache_info())
+    # logger.debug(compare_segments.cache_info())
+    # logger.debug(score_segments.cache_info())
+    logger.debug(pprint.pformat(results))
 
     return [val for score, val in results]
 

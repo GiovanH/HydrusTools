@@ -6,7 +6,10 @@ from typing import Sequence
 from frozendict import frozendict
 
 from hydrustools.utils import htlogging
+htlogging.configure_logging()
+
 from hydrustools.utils import fuzzysearch
+
 
 TAGS = (
     "steven universe",
@@ -277,6 +280,21 @@ class TestFuzzySearch(unittest.TestCase):
         # )
 
     # TODO: prioritize context even with limits
+
+    def test_namespaces_are_not_distance(self):
+        matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
+            (
+                'fallout_new_vegas',
+                'series:fallout',
+                'series:fallout 4',
+            ),
+            "fallout"
+        ))
+        self.assertBefore(matches,
+            "series:fallout",
+            "fallout_new_vegas",
+        )
+
 
     def test_search_filter_context_priority(self):
         matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
