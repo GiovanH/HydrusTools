@@ -265,7 +265,8 @@ class TagEditorList(ttk.Frame):
 
         # pprint.pprint(self.all_tags)
 
-        self.load_context_suggestions()
+        with timer("load tag context", min_secs=0.1):
+            self.load_context_suggestions()
 
 
     def load_context_suggestions(self, event=None):

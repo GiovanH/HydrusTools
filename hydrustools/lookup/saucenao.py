@@ -7,8 +7,8 @@ from pathlib import Path
 import requests
 from joblib import memory
 
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils.hydrus import FileMetadata
-from hydrustools.utils.inisettings import IniSettings
 
 from ..utils import hydrus
 from ..utils.util import timer
@@ -16,7 +16,8 @@ from . import registry
 
 memory = memory.Memory("cache", verbose=False)
 
-class SauceNaoSettings(IniSettings):
+@settings_section(section="SauceNao", file="Lookup")
+class Settings(HTSettings):
     api_key: str = ""
     enabled_sites: list[str] = [
         'pixiv',
@@ -28,8 +29,6 @@ class SauceNaoSettings(IniSettings):
     ]  # noqa: RUF012
     numres: int = 1
     minsim: int = 90
-
-Settings = SauceNaoSettings(Path("lookup/saucenao.ini"))
 
 logger = logging.getLogger(__name__)
 

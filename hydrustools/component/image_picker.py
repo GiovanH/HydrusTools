@@ -9,6 +9,8 @@ import hydrus_api
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
 
+from ..component.toolwindow import ToolWindow
+from ..settings import HTSettings, settings_section
 from ..utils import hydrus
 from ..utils.gui_util import (
     Increment,
@@ -17,9 +19,14 @@ from ..utils.gui_util import (
     tkwrap,
     tkwrapc,
 )
-from ..component.toolwindow import ToolWindow
 from ..utils.hydrus import FileMetadata
-from ..settings import Settings
+
+
+@settings_section(section="ImagePicker")
+class Settings(HTSettings):
+    imagesearch_query: str = ""
+    imagesearch_query_hl: list[str] = []
+    imagesearch_alts: bool = True
 
 
 class ImageFileSchema(TreeviewSchema[FileMetadata]):
@@ -133,7 +140,7 @@ class ImagePickerWindow(ToolWindow):
             tk.Label(frame_top, text="Query:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_search = SearchQueryEntry(frame_top, textvariable=self.textvar_query, hist_store='imagesearch_query_hl')
+            self.entry_search = SearchQueryEntry(frame_top, textvariable=self.textvar_query, hist_store=(Settings, 'imagesearch_query_hl'))
             self.entry_search.grid(column=cx.value, row=1, sticky="ew")
             self.entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, False))
 

@@ -15,11 +15,12 @@ from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from hydrustools.component.tageditorlist import TagEditorList, TagList
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
-from ..utils import hydrus
-from hydrustools.settings import Settings
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils.util import timer
 
 from .. import lookup
+from ..component.toolwindow import ToolWindow
+from ..utils import hydrus
 from ..utils.gui_util import (
     Increment,
     get_selection_neighbors,
@@ -29,7 +30,6 @@ from ..utils.gui_util import (
     tkwrap,
     tkwrapc,
 )
-from ..component.toolwindow import ToolWindow
 from ..utils.hydrus import FileMetadata, TagInfo
 
 plugin_registry: dict[str, LookupPlugin] = None # type: ignore
@@ -107,7 +107,7 @@ Heavy work-in-progress"""
         self.var_id = tk.StringVar(self)
         self.var_tags = tk.StringVar(self)
 
-        self.autosearch = True
+        self.pref_autosearch: tk.BooleanVar = tk.BooleanVar(self, value=False)
 
         self.initwindow()
         self.bind_controls()
@@ -115,7 +115,6 @@ Heavy work-in-progress"""
         self.after_idle(self.pick_images)
         self.startTask(self.update_tag_cache, lock=False)
         self.bind('<F5>', self.update_tag_cache)
-
 
         self.mainloop()
 
@@ -205,9 +204,17 @@ Heavy work-in-progress"""
             btn_refresh = ttk.Button(w, text="Lookup", command=self.startTaskCurry(self.doSearch))
             btn_refresh.pack(anchor='s', fill='x')
 
+            btn = ttk.Checkbutton(
+                w,
+                variable=self.pref_autosearch,
+                text="Automatically lookup"
+            ).pack(anchor='n', fill='x')
+
             btn_refresh = ttk.Button(w, text="Apply All to All", command=self.applyAll)
             btn_refresh.pack(side=tk.BOTTOM, fill='x')
             return w
+
+
 
         def col_suggestions(m):
             w = grooveframe(m)
@@ -309,7 +316,7 @@ Heavy work-in-progress"""
         self.setStatus(f"Selected image {self.current_image['file_id']}")
         # traceback.print_stack()
 
-        if self.autosearch:
+        if self.pref_autosearch.get():
             self.startTask(self.doSearch)
 
     def runPlugin(self, plugin_id):
@@ -455,11 +462,12 @@ Heavy work-in-progress"""
             self.logger.info("Applied all, now incrementing")
 
             prev_selection = self.image_list.tree.selection()
-            self.autosearch = False
+            prev_autosearch = self.pref_autosearch.get()
+            self.pref_autosearch.set(False)
             self.next_image()
             self.update()
             cur_selection = self.image_list.tree.selection()
-            self.autosearch = True
+            self.pref_autosearch.set(prev_autosearch)
 
             self.logger.info("Incremented, now looping")
         self.setStatus("Done!")

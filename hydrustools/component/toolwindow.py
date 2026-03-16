@@ -8,9 +8,14 @@ from contextlib import contextmanager
 from tkinter import messagebox
 from typing import Any, Callable, Generator, Iterable
 
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils.util import timer
 
-from ..settings import Settings
+# Shared with gui.py
+@settings_section(section="ToolsList")
+class GuiSettings(HTSettings):
+    gui_last: int = -1
+    gui_test_list: list[str] = []
 
 
 def recursive_widgets(w, key) -> Iterable[tk.Widget]:
@@ -44,7 +49,7 @@ class ToolWindow(tk.Toplevel):
         self.abort_threads = True
 
     def on_closing(self):
-        Settings.gui_last = -1
+        GuiSettings.gui_last = -1
         self.abort_threads = True
         self.destroy()
 

@@ -6,12 +6,20 @@ from dataclasses import dataclass
 from tkinter import messagebox, ttk
 from typing import ClassVar
 
-from ..utils import hydrus
-from ..utils.gui_util import Increment, QueryHistory, RegexEntry, pb_iter, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
+from ..settings import HTSettings, settings_section
+from ..utils import hydrus
+from ..utils.gui_util import Increment, QueryHistory, RegexEntry, pb_iter, tkwrap, tkwrapc
 from ..utils.hydrus import SiblingInfo, TagInfo
-from ..settings import Settings
+
+
+@settings_section(section="TagFlatten")
+class Settings(HTSettings):
+    flatten_presearch: str = "<Changeme>"
+    flatten_presearch_hl: list[str] = []
+    flatten_search: str = ""
+    flatten_search_hl: list[str] = []
 
 
 @dataclass
@@ -73,7 +81,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             entry_search = QueryHistory(
                 frame_top, font=('Courier', 10),
                 textvariable=self.textvar_presearch,
-                hist_store='flatten_presearch_hl'
+                hist_store=(Settings, 'flatten_presearch_hl')
             )
             entry_search.grid(column=cx.value, row=1, sticky="ew")
 
@@ -86,7 +94,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
             entry_search = RegexEntry(
                 frame_top,
                 textvariable=self.textvar_search,
-                hist_store='flatten_search_hl'
+                hist_store=(Settings, 'flatten_search_hl')
             )
             entry_search.grid(column=cx.value, row=1, sticky="ew")
             entry_search.bind("<Return>", self.startSearch)

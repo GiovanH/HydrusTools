@@ -6,9 +6,16 @@ from hydrustools.utils import querylang
 
 from ..component.tag_adder_window import TagAction, TagAdderFrame
 from ..component.toolwindow import ToolWindow
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 from ..utils import hydrus
 from ..utils.gui_util import SearchQueryEntry, pb_iter, tkwrapc
+
+@settings_section(section="ExtractCreator")
+class Settings(HTSettings):
+    extractcreatornote_search: str = ""
+    extractcreatornote_search_hl: list[str] = []
+    extractcreatornote_notename: str = "filename"
+    extractcreatornote_min_count: int = 2
 
 
 def all_creator_names(min_count=2):
@@ -61,7 +68,7 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
             tk.Label(frame, text="Image filter:")\
                 .grid(column=cx.value, row=0, sticky="w")
 
-            self.entry_search = SearchQueryEntry(frame, textvariable=self.var_search, hist_store='extractcreatornote_search_hl')
+            self.entry_search = SearchQueryEntry(frame, textvariable=self.var_search, hist_store=(Settings, 'extractcreatornote_search_hl'))
             self.entry_search.grid(column=cx.value, row=1, sticky="ew")
             frame.columnconfigure(index=cx.value, weight=1)
             self.entry_search.bind("<Return>", self.startTaskCurry(self.doSearch, lock=False))

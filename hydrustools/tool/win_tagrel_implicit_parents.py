@@ -9,8 +9,15 @@ from ..component.relationship_adder import RelationshipAction, RelationshipAdder
 from ..component.toolwindow import ToolWindow
 
 from ..utils import hydrus
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 
+
+@settings_section(section="ImplicitParentFinder")
+class Settings(HTSettings):
+    findimplicitparent_ns_parent: str = "series:"
+    findimplicitparent_ns_child: str = "character:"
+    findimplicitparent_min_count: int = 2
+    findimplicitparent_factor: int = 2
 
 class ImplicitParentFinderWin(ToolWindow):  # noqa: PLR0904
     label = "Find Implicit Parents"
@@ -257,6 +264,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
                     ]
                     self.logger.info(f"Recognizing {new_tags} as possible true parents")
                 else:
+                    self.logger.info(f"Skipping; doesn't pass factor {first_tag_factor}")
                     continue
 
             for new_tag in new_tags:

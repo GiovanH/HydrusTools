@@ -11,8 +11,15 @@ from ..utils.gui_util import QueryHistory, RegexEntry, TextCopyWindow, tkwrap, t
 from ..component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from ..component.toolwindow import ToolWindow
 from ..utils.hydrus import TagInfo
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 
+@settings_section(section="TagManager")
+class Settings(HTSettings):
+    tagsearch_presearch: str = "<Changeme>"
+    tagsearch_search: str = ""
+    tagsearch_presearch_hl: list[str] = []
+    tagsearch_search_hl: list[str] = []
+    tagsearch_localonly: bool = True
 
 class TagSchema(TreeviewSchema[TagInfo]):
     headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
@@ -71,7 +78,7 @@ AND/OR opens search page for all images with the selected tags.
                 frame_top,
                 font=("Courier", 10),
                 textvariable=self.textvar_presearch,
-                hist_store='tagsearch_presearch_hl',
+                hist_store=(Settings, 'tagsearch_presearch_hl'),
             )
             self.entry_presearch.grid(column=cx.value, row=1, sticky="ew")
             self.entry_presearch.bind("<Return>", self.startTaskCurry(self.doSearch))
@@ -82,7 +89,8 @@ AND/OR opens search page for all images with the selected tags.
             tk.Label(frame_top, text="Regex refinement:").grid(column=cx.value, row=0, sticky="w")
 
             self.entry_filter = RegexEntry(
-                frame_top, font=("Courier", 10), textvariable=self.textvar_search, hist_store='tagsearch_search_hl'
+                frame_top, font=("Courier", 10), textvariable=self.textvar_search,
+                hist_store=(Settings, 'tagsearch_search_hl')
             )
             self.entry_filter.grid(column=cx.value, row=1, sticky="ew")
             self.entry_filter.bind("<Return>", self.startTaskCurry(self.doSearch))
@@ -129,7 +137,7 @@ AND/OR opens search page for all images with the selected tags.
 
         try:
             results: list[TagInfo] = hydrus.search_tags_re(search_query, search_refinement, display_type="display")
-        except re.error as e:  # noqa: F821
+        except re.error as e:
             messagebox.showerror(title="Invalid regex", message=f"Error parsing {search_refinement!r}\n{e}")
             return
 

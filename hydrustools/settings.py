@@ -1,55 +1,13 @@
-from .utils.inisettings import IniSettings
-
 import tkinter as tk
-import hydrus_api
-from typing import TypeVar, Type
+from collections.abc import Callable
+from pathlib import Path
+from typing import Type, TypeVar
+
+from .utils.inisettings import IniSettings
 
 V = TypeVar("V", bound=tk.Variable)
 
 class HTSettings(IniSettings):
-    hydrus_api_key: str = "CHANGEME"
-    hydrus_api_url: str = hydrus_api.DEFAULT_API_URL
-
-    gui_last: int = -1
-
-    gui_test_list: list[str] = []
-
-    flatten_presearch: str = "<Changeme>"
-    flatten_presearch_hl: list[str] = []
-    flatten_search: str = ""
-    flatten_search_hl: list[str] = []
-
-    img_autosave: bool = True
-    img_dwim_savetags: bool = True
-    img_dwim_archive: bool = True
-    img_dwim_advance: bool = True
-    img_dwim_only_one: bool = True
-
-    tagsearch_presearch: str = "<Changeme>"
-    tagsearch_search: str = ""
-    tagsearch_presearch_hl: list[str] = []
-    tagsearch_search_hl: list[str] = []
-    tagsearch_localonly: bool = True
-
-    note_prequery: str = ""
-    note_notename: str = "filename"
-    note_pattern: str = ""
-    note_partial: bool = False
-
-    findimplicitparent_ns_parent: str = "series:"
-    findimplicitparent_ns_child: str = "character:"
-    findimplicitparent_min_count: int = 2
-    findimplicitparent_factor: int = 2
-
-    extractcreatornote_search: str = ""
-    extractcreatornote_search_hl: list[str] = []
-    extractcreatornote_notename: str = "filename"
-    extractcreatornote_min_count: int = 2
-
-    imagesearch_query: str = ""
-    imagesearch_query_hl: list[str] = []
-    imagesearch_alts: bool = True
-
     def boundTkVar(self, master, name, constructor: type[V] = tk.StringVar) -> V:
         var: V = constructor(master)
 
@@ -62,10 +20,11 @@ class HTSettings(IniSettings):
 
         return var
 
-Settings = HTSettings()
+C = TypeVar('C', bound=HTSettings)
 
-if __name__ == "__main__":
-    settings = HTSettings()
+# Evil:
+def settings_section(section: str | None = None, file: str = "HTSettings") -> Callable[..., HTSettings]:
+    def _wrapper(cls: type[C]) -> C:
+        return cls(section=section, ini_file=Path(f"{file}.ini"))
 
-    print(settings.note_notename)
-    print(settings.note_pattern)
+    return _wrapper

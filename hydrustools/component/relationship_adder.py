@@ -10,7 +10,7 @@ from typing import ClassVar
 from ..utils.gui_util import Increment, tkwrap
 from .multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from .toolwindow import ToolWindow
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 from ..utils.gui_util import TextCopyWindow
 
 from ..utils import hydrus

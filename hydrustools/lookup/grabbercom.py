@@ -9,23 +9,21 @@ from pathlib import Path
 import hydrus_api
 from joblib import memory
 
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils.hydrus import FileMetadata
-from hydrustools.utils.inisettings import IniSettings
 
 from ..utils import hydrus
 from . import registry
 
 memory = memory.Memory("cache", verbose=False)
 
-class GrabberComSettings(IniSettings):
+@settings_section(section="GrabberCom", file="Lookup")
+class Settings(HTSettings):
     grabber_dir: str = ""
     grabber_sites: list[str] = []
     grabber_aliases: dict[str, str] = {  # noqa: RUF012
         'Gelbooru': 'gelbooru.com'
     }
-
-Settings = GrabberComSettings(Path("lookup/grabber.ini"))
-
 
 logger = logging.getLogger(__name__)
 

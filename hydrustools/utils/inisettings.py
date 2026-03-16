@@ -1,150 +1,169 @@
+"""
+Settings objects backed by sections of a shared INI file.
+
+Multiple IniSettings subclasses can share a single INI file by pointing to
+the same path with different section names.  Each instance only touches its
+own section, and file writes are serialised via a lock file to prevent races
+between concurrent processes or threads.
+"""
+
+from __future__ import annotations
+
+from _thread import LockType
 import configparser
 import json
+import threading
 from pathlib import Path
-from typing import Any, get_type_hints, get_origin
+from typing import Any, TypeVar, get_type_hints
+
+from pydantic import TypeAdapter
+
+# Registry mapping each disk ini path to a single configparser instance
+_file_registry: dict[Path, tuple[configparser.ConfigParser, LockType]] = {}
+_registry_lock: LockType = threading.Lock()
+
+
+def _get_config_and_lock(ini_file: Path) -> tuple[configparser.ConfigParser, LockType]:
+    """Return the shared ConfigParser and lock for a given file path."""
+    key = ini_file.resolve()
+    with _registry_lock:
+        if key not in _file_registry:
+            config = configparser.ConfigParser()
+            if key.exists():
+                config.read(key)
+            lock = threading.Lock()
+            _file_registry[key] = (config, lock)
+        return _file_registry[key]
+
+
+def clear_registry() -> None:
+    """Remove all cached file state.  Useful in tests."""
+    with _registry_lock:
+        _file_registry.clear()
 
 
 class IniSettings:
-    """Base class for settings objects backed by persistent INI files.
+    """Base class for settings objects backed by sections of a shared INI file.
 
-    Subclasses should define class attributes with type hints and default values.
-    These attributes will be automatically loaded from/saved to an INI file.
+    Subclasses define class attributes with type hints and default values.
+    Those attributes are automatically loaded from / saved to an INI file.
 
-    Example:
-        class MySettings(IniSettings):
-            username: str = "default_user"
-            max_connections: int = 10
+    Example::
+
+        class AppSettings(IniSettings):
+            debug: bool = False
+            max_retries: int = 3
+
+        class PluginSettings(IniSettings):
+            plugin_dir: str = "/usr/lib/plugins"
             enabled: bool = True
-            timeout: float = 30.5
+
+        # Both write to the same file, different sections
+        app    = AppSettings(Path("config.ini"), section="app")
+        plugin = PluginSettings(Path("config.ini"), section="plugin")
     """
 
-    _ini_file: Path
-    _config: configparser.ConfigParser
-    _section: str = "DEFAULT"
-    _list_delimiter: str = "|"
-    _initialized: bool = False
+    def __init__(self, ini_file: Path | None = None, section: str | None = None):
+        resolved_file = Path(ini_file or f"{self.__class__.__name__}.ini")
+        resolved_section = section or self.__class__.__name__
 
-    _schema: dict[str, Any]
+        config, lock = _get_config_and_lock(resolved_file)
 
-    def __init__(self, ini_file: Path | None = None, section: str = "DEFAULT"):
-        """Initialize settings from an INI file.
-
-        Args:
-            ini_file: Path to the INI file (created if it doesn't exist)
-            section: INI section name to use for storing settings
-        """
-        # Store instance variables without triggering __setattr__
-        object.__setattr__(self, "_ini_file", Path(ini_file or f"{self.__class__.__name__}.ini"))
-        object.__setattr__(self, "_section", section)
-        object.__setattr__(self, "_config", configparser.ConfigParser())
+        object.__setattr__(self, "_ini_file", resolved_file)
+        object.__setattr__(self, "_section", resolved_section)
+        object.__setattr__(self, "_config", config)
+        object.__setattr__(self, "_lock", lock)
         object.__setattr__(self, "_initialized", False)
         object.__setattr__(self, "_schema", self._get_schema())
+        object.__setattr__(self, "_typevalidators", self._get_typeadapters())
 
-        # Load existing INI file if it exists
-        if self._ini_file.exists():
-            self._config.read(self._ini_file)
+        if resolved_section != "DEFAULT" and not config.has_section(resolved_section):
+            config.add_section(resolved_section)
 
-        # Ensure section exists
-        if not self._config.has_section(self._section) and self._section != "DEFAULT":
-            self._config.add_section(self._section)
-
-        # Initialize with defaults for any missing values
         self._init_defaults()
-
         object.__setattr__(self, "_initialized", True)
 
-    def _init_defaults(self):
-        """Initialize settings with default values if not present in INI."""
-        schema = self._schema
-        changed = False
-
-        for attr, default_value in schema.items():
-            if not self._config.has_option(self._section, attr):
-                self._config.set(self._section, attr, self._serialize(default_value))
-                changed = True
-
-        if changed:
-            self._save()
+    def _get_typeadapters(self) -> dict[str, TypeAdapter[Any]]:
+        return {k: TypeAdapter(t) for k, t in get_type_hints(self.__class__).items()}
 
     def _get_schema(self) -> dict[str, Any]:
-        """Get the schema (class attributes with defaults) for this settings class."""
-        schema = {}
-
-        # Iterate through the class hierarchy to get all defaults
+        schema: dict[str, Any] = {}
         for cls in reversed(self.__class__.__mro__):
-            if cls is IniSettings or cls is object:
+            if cls in (IniSettings, object):
                 continue
-
-            # Get class attributes that have defaults
-            for attr, default in cls.__dict__.items():
-                if not attr.startswith("_") and not callable(default):
-                    schema[attr] = default
-
+            schema.update({
+                attr: val for attr, val in cls.__dict__.items() if not attr.startswith("_") and not callable(val)
+            })
         return schema
 
     def _serialize(self, value: Any) -> str:
-        """Convert a Python value to a string for INI storage."""
         if isinstance(value, bool):
             return str(value)
         if isinstance(value, str):
-            return str(value)
+            return value
+        # TODO validate against pydantic
         return json.dumps(value)
 
-    def _deserialize(self, attr: str, value: str) -> Any:
-        """Convert an INI string value to the appropriate Python type."""
-        type_hints = get_type_hints(self.__class__)
-        expected_type = type_hints.get(attr, str)
+    def _deserialize(self, attr: str, raw: str) -> Any:
+        hints = get_type_hints(self.__class__)
+        expected = hints.get(attr, str)
 
-        # Handle boolean specially
-        if expected_type is bool:
-            return value.lower() in ("true", "1", "yes", "on")
+        if expected is bool:
+            return raw.lower() in ("true", "1", "yes", "on")
+        if expected in (int, float, str):
+            return expected(raw)
+        return json.loads(raw)
 
-        # Handle other basic types
-        if expected_type in (int, float, str):
-            return expected_type(value)
+    def _init_defaults(self) -> None:
+        with self._lock:
+            if self._ini_file.exists():
+                self._config.read(self._ini_file)
 
-        return json.loads(value)
+            changed = False
+            for attr, default in self._schema.items():
+                if not self._config.has_option(self._section, attr):
+                    self._config.set(self._section, attr, self._serialize(default))
+                    changed = True
 
-    def _save(self) -> None:
-        """Save the current configuration to the INI file."""
+            if changed:
+                self._flush()
+
+    def _save(self, attr: str, value: Any) -> None:
+        with self._lock:
+            if self._ini_file.exists():
+                self._config.read(self._ini_file)
+            self._typevalidators[attr].validate_python(value)
+            self._config.set(self._section, attr, self._serialize(value))
+            self._flush()
+
+    def _flush(self) -> None:
         self._ini_file.parent.mkdir(parents=True, exist_ok=True)
         with open(self._ini_file, "w") as f:
             self._config.write(f)
 
     def __getattribute__(self, name: str) -> Any:
-        """Intercept attribute access to load from INI file."""
-        # Allow access to private attributes and methods normally
         if name.startswith("_"):
             return object.__getattribute__(self, name)
 
-        # Check if this is part of the schema
-        if name not in self._schema:
+        schema = object.__getattribute__(self, "_schema")
+        if name not in schema:
             return object.__getattribute__(self, name)
 
-        # Load from INI
-        config = self._config
-        section = self._section
+        config: configparser.ConfigParser = object.__getattribute__(self, "_config")
+        section: str = object.__getattribute__(self, "_section")
 
         if config.has_option(section, name):
-            raw_value = config.get(section, name)
-            deserialize = self._deserialize
-            return deserialize(name, raw_value)
+            return self._deserialize(name, config.get(section, name))
 
-        # Return default if not in INI
-        return self._schema[name]
+        return schema[name]
 
-    def __setattr__(self, name: str, value: Any):
-        """Intercept attribute writes to save to INI file."""
-        # Before initialization, use normal attribute setting
+    def __setattr__(self, name: str, value: Any) -> None:
         if not object.__getattribute__(self, "_initialized"):
             object.__setattr__(self, name, value)
             return
 
-        # Check if this is part of the schema
         if name not in self._schema:
             object.__setattr__(self, name, value)
             return
 
-        # Save to INI
-        self._config.set(self._section, name, self._serialize(value))
-        self._save()
+        self._save(name, value)

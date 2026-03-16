@@ -5,7 +5,7 @@ from pathlib import Path
 import requests
 from joblib import memory
 
-from hydrustools.utils.inisettings import IniSettings
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils.hydrus import FileMetadata
 
 from . import registry
@@ -14,11 +14,10 @@ e621_url_pattern: re.Pattern[str] = re.compile(r'https?://e621.net/posts?/(show/
 
 memory = memory.Memory("cache", verbose=False)
 
-class e621Settings(IniSettings):
+@settings_section(section="e621", file="Lookup")
+class Settings(HTSettings):
     e621_user: str = ""
     e621_api_key: str = ""
-
-Settings = e621Settings(Path("lookup/e621.ini"))
 
 logger = logging.getLogger(__name__)
 

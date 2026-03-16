@@ -11,9 +11,18 @@ import hydrus_api
 from hydrustools.utils import querylang
 
 from ..component.toolwindow import ToolWindow
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 from ..utils import hydrus
 from ..utils.gui_util import Increment, RegexEntry, SearchQueryEntry, tkwrap, tkwrapc
+
+@settings_section(section="RegexNoteSearch")
+class Settings(HTSettings):
+    note_prequery: str = ""
+    note_prequery_hl: list[str] = []
+    note_notename: str = "filename"
+    note_pattern: str = ""
+    note_pattern_hl: list[str] = []
+    note_partial: bool = False
 
 
 class RegexNoteSearchWin(ToolWindow):
@@ -53,7 +62,11 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
             tk.Label(frame_form, text="Search query").grid(column=0, row=cy.inc(), sticky="e")
 
-            self.entry_search = SearchQueryEntry(frame_form, textvariable=self.textvar_prequery)
+            self.entry_search = SearchQueryEntry(
+                frame_form,
+                textvariable=self.textvar_prequery,
+                hist_store=(Settings, 'note_prequery_hl')
+            )
             self.entry_search.grid(column=1, row=cy.value, sticky="ew")
 
             tk.Label(frame_form, text="Note title").grid(column=0, row=cy.inc(), sticky="e")
@@ -61,7 +74,11 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             entry_notetitle.grid(column=1, row=cy.value, sticky="ew")
 
             tk.Label(frame_form, text="Search pattern").grid(column=0, row=cy.inc(), sticky="e")
-            entry_pattern = RegexEntry(frame_form, textvariable=self.textvar_pattern)
+            entry_pattern = RegexEntry(
+                frame_form,
+                textvariable=self.textvar_pattern,
+                hist_store=(Settings, 'note_pattern_hl')
+            )
             entry_pattern.grid(column=1, row=cy.value, sticky="ew")
 
         with tkwrap(ttk.Frame(self, padding=8)) as frame_row:

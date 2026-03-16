@@ -1,14 +1,15 @@
-from collections import abc
 import dataclasses
 import functools
 import logging
 import re
-from collections import OrderedDict
+import typing as T
+from collections import OrderedDict, abc
 from collections.abc import Sequence
 from io import BytesIO
 from typing import Any, Required, TypedDict
 
 import hydrus_api
+from hydrus_api import FileSortType
 
 # from pick import pick
 from PIL import Image
@@ -16,14 +17,17 @@ from PIL import Image
 from hydrustools.component.toolwindow import ToolWindow
 from hydrustools.utils import querylang
 from hydrustools.utils.gui_util import flatList
+from hydrustools.utils.inisettings import IniSettings
 
-import typing as T
-
-from ..settings import Settings
-
-from hydrus_api import FileSortType
+from ..settings import settings_section
 
 logger = logging.getLogger(__name__)
+
+@settings_section(section="HydrusAPI")
+class HyApiSettings(IniSettings):
+    hydrus_api_key: str = "CHANGEME"
+    hydrus_api_url: str = hydrus_api.DEFAULT_API_URL
+
 
 class TypedClient(hydrus_api.Client):
     def search_files( # pyright: ignore[reportIncompatibleMethodOverride]
@@ -82,18 +86,18 @@ class FileMetadata(TypedDict, total=False):
 
 
 def set_api_key(new_api_key):
-    Settings.hydrus_api_key = new_api_key
+    HyApiSettings.hydrus_api_key = new_api_key
 
 
 def get_api_credentials() -> tuple[str, str]:
     try:
-        if not Settings.hydrus_api_key:
+        if not HyApiSettings.hydrus_api_key:
             raise AttributeError
     except AttributeError:
-        Settings.hydrus_api_key = "CHANGEME"
+        HyApiSettings.hydrus_api_key = "CHANGEME"
         raise AttributeError("API key variable must be set! Edit ini file.")
 
-    return (Settings.hydrus_api_key, Settings.hydrus_api_url)
+    return (HyApiSettings.hydrus_api_key, HyApiSettings.hydrus_api_url)
 
 
 client: TypedClient = None  # type: ignore

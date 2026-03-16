@@ -7,7 +7,7 @@ from ..utils.gui_util import Increment, TextCopyWindow, tkwrap, tkwrapc
 from ..component.multicolumnlistbox import MultiColumnListbox
 from ..component.toolwindow import ToolWindow
 from ..utils.hydrus import TagInfo
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 
 # HEAD_TAG = "Tag"
 HEAD_COUNT = "Count"

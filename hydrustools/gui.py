@@ -9,7 +9,7 @@ import hydrus_api
 
 from .component.toolwindow import ToolWindow
 from .macro import macro_localize_char_names, macro_matching_namespaced, macro_pages_from_note
-from .settings import Settings
+from .settings import HTSettings, settings_section
 from .tool.win_image_extract_creator_from_notes import ExtractCreatorFromNotesWin
 from .tool.win_image_inspector import ImageInspectorWin
 from .tool.win_image_lookup import ImageMetadataLookupWin
@@ -24,7 +24,12 @@ from .utils.gui_util import tkwrapc
 
 GH_HOME = 'https://github.com/GiovanH/HydrusTools'
 
-htlogging.configure_logging()
+# Shared with toolswindow.py
+@settings_section(section="ToolsList")
+class Settings(HTSettings):
+    gui_last: int = -1
+    gui_test_list: list[str] = []
+
 
 def showDocFac(label: str, fn: Callable) -> None | Callable[..., None]:
     if not fn.__doc__:
@@ -200,6 +205,8 @@ class ToolsListWindow(tk.Tk):
 
 
 def main():
+    htlogging.configure_logging()
+
     try:
         hydrus.init_client()
     except hydrus_api.ConnectionError as e:

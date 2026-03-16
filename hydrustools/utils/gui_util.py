@@ -11,7 +11,7 @@ import requests
 import win32clipboard
 from PIL import Image, ImageTk
 
-from ..settings import Settings
+from ..settings import HTSettings, settings_section
 from . import querylang
 
 
@@ -142,18 +142,20 @@ class NSVar(tk.StringVar):
 
 
 class QueryHistory(ttk.Combobox):
-    def __init__(self, master, hist_store: str | None = None, history_length=25, *args, **kwargs):
+    def __init__(self, master, hist_store: None | tuple[HTSettings, str] = None, history_length=25, *args, **kwargs):
         kwargs['width'] = 0
         super().__init__(master, *args, **kwargs)
 
         self.history_length = history_length
 
         if hist_store:
-            self.hist_var: str = hist_store
+            Settings, hist_var = hist_store
+            self.hist_var: str = hist_var
+            self.hist_store: HTSettings = Settings
             self.hist_list: list[str] = Settings.__getattribute__(self.hist_var)
             self.populate_history()
         else:
-            print("No history store!", self)
+            print("No history store!", self, hist_store)
 
     def populate_history(self):
         self.config(values=self.hist_list)
@@ -162,17 +164,23 @@ class QueryHistory(ttk.Combobox):
         if item in self.hist_list:
             self.hist_list.remove(item)
         self.hist_list = [*self.hist_list[-self.history_length:], item]
-        Settings.__setattr__(self.hist_var, self.hist_list)
+        self.hist_store.__setattr__(self.hist_var, self.hist_list)
         self.populate_history()
 
 
 class SearchQueryEntry(QueryHistory):
-    def __init__(self, master: tk.Widget, textvariable: tk.StringVar, *args, **kwargs):
+    def __init__(self,
+        master: tk.Widget,
+        textvariable: tk.StringVar,
+        hist_store: None | tuple[HTSettings, str] = None,
+        history_length=25,
+        *args, **kwargs
+    ):
         self.textvar_query: tk.StringVar = textvariable
 
         kwargs['font'] = ('Courier', 10)
         kwargs['textvariable'] = self.textvar_query
-        super().__init__(master, *args, **kwargs)
+        super().__init__(master, hist_store=hist_store, history_length=history_length, *args, **kwargs)
 
         self.bind("<<Paste>>", self.on_paste)
 

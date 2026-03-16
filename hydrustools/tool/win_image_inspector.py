@@ -12,7 +12,7 @@ from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
 from hydrustools.component.tageditorlist import TagEditorList
-from hydrustools.settings import Settings
+from hydrustools.settings import HTSettings, settings_section
 
 from ..utils import hydrus
 from ..utils.gui_util import (
@@ -26,6 +26,14 @@ from ..utils.gui_util import (
 )
 from ..component.toolwindow import ToolWindow
 from ..utils.hydrus import FileMetadata
+
+@settings_section(section="ImageInspector")
+class Settings(HTSettings):
+    img_autosave: bool = True
+    img_dwim_savetags: bool = True
+    img_dwim_archive: bool = True
+    img_dwim_advance: bool = True
+    img_dwim_only_one: bool = True
 
 
 class ImageInspectorWin(ImageTool):
