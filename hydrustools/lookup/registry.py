@@ -1,7 +1,7 @@
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils import hydrus
@@ -31,11 +31,11 @@ class LookupSettings(HTSettings):
 @dataclass()
 class MetadataActions:
     file_id: int
-    add_tags: None | list[str] = None
-    add_downloader_tags: None | list[str] = None
-    add_urls: None | list[str] = None
-    add_notes: None | list[dict[str, str]] = None
-    info_only: None | list[str] = None
+    add_tags: list[str] = field(default_factory=list)
+    add_downloader_tags: list[str] = field(default_factory=list)
+    add_urls: list[str] = field(default_factory=list)
+    add_notes: list[dict[str, str]] = field(default_factory=list)
+    info_only: list[str] = field(default_factory=list)
     source: 'LookupPlugin | None' = None
 
     def has_any(self):
@@ -157,25 +157,19 @@ def postprocessSuggestions(
 
                 if dg_bc_threshhold or dg_bc_list:
                     actions.add_tags.remove(tag_value)
-                    if not actions.add_downloader_tags:
-                        actions.add_downloader_tags = []
+                    # if not actions.add_downloader_tags:
+                    #     actions.add_downloader_tags = []
                     actions.add_downloader_tags.append(tag_value)
 
     if actions.add_downloader_tags:
-        # Remove all downloader tags?
-        # if no_downloader_tags:
-        #     if not actions.info_only:
-        #         actions.info_only = []
-        #         actions.info_only.extend(actions.add_downloader_tags)
-        #     actions.add_downloader_tags = []
 
         for tag_value in [*actions.add_downloader_tags]:
             # If there's a minimum count, move tags to dltags
             if tags_min_count_download:
                 if tag_count_cache.get(tag_value, 0) < tags_min_count_download:
                     actions.add_downloader_tags.remove(tag_value)
-                    if not actions.info_only:
-                        actions.info_only = []
+                    # if not actions.info_only:
+                    #     actions.info_only = []
                     actions.info_only.append(tag_value)
 
     return actions
