@@ -22,6 +22,10 @@ def parse_sl_query(query: SLQuery | str) -> Query:
             return inner.split(' OR ')
         return token
 
+    if not query.startswith('(') and not query.endswith(')'):
+        if ' AND ' not in query and ' OR ' in query:
+            return [query.split(' OR ')]
+
     parts = re.split(r'\s+AND\s+(?![^(]*\))', query)
     return [parse_token(p) for p in parts]
 

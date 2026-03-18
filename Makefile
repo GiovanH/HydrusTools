@@ -45,10 +45,10 @@ check: venv lint test
 docs: Docs_Tools.md Docs_CLI.md
 
 Docs_Tools.md: venv autodoc.py launcher.py ${MODULE_SRCS}
-	${VPYTHON} autodoc.py tools > $@
+	HTDOCS=true ${VPYTHON} autodoc.py tools > $@
 
 Docs_CLI.md: venv autodoc.py launcher.py ${MODULE_SRCS}
-	${VPYTHON} autodoc.py cli > $@
+	HTDOCS=true ${VPYTHON} autodoc.py cli > $@
 
 .PHONY: lint
 lint: venv

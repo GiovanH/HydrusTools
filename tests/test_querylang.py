@@ -23,6 +23,20 @@ class TestQueryLang(unittest.TestCase):
             ['tag1', 'tag2']
         )
 
+    def test_parse_sl_just_ors(self):
+        querystr = SLQuery("(tag2 OR tag3)")
+        self.assertEqual(
+            querylang.parse_sl_query(querystr),
+            [['tag2', 'tag3']]
+        )
+
+    def test_parse_sl_just_ors_noparens(self):
+        querystr = SLQuery("tag2 OR tag3")
+        self.assertEqual(
+            querylang.parse_sl_query(querystr),
+            [['tag2', 'tag3']]
+        )
+
     def test_parse_sl_split_or(self):
         querystr = SLQuery("tag1 AND (tag2 OR tag3)")
         self.assertEqual(

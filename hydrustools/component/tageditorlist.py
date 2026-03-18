@@ -230,6 +230,9 @@ class TagEditorList(ttk.Frame):
             self.addTag(entry_value)
             # self.last_tag = entry_value
             widget.delete(0, tk.END)
+
+            self.add_single_tag_to_context(entry_value)
+
             self.validate()
             return
 
@@ -284,6 +287,13 @@ class TagEditorList(ttk.Frame):
 
         self.pb['value'] = 0
         self.logger.info("Found %s descendant tags in context", len(self.tag_context))
+
+    def add_single_tag_to_context(self, new_tag):
+        # Add new tag to context
+        self.all_tags = (
+            new_tag,
+            *self.all_tags,
+        )
 
     def show_suggestions(self, event=None):
         if len(self.all_tags) < 1:

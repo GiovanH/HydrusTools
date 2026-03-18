@@ -5,11 +5,9 @@ import re
 from collections import OrderedDict
 from collections.abc import Sequence
 from io import BytesIO
-from typing import Required, TypedDict
+from typing import Any, Generator, Iterable, Required, TypedDict, TypeVar
 
 import hydrus_api
-
-# from pick import pick
 from PIL import Image
 
 from hydrustools.component.toolwindow import ToolWindow
@@ -95,8 +93,9 @@ def init_client() -> None:
     except:
         logger.error("Missing a 'downloader tags' tag group. Some things may break! This tool needs to be fixed to better support this case.")
 
+T = TypeVar('T')
 
-def chunk(iterable, maxsize):
+def chunk(iterable: Iterable[T], maxsize: int) -> Generator[tuple[T, ...], Any, None]:
     """A generator that yields lists of size `maxsize` containing the results of iterable `it`.
 
     Args:
@@ -128,9 +127,12 @@ def search_tags_re(substr: str, subpattern: str | None, display_type="storage") 
     ]
 
 
-def replace_tag(original_tag: str, new_tags: list[str]) -> None:
-    resp = client.search_files(tags=[original_tag])
-    tagged_files = resp["file_ids"]
+def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] | None = None) -> None:
+    if in_file_ids:
+        tagged_files = in_file_ids
+    else:
+        resp = client.search_files(tags=[original_tag])
+        tagged_files = resp["file_ids"]
     # pprint.pprint(tagged_files)
 
     logger.info(f"Replacing {original_tag!r} with {new_tags!r} in {len(tagged_files)} files")
@@ -140,6 +142,26 @@ def replace_tag(original_tag: str, new_tags: list[str]) -> None:
             local_tags_service_key: {
               hydrus_api.TagAction.ADD: new_tags,
               hydrus_api.TagAction.DELETE: [original_tag]
+            }
+        }
+    )
+
+def remove_tags_from_matches(query: querylang.AndQuery, remove_tags: list[str]):
+    resp = client.search_files(
+        tags=query
+    )
+    matching_files = resp['file_ids']
+
+    logger.info(f"Removing {remove_tags!r} on {len(matching_files)} files matching {query}")
+    if len(matching_files) == 0:
+        logger.info("Nothing to do!")
+        return
+
+    client.add_tags(
+        file_ids=matching_files,
+        service_keys_to_actions_to_tags={
+            local_tags_service_key: {
+              hydrus_api.TagAction.DELETE: remove_tags
             }
         }
     )
@@ -207,21 +229,28 @@ namespace_list = [
 
 namespace_map = OrderedDict((n.name, n) for n in namespace_list)
 
-@functools.cache
+@functools.lru_cache()
 def get_tag_namespace(tag: str) -> None | Namespace:
     if ":" not in tag:
         return None
     ns = tag.split(":")[0]
     return namespace_map.get(ns) or Namespace(ns)
 
-@functools.cache
+@functools.lru_cache()
+def get_tag_unnamespaced_value(tag: str) -> str:
+    if ":" not in tag:
+        return tag
+    val = tag.split(":")[1]
+    return val
+
+@functools.lru_cache()
 def get_tag_color(tag: str) -> None | str:
     namespace = get_tag_namespace(tag)
     if not namespace:
         return "#006ffa"
     return namespace.color
 
-@functools.cache
+@functools.lru_cache()
 def sort_tags_key(tag: str) -> tuple[int, ...]:
     namespace = get_tag_namespace(tag)
     ns_index = 99

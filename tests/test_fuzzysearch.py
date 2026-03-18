@@ -6,7 +6,6 @@ from typing import Sequence
 from frozendict import frozendict
 
 from hydrustools.utils import htlogging
-htlogging.configure_logging()
 
 from hydrustools.utils import fuzzysearch
 
