@@ -44,7 +44,7 @@ jobs:
         gh release create
         "$(date +'%Y-%m-%d')"
         --repo '${{ github.repository }}'
-        --notes ""
+        --notes "" --prerelease
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
