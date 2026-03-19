@@ -10,13 +10,31 @@ from frozendict import frozendict
 from hydrustools.utils import hydrus
 from hydrustools.utils import fuzzysearch
 from hydrustools.utils.util import timer
+from hydrustools.settings import HTSettings, settings_section
 
 from ..utils.gui_util import tkwrapc
 
-# def penalize_ships(tup: tuple[fuzzysearch.Score, str]):
-#     if tup[1].startswith("ship:"):
-#         return (tup[0]-1, tup[1])
-#     return tup
+logger = logging.getLogger(__name__)
+
+@settings_section(section="fuzzysearch")
+class Settings(HTSettings):
+    fuzzysearch_penalize_namespaces: list[str] = ['ship']
+    gui_test_list: list[str] = []
+
+
+def penalize_namespaces(tup: tuple[fuzzysearch.Score, str]):
+    score, tag = tup
+    ns = hydrus.get_tag_namespace(tag)
+    if ns and ns.name in Settings.fuzzysearch_penalize_namespaces:
+        new_entry = (
+            fuzzysearch.mzs(score, fuzzysearch.Score(accuracy=-5)),
+            tag
+        )
+        # logger.debug("Downgrading %s to %s, tag ns %s in %s", tup, new_entry, ns, Settings.fuzzysearch_penalize_namespaces)
+        return new_entry
+    else:
+        # logger.debug("Match %s OK, tag ns %s not in %s", tup, ns, Settings.fuzzysearch_penalize_namespaces)
+        return tup
 
 class ListboxNavigator:
     def __init__(self, listbox: tk.Listbox):
@@ -335,7 +353,7 @@ class TagEditorList(ttk.Frame):
             matches = fuzzysearch.merge_lists(
                 match_all, match_commands, match_context,
                 count_tiebreak=self.all_tag_counts,
-                # edits=[penalize_ships]
+                edits=[penalize_namespaces]
             )
 
         suggestions = []

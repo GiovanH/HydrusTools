@@ -141,7 +141,7 @@ class IniSettings:
         with open(self._ini_file, "w") as f:
             self._config.write(f)
 
-    def __getattribute__(self, name: str) -> Any:
+    def __getattribute__(self, name: str):
         if name.startswith("_"):
             return object.__getattribute__(self, name)
 

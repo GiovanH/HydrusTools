@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 class HyApiSettings(IniSettings):
     hydrus_api_key: str = "CHANGEME"
     hydrus_api_url: str = hydrus_api.DEFAULT_API_URL
+    service_name_main_tags = "my tags"
+    service_name_extra_tags = "downloader tags"
+
 
 
 @dataclasses.dataclass
@@ -84,14 +87,14 @@ def init_client() -> None:
     client = TypedClient(api_key, api_url)
 
     tag_services = client.get_services()["local_tags"]
-    local_tags_service = next(s for s in tag_services if s["name"] == "my tags")
+    local_tags_service = next(s for s in tag_services if s["name"] == HyApiSettings.service_name_main_tags)
     local_tags_service_key = local_tags_service["service_key"]
 
     try:
-        downloader_tags_service = next(s for s in tag_services if s["name"] == "downloader tags")
+        downloader_tags_service = next(s for s in tag_services if s["name"] == HyApiSettings.service_name_extra_tags)
         downloader_tags_service_key = downloader_tags_service["service_key"]
     except:
-        logger.error("Missing a 'downloader tags' tag group. Some things may break! This tool needs to be fixed to better support this case.")
+        logger.error(f"Missing a {HyApiSettings.service_name_extra_tags!r} tag group. Some things may break! This tool needs to be fixed to better support this case.")
 
 T = TypeVar('T')
 
@@ -234,6 +237,7 @@ def get_tag_namespace(tag: str) -> None | Namespace:
     if ":" not in tag:
         return None
     ns = tag.split(":")[0]
+    ns = ns.removeprefix('-')
     return namespace_map.get(ns) or Namespace(ns)
 
 @functools.lru_cache()
@@ -363,7 +367,7 @@ def addAltsToList(image_id_list: list[int]) -> list[int]:
     for image_hash, rel_data in file_relationships.items():
         image_id = hash_to_id[image_hash]
         if image_id in moved:
-            logger.debug(f"{image_id} alts: Already touched self, skipping")
+            # logger.debug(f"{image_id} alts: Already touched self, skipping")
             continue
         try:
             image_index: int = image_id_list.index(image_id)
@@ -380,22 +384,22 @@ def addAltsToList(image_id_list: list[int]) -> list[int]:
             for rel_hash in rel_group:
                 rel_id = hash_to_id[rel_hash]
                 if rel_id in moved:
-                    logger.debug(f"{image_id} alts: Already touched {rel_id}, skipping")
+                    # logger.debug(f"{image_id} alts: Already touched {rel_id}, skipping")
                     continue
 
-                logger.debug(f"{rel_id!r}, {image_id_list!r}")
+                # logger.debug(f"{rel_id!r}, {image_id_list!r}")
                 if rel_id in image_id_list:
                     # Relocate
-                    logger.debug(f"{image_id} alts: Moving {rel_id} to index {image_index+1}")
+                    # logger.debug(f"{image_id} alts: Moving {rel_id} to index {image_index+1}")
                     image_id_list.remove(rel_id)
                     image_id_list.insert(image_index+1, rel_id)
                 else:
                     # Add
-                    logger.debug(f"{image_id} alts: Adding new {rel_id} to index {image_index+1}")
+                    # logger.debug(f"{image_id} alts: Adding new {rel_id} to index {image_index+1}")
                     image_id_list.insert(image_index+1, rel_id)
 
-                logger.debug(f"New list: {image_id_list}")
-                logger.debug(f"{image_id} alts: adding {rel_id} to moved set {moved}")
+                # logger.debug(f"New list: {image_id_list}")
+                # logger.debug(f"{image_id} alts: adding {rel_id} to moved set {moved}")
                 moved.add(rel_id)
     return image_id_list
 
