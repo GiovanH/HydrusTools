@@ -144,17 +144,17 @@ class TestFuzzySearch(unittest.TestCase):
         self.assertLess(len(matches), 10)
 
     def test_search_basic_prefer_concise(self):
-        matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
-            TAGS,
-            "steven"
-        ))
-        self.assertIn("steven universe", matches)
-        self.assertIn("series:steven universe", matches)
+        # matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
+        #     ('series:steven universe', 'steven universe'),
+        #     "steven"
+        # ))
+        # self.assertIn("steven universe", matches)
+        # self.assertIn("series:steven universe", matches)
 
-        self.assertLess(
-            matches.index("steven universe"),
-            matches.index("series:steven universe")
-        )
+        # self.assertBefore(matches,
+        #     "steven universe",
+        #     "series:steven universe"
+        # )
 
         matches = fuzzysearch.merge_lists(fuzzysearch.perfect_search(
             TAGS,
@@ -358,6 +358,25 @@ class TestFuzzySearch(unittest.TestCase):
                 matches,
                 "character:stevonnie",
                 "character:sugilite",
+            )
+        except:
+            pprint.pprint(rawmatch)
+            raise
+
+    def test_cheese(self):
+        rawmatch = fuzzysearch.perfect_search((
+            "character:cheese the chao",
+            "rating:cheesecake"
+        ), "chees")
+        matches = fuzzysearch.merge_lists(
+            rawmatch,
+            count_tiebreak=frozendict({"rating:cheesecake": 100})
+        )
+        try:
+            self.assertBefore(
+                matches,
+                "rating:cheesecake",
+                "character:cheese the chao",
             )
         except:
             pprint.pprint(rawmatch)

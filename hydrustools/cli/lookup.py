@@ -2,9 +2,8 @@
 import argparse
 import logging
 import pprint
-from functools import partial
 
-from hydrustools.utils.argparse_formatter import HTApFmtCls, HTApFmtClsVerb
+from hydrustools.utils.argparse_formatter import HTApFmtClsVerb
 
 from ..lookup.registry import LookupSettings, MetadataActions, get_plugins, postprocessSuggestions
 from ..utils import htlogging, hydrus, querylang

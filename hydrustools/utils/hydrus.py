@@ -138,6 +138,10 @@ def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] |
         tagged_files = resp["file_ids"]
     # pprint.pprint(tagged_files)
 
+    if len(tagged_files) < 1:
+        logger.info("Nothing to do!")
+        return
+
     logger.info(f"Replacing {original_tag!r} with {new_tags!r} in {len(tagged_files)} files")
     client.add_tags(
         file_ids=tagged_files,

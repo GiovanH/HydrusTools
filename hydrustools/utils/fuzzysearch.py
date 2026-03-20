@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # logger.setLevel(logging.DEBUG)
 
-Score = namedtuple("Score", ["accuracy", "distance", "tagcount"], defaults=[0, 0, 0])
+Score = namedtuple("Score", ["accuracy", "distance", "length", "tagcount"], defaults=[0, 0, 0, 0])
 
 def mzs(t1: Score, t2: Score) -> Score:
     return Score(*map(sum, zip(t1, t2)))
@@ -64,7 +64,7 @@ def compare_segments(qseg, hseg, query_split=None, check_in=False) -> int:
 @functools.lru_cache(maxsize=8000000)
 def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...], query_split=None) -> Score:
     accuracy = 0
-    distance = 0
+    pen_index = 0
 
     qix = 0
     hix = 0
@@ -84,10 +84,10 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
             accuracy += scoredelta
 
             # logger.debug("    score %s -= %s (hix)", accuracy, hix)
-            accuracy -= hix
+            pen_index -= hix
             # Reverse distance for namespaces
             if ":" in hay_segments:
-                accuracy += hay_segments.index(":") + 1
+                pen_index += hay_segments.index(":") + 1
 
             qix += 1
             hix += 1
@@ -105,9 +105,9 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
     else:
         len_pen = len([h for h in hay_segments if len(h) > 1])
     # logger.debug("    distance %s (length)", len_pen)
-    distance = -len_pen
+    # distance = -len_pen
 
-    return Score(accuracy=accuracy, distance=distance, tagcount=0)
+    return Score(accuracy=accuracy, distance=pen_index, length=-len_pen)
 
 def merge_lists(
     *lists: list[tuple[Score, str]],

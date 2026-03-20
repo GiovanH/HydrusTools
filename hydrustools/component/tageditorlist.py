@@ -274,10 +274,10 @@ class TagEditorList(ttk.Frame):
 
         # pprint.pprint(self.tag_synonyms_all)
 
-        self.all_tags = tuple([
+        self.all_tags = (
             *all_tags,
             *self.tag_synonyms_all.keys()
-        ])
+        )
 
         self.all_tag_counts = frozendict({
             t.value: t.count

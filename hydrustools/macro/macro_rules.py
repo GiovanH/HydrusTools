@@ -33,6 +33,7 @@ def disambiguate_chars_in_series(series: str, characters: list[str]):
             [char_tag, f'series:{series}']
         )
 
+
 def run(tk=True):
     for tag_name in [
         'creator:unsorted',
