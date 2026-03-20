@@ -18,6 +18,8 @@ from typing import Any, TypeVar, get_type_hints
 
 from pydantic import TypeAdapter
 
+from typing import TYPE_CHECKING
+
 # Registry mapping each disk ini path to a single configparser instance
 _file_registry: dict[Path, tuple[configparser.ConfigParser, LockType]] = {}
 _registry_lock: LockType = threading.Lock()
@@ -42,7 +44,7 @@ def clear_registry() -> None:
         _file_registry.clear()
 
 
-class IniSettings:
+class _IniSettings:
     """Base class for settings objects backed by sections of a shared INI file.
 
     Subclasses define class attributes with type hints and default values.
@@ -62,6 +64,14 @@ class IniSettings:
         app    = AppSettings(Path("config.ini"), section="app")
         plugin = PluginSettings(Path("config.ini"), section="plugin")
     """
+
+    _ini_file: Path
+    _section: str
+    _config: configparser.ConfigParser
+    _lock: LockType
+    _initialized: bool
+    _schema: dict[str, Any]
+    _typevalidators: dict[str, TypeAdapter[Any]]
 
     def __init__(self, ini_file: Path | None = None, section: str | None = None):
         resolved_file = Path(ini_file or f"{self.__class__.__name__}.ini")
@@ -84,7 +94,7 @@ class IniSettings:
         object.__setattr__(self, "_initialized", True)
 
     def _get_typeadapters(self) -> dict[str, TypeAdapter[Any]]:
-        return {k: TypeAdapter(t) for k, t in get_type_hints(self.__class__).items()}
+        return {k: TypeAdapter(t) for k, t in get_type_hints(self.__class__).items() if not k.startswith('_')}
 
     def _get_schema(self) -> dict[str, Any]:
         schema: dict[str, Any] = {}
@@ -141,22 +151,6 @@ class IniSettings:
         with open(self._ini_file, "w") as f:
             self._config.write(f)
 
-    def __getattribute__(self, name: str):
-        if name.startswith("_"):
-            return object.__getattribute__(self, name)
-
-        schema = object.__getattribute__(self, "_schema")
-        if name not in schema:
-            return object.__getattribute__(self, name)
-
-        config: configparser.ConfigParser = object.__getattribute__(self, "_config")
-        section: str = object.__getattribute__(self, "_section")
-
-        if config.has_option(section, name):
-            return self._deserialize(name, config.get(section, name))
-
-        return schema[name]
-
     def __setattr__(self, name: str, value: Any) -> None:
         if not object.__getattribute__(self, "_initialized"):
             object.__setattr__(self, name, value)
@@ -167,3 +161,26 @@ class IniSettings:
             return
 
         self._save(name, value)
+
+# Don't let the type checker know we've overwritten the getattribute
+if TYPE_CHECKING:
+    class IniSettings(_IniSettings):
+        pass
+
+else:
+    class IniSettings(_IniSettings):
+        def __getattribute__(self, name: str):
+            if name.startswith("_"):
+                return object.__getattribute__(self, name)
+
+            schema = object.__getattribute__(self, "_schema")
+            if name not in schema:
+                return object.__getattribute__(self, name)
+
+            config: configparser.ConfigParser = object.__getattribute__(self, "_config")
+            section: str = object.__getattribute__(self, "_section")
+
+            if config.has_option(section, name):
+                return self._deserialize(name, config.get(section, name))
+
+            return schema[name]

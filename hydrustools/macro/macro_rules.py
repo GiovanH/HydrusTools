@@ -1,18 +1,22 @@
-import json
 import logging
-import re
-import threading
-from pathlib import Path
 
 import hydrus_api
-import tqdm
 
-import hydrustools.utils.util
+from hydrustools.settings import HTSettings, settings_section
 from hydrustools.utils import htlogging, querylang
 
 from ..utils import hydrus
 
 logger = logging.getLogger(__name__)
+
+@settings_section(section="MacroRules")
+class Settings(HTSettings):
+    tags_delete: list[str] = []
+    tags_flatten_to_parents: list[str] = []
+    flatten_presearch_hl: list[str] = []
+    flatten_search: str = ""
+    flatten_search_hl: list[str] = []
+
 
 def replace_tag_in_query(tag_name: str, new_tags: list[str], in_query: querylang.AndQuery):
 
@@ -35,10 +39,7 @@ def disambiguate_chars_in_series(series: str, characters: list[str]):
 
 
 def run(tk=True):
-    for tag_name in [
-        'creator:unsorted',
-        'meta:badtag'
-    ]:
+    for tag_name in Settings.tags_delete:
         logger.info(f"Deleting tag {tag_name}")
         try:
             hydrus.replace_tag(tag_name, [])
@@ -53,6 +54,9 @@ def run(tk=True):
         ['series:*', 'todo:series'],
         ['todo:series']
     )
+
+    for source_tag in Settings.tags_flatten_to_parents:
+        hydrus.flatten_tag_to_parents(source_tag)
 
     disambiguate_chars_in_series(
         'totally spies',

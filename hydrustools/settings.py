@@ -20,10 +20,10 @@ class HTSettings(IniSettings):
 
         return var
 
-C = TypeVar('C', bound=HTSettings)
+C = TypeVar('C', bound=IniSettings)
 
 # Evil:
-def settings_section(section: str | None = None, file: str = "HTSettings") -> Callable[..., HTSettings]:
+def settings_section(section: str | None = None, file: str = "HTSettings") -> Callable[[type[C]], C]:
     def _wrapper(cls: type[C]) -> C:
         return cls(section=section, ini_file=Path(f"{file}.ini"))
 

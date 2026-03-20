@@ -27,8 +27,6 @@ class HyApiSettings(IniSettings):
     service_name_main_tags = "my tags"
     service_name_extra_tags = "downloader tags"
 
-
-
 @dataclasses.dataclass
 class TagInfo():
     count: int
@@ -152,6 +150,20 @@ def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] |
             }
         }
     )
+
+
+def flatten_tag_to_parents(source_tag: str):
+    targets: list[SiblingInfo] = get_sibling_ideal_targets([source_tag])
+    if len(targets) < 1:
+        raise ValueError(f"Tag {source_tag!r} has no relationships")
+    assert len(targets) == 1
+    si = next(si for si in targets if si.tag == source_tag)
+
+    if len(si.ancestors) < 1:
+        raise ValueError(f"Tag {source_tag!r} has no ancestors in {si}")
+
+    replace_tag(source_tag, list(si.ancestors))
+
 
 def remove_tags_from_matches(query: querylang.AndQuery, remove_tags: list[str]):
     resp = client.search_files(
