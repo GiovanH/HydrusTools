@@ -298,6 +298,10 @@ If tagname is attached to the image, "-tagname" will remove it.
             lines.append("Archived")
             lines.append("")
 
+        if metadata['ratings'][hydrus.favorites_service_key]:
+            lines.append("Favorited")
+            lines.append("")
+
         if metadata['is_trashed']:
             lines.append("Trashed")
             lines.append("")
@@ -379,5 +383,18 @@ If tagname is attached to the image, "-tagname" will remove it.
         self.refresh_current()
 
     def toggle_favorite(self, event=None):
-        raise NotImplementedError()
-        # TODO
+        metadata = self.current_image
+        if not metadata:
+            self.textvar_info.set("No image selected")
+            return
+
+        rating = metadata['ratings'][hydrus.favorites_service_key]
+        new_rating = (not rating)
+        hydrus.client.set_rating(
+            rating_service_key=hydrus.favorites_service_key,
+            hashes=[metadata['hash']],
+            rating=new_rating
+        )
+        metadata['ratings'][hydrus.favorites_service_key] = new_rating
+
+        self.refresh_current()
