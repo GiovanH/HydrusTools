@@ -32,8 +32,8 @@ def run(tk=True):
     all_tags_map = {ti.value: ti for ti in all_tags}
 
     unnamespaced_tags = [t for t in all_tags_set if ':' not in t]
-    sibling_resp = hydrus.get_sibling_ideal_targets(unnamespaced_tags)
-    all_relationships: dict[str, hydrus.SiblingInfo] = {
+    sibling_resp = hydrus.get_relationship_info(unnamespaced_tags)
+    all_relationships: dict[str, hydrus.RelationshipInfo] = {
          **{
             s: si
             for si in

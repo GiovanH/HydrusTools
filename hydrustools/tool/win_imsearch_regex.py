@@ -9,6 +9,7 @@ from typing import Any, Callable
 import hydrus_api
 
 from hydrustools.utils import querylang
+import hydrustools.utils.util
 
 from ..component.toolwindow import ToolWindow
 from ..settings import HTSettings, settings_section
@@ -155,7 +156,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             start_time = time.time()
 
             try:
-                for id_chunk in hydrus.chunk(file_ids_with_note, 1000):
+                for id_chunk in hydrustools.utils.util.chunk(file_ids_with_note, 1000):
                     resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=True)
 
                     for metadata in resp['metadata']:

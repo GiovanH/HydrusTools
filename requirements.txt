@@ -1,5 +1,5 @@
+-e ./libs/hydrus-api
 pillow
-hydrus_api
 joblib
 pick
 numpy

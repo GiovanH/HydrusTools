@@ -9,6 +9,7 @@ from frozendict import frozendict
 
 from hydrustools.utils import hydrus
 from hydrustools.utils import fuzzysearch
+import hydrustools.utils.namespace
 from hydrustools.utils.util import timer
 from hydrustools.settings import HTSettings, settings_section
 
@@ -24,7 +25,7 @@ class Settings(HTSettings):
 
 def penalize_namespaces(tup: tuple[fuzzysearch.Score, str]):
     score, tag = tup
-    ns = hydrus.get_tag_namespace(tag)
+    ns = hydrustools.utils.namespace.get_tag_namespace(tag)
     if ns and ns.name in Settings.fuzzysearch_penalize_namespaces:
         new_entry = (
             fuzzysearch.mzs(score, fuzzysearch.Score(accuracy=-5)),
@@ -76,7 +77,7 @@ class TagList(tk.Listbox):
         for value in elements:
             super().insert(index, value)
             self.itemconfig(tk.END,
-                foreground=hydrus.get_tag_color(value),
+                foreground=hydrustools.utils.namespace.get_tag_color(value),
             )
 
 
@@ -174,7 +175,7 @@ class TagEditorList(ttk.Frame):
         # self.tag_list = tag_list
         self.tag_list.clear()
 
-        for tag in hydrus.sort_tags(tag_list):
+        for tag in hydrustools.utils.namespace.sort_tags(tag_list):
             self.addTag(tag, interactive=False)
             # self.listbox_taglist.insert(tk.END, tag)
 
@@ -267,7 +268,7 @@ class TagEditorList(ttk.Frame):
         self.pb['value'] = 50
         self.tag_synonyms_all = {
             sib: si.ideal_tag
-            for si in hydrus.get_sibling_ideal_targets(all_tags)
+            for si in hydrus.get_relationship_info(all_tags)
             for sib in si.siblings
             if sib != si.ideal_tag
         }
@@ -294,7 +295,7 @@ class TagEditorList(ttk.Frame):
         self.logger.info("Loading context suggestions for %s", self.tag_list)
 
         self.pb['value'] = 20
-        sib_info = hydrus.get_sibling_ideal_targets(self.tag_list)
+        sib_info = hydrus.get_relationship_info(self.tag_list)
 
         self.pb['value'] = 90
         self.tag_context = tuple(hydrus.flatList(
@@ -367,7 +368,7 @@ class TagEditorList(ttk.Frame):
                 continue
             self.listbox_suggestion.insert(tk.END, tag)
             self.listbox_suggestion.itemconfig(tk.END,
-                foreground=hydrus.get_tag_color(tag),
+                foreground=hydrustools.utils.namespace.get_tag_color(tag),
             )
             suggestions.append(tag)
 

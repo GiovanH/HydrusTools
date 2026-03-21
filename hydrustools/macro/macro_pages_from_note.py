@@ -6,6 +6,7 @@ import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
 from hydrustools.utils import htlogging, querylang
+import hydrustools.utils.util
 
 from ..component.tag_adder_window import TagAction, TagAdderWindow
 
@@ -65,7 +66,7 @@ def add_page_tags(tk=True):
     tqdm_iterator = (tqdmtk if tk else tqdm.tqdm)
     # iterator: tqdm.tqdm = (tqdmtk if tk else tqdm.tqdm)
     iterable = tqdm_iterator(
-        [*hydrus.chunk(file_ids_with_note, 1000)],
+        [*hydrustools.utils.util.chunk(file_ids_with_note, 1000)],
         desc="Searching for page names in filenames",
         unit="chunk",
         leave=False

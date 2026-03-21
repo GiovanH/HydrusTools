@@ -11,7 +11,7 @@ from ..component.toolwindow import ToolWindow
 from ..settings import HTSettings, settings_section
 from ..utils import hydrus
 from ..utils.gui_util import Increment, QueryHistory, RegexEntry, pb_iter, tkwrap, tkwrapc
-from ..utils.hydrus import SiblingInfo, TagInfo
+from ..utils.hydrus import RelationshipInfo, TagInfo
 
 
 @settings_section(section="TagFlatten")
@@ -148,7 +148,7 @@ Presearch searches Hydrus for tags (* will only work if specified in the tag rep
         }
 
         self.pb['value'] += 25
-        targets: list[SiblingInfo] = hydrus.get_sibling_ideal_targets([ti.value for ti in results])
+        targets: list[RelationshipInfo] = hydrus.get_relationship_info([ti.value for ti in results])
         targets = [t for t in targets if t.tag != t.ideal_tag]
 
         self.pb['value'] += 25

@@ -18,7 +18,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 logger = logging.getLogger(__name__)
 
-@functools.cache
+@functools.lru_cache()
 def render_image(file_id: int, width: int, height: int, max_width: int, max_height: int) -> Image.Image:
     if max_height <= 1 or max_width <= 1:
         raise ValueError(f"Invalid dimensions {width=} {height=} {max_width=} {max_height=}")

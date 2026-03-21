@@ -8,6 +8,7 @@ import hydrus_api
 
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
+import hydrustools.utils.util
 
 from ..component.toolwindow import ToolWindow
 from ..settings import HTSettings, settings_section
@@ -226,7 +227,7 @@ class ImagePickerWindow(ToolWindow):
         self.entry_search.add_history(self.textvar_query.get())
         self.setStatus(f"Getting metadata for {len(matching_files)} files")
 
-        for id_chunk in pb_iter(self.pb, [*hydrus.chunk(matching_files, 200)]):
+        for id_chunk in pb_iter(self.pb, [*hydrustools.utils.util.chunk(matching_files, 200)]):
             resp = hydrus.client.get_file_metadata(file_ids=id_chunk, include_notes=self.include_notes)
 
             def commit(resp=resp) -> None:

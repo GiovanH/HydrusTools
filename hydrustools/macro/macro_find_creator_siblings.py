@@ -29,8 +29,8 @@ def run(tk=True):
     all_tags_set = {ti.value for ti in all_tags}
     all_tags_map = {ti.value: ti for ti in all_tags}
 
-    sibling_resp = hydrus.get_sibling_ideal_targets([*all_tags_set])
-    all_relationships: dict[str, hydrus.SiblingInfo] = {
+    sibling_resp = hydrus.get_relationship_info([*all_tags_set])
+    all_relationships: dict[str, hydrus.RelationshipInfo] = {
          **{
             s: si
             for si in

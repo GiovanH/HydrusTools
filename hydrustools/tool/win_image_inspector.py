@@ -29,7 +29,7 @@ from ..utils.hydrus import FileMetadata
 
 @settings_section(section="ImageInspector")
 class Settings(HTSettings):
-    img_autosave: bool = True
+    img_autosave: bool = False
     img_dwim_savetags: bool = True
     img_dwim_archive: bool = True
     img_dwim_advance: bool = True

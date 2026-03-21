@@ -55,9 +55,9 @@ def get_tag_cache() -> dict[str, int]:
     all_tags_set = {ti.value for ti in all_tags}
     tag_count_cache = {ti.value: ti.count for ti in all_tags}
 
-    sibling_resp = hydrus.get_sibling_ideal_targets([*all_tags_set])
+    sibling_resp = hydrus.get_relationship_info([*all_tags_set])
 
-    all_relationships: dict[str, hydrus.SiblingInfo] = {
+    all_relationships: dict[str, hydrus.RelationshipInfo] = {
         **{
             s: si
             for si in

@@ -5,6 +5,8 @@ import threading
 import tqdm
 from tqdm.tk import tqdm as tqdmtk
 
+import hydrustools.utils.util
+
 from ..utils import querylang
 
 from ..component.tag_adder_window import TagAction, TagAdderWindow
@@ -69,7 +71,7 @@ def find_creators(tk=True):
 
     iterable.close()
     iterable = tqdm_iterator(
-        [*hydrus.chunk(file_ids_with_note, 200)],
+        [*hydrustools.utils.util.chunk(file_ids_with_note, 200)],
         desc=f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames",
         unit="page",
         leave=False

@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from hydrustools.utils import querylang
+import hydrustools.utils.util
 
 from ..component.tag_adder_window import TagAction, TagAdderFrame
 from ..component.toolwindow import ToolWindow
@@ -164,7 +165,7 @@ class ExtractCreatorFromNotesWin(ToolWindow):  # noqa: PLR0904
 
         self.setStatus(f"Searching for any of {len(creator_names)} creator tags in {len(file_ids_with_note)} filenames")
 
-        for id_chunk in pb_iter(self.pb, [*hydrus.chunk(file_ids_with_note, 200)]):
+        for id_chunk in pb_iter(self.pb, [*hydrustools.utils.util.chunk(file_ids_with_note, 200)]):
             if self.abort_threads:
                 self.setStatus("Aborted")
                 return

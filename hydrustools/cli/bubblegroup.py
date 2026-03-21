@@ -10,6 +10,8 @@ import hydrus_api
 
 from hydrustools.utils import htlogging, querylang
 from hydrustools.utils.argparse_formatter import HTApFmtCls
+import hydrustools.utils.namespace
+import hydrustools.utils.util
 # from hydrustools.utils.htlogging import IterationLogHandler
 
 from ..utils import hydrus
@@ -273,7 +275,7 @@ def shrink_large_group_by_force(
 ) -> bool:
     group_size = settings.max_size - settings.min_size
     logger.error("Force-dividing large group %s (%s) into %sx chunks", group_key, len(group_files), group_size)
-    for i, bichunk in enumerate(hydrus.chunk(group_files, group_size)):
+    for i, bichunk in enumerate(hydrustools.utils.util.chunk(group_files, group_size)):
         for bi in bichunk:
             bi.tags = frozenset([*bi.tags, f"force{i}"])
 
@@ -411,7 +413,7 @@ def apply_groups(groups):
         name_tagset = set()
         for n in tagset:
             if not all(n in set for set in all_tagsets) and not n.startswith("-"):
-                name_tagset.add(hydrus.get_tag_unnamespaced_value(n))
+                name_tagset.add(hydrustools.utils.namespace.get_tag_unnamespaced_value(n))
 
         tagname = f"{group_namespace}:{', '.join(name_tagset)}"
         if len(tagset) == 0:
@@ -500,7 +502,7 @@ def main():
 
     if args.force:
         group_size = args.max_size - args.min_size
-        for i, bichunk in enumerate(hydrus.chunk(bubble_list, group_size)):
+        for i, bichunk in enumerate(hydrustools.utils.util.chunk(bubble_list, group_size)):
             for bi in bichunk:
                 bi.tags = frozenset([*bi.tags, f"force{i}"])
 

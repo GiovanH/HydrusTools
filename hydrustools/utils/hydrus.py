@@ -1,14 +1,16 @@
 import dataclasses
 import functools
 import logging
+import pprint
 import re
-from collections import OrderedDict
 from collections.abc import Sequence
 from io import BytesIO
-from typing import Any, Generator, Iterable, Required, TypedDict, TypeVar
+from typing import Literal
 
 import hydrus_api
+from hydrus_api.types import FileHash, FileId, FileMetadata, FileRelationships, ServiceKey
 from PIL import Image
+from pydantic import TypeAdapter
 
 from hydrustools.component.toolwindow import ToolWindow
 from hydrustools.utils import querylang
@@ -26,94 +28,83 @@ class HyApiSettings(IniSettings):
     hydrus_api_url: str = hydrus_api.DEFAULT_API_URL
     service_name_main_tags = "my tags"
     service_name_extra_tags = "downloader tags"
+    service_name_favorites = "favourites"
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class TagInfo():
     count: int
     value: str
 
 @dataclasses.dataclass(frozen=True)
-class SiblingInfo():
+class RelationshipInfo():
     tag: str
     ideal_tag: str
     siblings: frozenset[str]
     ancestors: frozenset[str]
     descendants: frozenset[str]
 
-class FileMetadata(TypedDict, total=False):
-    file_id: Required[int]
-    notes: Required[dict[str, str]]
-    known_urls: Required[list[str]]
-    tags: Required[dict[str, dict[str, dict[str, list[str]]]]]
-    height: Required[int]
-    width: Required[int]
-    time_modified: Required[int]
-    size: Required[int]
-    is_deleted: Required[bool]
-    is_inbox: Required[bool]
-    is_local: Required[bool]
-    is_trashed: Required[bool]
-    hash: Required[str]
-
 
 def set_api_key(new_api_key):
     HyApiSettings.hydrus_api_key = new_api_key
 
 
-def get_api_credentials() -> tuple[str, str]:
-    try:
-        if not HyApiSettings.hydrus_api_key:
-            raise AttributeError
-    except AttributeError:
-        HyApiSettings.hydrus_api_key = "CHANGEME"
-        raise AttributeError("API key variable must be set! Edit ini file.")
+@dataclasses.dataclass()
+class _HTWires():
+    local_tags_service_key: str
+    downloader_tags_service_key: str = None  # type: ignore
 
-    return (HyApiSettings.hydrus_api_key, HyApiSettings.hydrus_api_url)
-
+# HTWires = _HTWires()
 
 client: TypedClient = None  # type: ignore
-local_tags_service_key: str = None  # type: ignore
-downloader_tags_service_key: str = None  # type: ignore
 
+client_services: hydrus_api.Services = None  # type: ignore
 
-def init_client() -> None:
-    global client
-    global local_tags_service_key
-    global downloader_tags_service_key
+local_tags_service_key: ServiceKey = None  # type: ignore
+downloader_tags_service_key: ServiceKey = None  # type: ignore
+favorites_service_key: ServiceKey = None  # type: ignore
 
-    api_key, api_url = get_api_credentials()
-    client = TypedClient(api_key, api_url)
+# Data parsing, struct traversal
 
-    tag_services = client.get_services()["local_tags"]
-    local_tags_service = next(s for s in tag_services if s["name"] == HyApiSettings.service_name_main_tags)
-    local_tags_service_key = local_tags_service["service_key"]
+def get_service_key(services: hydrus_api.Services, type: hydrus_api.ServiceType, name: str) -> str:
+    return next(
+        k for k, v in services.items()
+        if v["type"] == type.value and v["name"] == name
+    )
 
-    try:
-        downloader_tags_service = next(s for s in tag_services if s["name"] == HyApiSettings.service_name_extra_tags)
-        downloader_tags_service_key = downloader_tags_service["service_key"]
-    except:
-        logger.error(f"Missing a {HyApiSettings.service_name_extra_tags!r} tag group. Some things may break! This tool needs to be fixed to better support this case.")
+def has_note(notename: str, max_n: int = 4) -> querylang.OrQuery:
+    return [
+        *[f'system:has note with name "{notename}"'],
+        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
+    ]
 
-T = TypeVar('T')
+def local_tags(
+    metadata: FileMetadata,
+    type_: Literal['storage_tags', 'display_tags'] = 'display_tags',
+    service_key: str | None = None
+) -> list[str]:
+    service_key = service_key or local_tags_service_key
+    tagmap = metadata['tags'][service_key][type_]
+    return tagmap.get(str(hydrus_api.TagStatus.CURRENT), [])
 
-def chunk(iterable: Iterable[T], maxsize: int) -> Generator[tuple[T, ...], Any, None]:
-    """A generator that yields lists of size `maxsize` containing the results of iterable `it`.
+def get_hash_to_id_from_rels(file_relationships: dict[FileHash, FileRelationships]) -> dict[FileHash, FileId]:
+    all_hashes = set()
+    all_hashes.update(file_relationships.keys())
+    all_hashes.update([r['king'] for r in file_relationships.values()])
+    all_hashes.update(flatList([
+        v for r in file_relationships.values()
+        for v in r.values()
+        if isinstance(v, list)
+    ]))
 
-    Args:
-        iterable: An iterable to split into chunks
-        maxsize (int): Max size of chunks
+    return {
+        file["hash"]: file["file_id"]
+        for file in
+        client.get_file_metadata(
+            hashes=[*all_hashes]
+        )['metadata']
+    }
 
-    Yields:
-        lists of size [1, maxsize]
-
-    >>> list(chunk(range(10), 4))
-    [(0, 1, 2, 3), (4, 5, 6, 7), (8, 9)]
-    """
-    from itertools import islice
-
-    iter_it = iter(iterable)
-    yield from iter(lambda: tuple(islice(iter_it, maxsize)), ())
-
+# Queries
 
 def search_tags_re(substr: str, subpattern: str | None, display_type="storage") -> list[TagInfo]:
     resp = client.search_tags(
@@ -127,6 +118,99 @@ def search_tags_re(substr: str, subpattern: str | None, display_type="storage") 
         if (not subpattern) or re.match(subpattern, item["value"])
     ]
 
+def get_relationship_info(
+    target_tags: Sequence[str],
+    service_key: str | None = None
+) -> list[RelationshipInfo]:
+    resp = client.get_siblings_and_parents(target_tags)
+    service_key = service_key or local_tags_service_key
+    return [
+        RelationshipInfo(
+            tag=tag_name,
+            ideal_tag=v[service_key]["ideal_tag"],
+            siblings=frozenset(v[service_key]["siblings"]),
+            ancestors=frozenset(v[service_key]["ancestors"]),
+            descendants=frozenset(v[service_key]["descendants"]),
+        )
+        for tag_name, v in resp["tags"].items()
+    ]
+
+@functools.cache
+def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max_height: int) -> Image.Image:
+    ratio = min(max_width/width, max_height/height)
+    resp = client.get_render(
+        file_id=file_id,  # type: ignore
+        height=int(ratio*height),
+        width=int(ratio*width)
+    )
+    resp.raise_for_status()
+    return Image.open(BytesIO(resp.content))
+
+@functools.cache
+def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> Image.Image:
+    resp = client.get_thumbnail(file_id=file_id)
+    resp.raise_for_status()
+    image = Image.open(BytesIO(resp.content))
+    # ratio =min(max_width/image.width, max_height/image.height)
+    image.thumbnail((max_width, max_height))
+    return image
+
+
+def addAltsToList(image_id_list: list[int]) -> list[int]:
+    if len(image_id_list) == 0:
+        return image_id_list
+
+    file_relationships = client.get_file_relationships(
+        file_ids=image_id_list
+    )['file_relationships']
+
+    # pprint.pprint(file_relationships)
+
+    hash_to_id: dict[FileHash, FileId] = get_hash_to_id_from_rels(file_relationships)
+
+    moved = set()
+    for image_hash, rel_data in file_relationships.items():
+        image_id = hash_to_id[image_hash]
+        if image_id in moved:
+            # logger.debug(f"{image_id} alts: Already touched self, skipping")
+            continue
+        try:
+            image_index: int = image_id_list.index(image_id)
+        except ValueError:
+            logger.warning("Somehow, %s is in the relationships list but not the search list", image_hash)
+            continue
+
+        for rel_kind in [
+            hydrus_api.DuplicateStatus.ALTERNATES,
+            hydrus_api.DuplicateStatus.DUPLICATES,
+            hydrus_api.DuplicateStatus.POTENTIAL_DUPLICATES,
+        ]:
+            rel_group = rel_data[str(rel_kind.value)]
+            assert isinstance(rel_group, list)
+            for rel_hash in rel_group:
+                rel_id = hash_to_id[rel_hash]
+                if rel_id in moved:
+                    # logger.debug(f"{image_id} alts: Already touched {rel_id}, skipping")
+                    continue
+
+                # logger.debug(f"{rel_id!r}, {image_id_list!r}")
+                if rel_id in image_id_list:
+                    # Relocate
+                    # logger.debug(f"{image_id} alts: Moving {rel_id} to index {image_index+1}")
+                    image_id_list.remove(rel_id)
+                    image_id_list.insert(image_index+1, rel_id)
+                else:
+                    # Add
+                    # logger.debug(f"{image_id} alts: Adding new {rel_id} to index {image_index+1}")
+                    image_id_list.insert(image_index+1, rel_id)
+
+                # logger.debug(f"New list: {image_id_list}")
+                # logger.debug(f"{image_id} alts: adding {rel_id} to moved set {moved}")
+                moved.add(rel_id)
+    return image_id_list
+
+
+# Database operations
 
 def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] | None = None) -> None:
     if in_file_ids:
@@ -153,7 +237,7 @@ def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] |
 
 
 def flatten_tag_to_parents(source_tag: str):
-    targets: list[SiblingInfo] = get_sibling_ideal_targets([source_tag])
+    targets: list[RelationshipInfo] = get_relationship_info([source_tag])
     if len(targets) < 1:
         raise ValueError(f"Tag {source_tag!r} has no relationships")
     assert len(targets) == 1
@@ -185,108 +269,6 @@ def remove_tags_from_matches(query: querylang.AndQuery, remove_tags: list[str]):
         }
     )
 
-def local_tags(metadata: FileMetadata, type_='display_tags', service_key: str | None = None) -> list[str]:
-    service_key = service_key or local_tags_service_key
-    return metadata['tags'][service_key][type_].get(str(hydrus_api.TagStatus.CURRENT.value), [])
-
-def get_sibling_ideal_targets(target_tags: Sequence[str]) -> list[SiblingInfo]:
-    resp = client.get_siblings_and_parents(target_tags)
-    # pprint.pprint(resp)
-    tags: dict[str, dict[str, str]] = resp["tags"]
-    siblings: dict[str, SiblingInfo] = {
-        k: SiblingInfo(
-            tag=k,
-            ideal_tag=v[local_tags_service_key]["ideal_tag"],  # type: ignore
-            siblings=frozenset(v[local_tags_service_key]["siblings"]),  # type: ignore
-            ancestors=frozenset(v[local_tags_service_key]["ancestors"]),  # type: ignore
-            descendants=frozenset(v[local_tags_service_key]["descendants"]),  # type: ignore
-        )
-        # k: v[local_tags_service_key]
-        for k, v in tags.items()
-    }
-    # pprint.pprint(siblings)
-    targets: list[SiblingInfo] = [v for k, v in siblings.items()]
-    return targets
-
-
-# def search_and_flatten_siblings(target_tags: list[str]) -> None:
-#     targets = get_sibling_ideal_targets(target_tags)
-#     # be kind,
-#     targets.sort(key=lambda si: si.tag)
-
-#     selected_indices = pick(
-#         [f'{si.tag} -> {si.ideal_tag}' for si in targets],
-#         "Tags to flatten",
-#         multiselect=True,
-#         min_selection_count=0
-#     )
-
-#     # Calculate real operations for approval
-#     selected_targets = [
-#         targets[index]
-#         for _, index in selected_indices  # type: ignore
-#     ]
-
-#     pprint.pprint(selected_targets)
-#     confirm = input("Confirm? (y/n): ").lower() == "y"
-
-#     if confirm:
-#         for si in selected_targets:
-#             replace_tag(si.tag, [si.ideal_tag])
-
-@dataclasses.dataclass
-class Namespace():
-    name: str
-    color: str = "#72a0c1"
-
-namespace_list = [
-    Namespace("series", "#aa00aa"),
-    Namespace("character", "#00aa00"),
-    Namespace("creator", "#aa0000"),
-    Namespace("source", "#989898"),
-]
-
-namespace_map = OrderedDict((n.name, n) for n in namespace_list)
-
-@functools.lru_cache()
-def get_tag_namespace(tag: str) -> None | Namespace:
-    if ":" not in tag:
-        return None
-    ns = tag.split(":")[0]
-    ns = ns.removeprefix('-')
-    return namespace_map.get(ns) or Namespace(ns)
-
-@functools.lru_cache()
-def get_tag_unnamespaced_value(tag: str) -> str:
-    if ":" not in tag:
-        return tag
-    val = tag.split(":")[1]
-    return val
-
-@functools.lru_cache()
-def get_tag_color(tag: str) -> None | str:
-    namespace = get_tag_namespace(tag)
-    if not namespace:
-        return "#006ffa"
-    return namespace.color
-
-@functools.lru_cache()
-def sort_tags_key(tag: str) -> tuple[int, ...]:
-    namespace = get_tag_namespace(tag)
-    ns_index = 99
-    if namespace:
-        ns_index = 100
-        try:
-            ns_index = namespace_list.index(namespace)
-        except ValueError:
-            pass
-    return (
-        ns_index,
-    )
-
-def sort_tags(tag_list: list[str]) -> list[str]:
-    return sorted(tag_list, key=sort_tags_key)
-
 def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list: list[FileMetadata]):
     tool.setStatus(f"Setting {len(tag_list)} tags")
     file_ids = [m['file_id'] for m in metadata_list]
@@ -308,15 +290,15 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
     logger.info("%s, %s", all_tags, set(tag_list))
 
     removed_tags = set(all_tags).difference(set(tag_list))
+
+    # We also need to remove any siblings of these tags
     resp = client.get_siblings_and_parents(removed_tags)
-    for k, v in resp["tags"].items():
+    for v in resp["tags"].values():
         if v[local_tags_service_key]['ideal_tag'] in removed_tags:
             for s in v[local_tags_service_key]['siblings']:
                 if s not in removed_tags:
                     logger.warning(f"Also removing sibling tag {s}")
                     removed_tags.add(s)
-    # We also need to remove any siblings of these tags
-
 
     if removed_tags:
         logger.info(f"Removing tags: {removed_tags}")
@@ -329,105 +311,49 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
             }
         )
 
-@functools.cache
-def get_render_scaled(file_id: int, width: int, height: int, max_width: int, max_height: int) -> Image.Image:
-    ratio = min(max_width/width, max_height/height)
-    resp = client.get_render(
-        file_id=file_id,  # type: ignore
-        height=int(ratio*height),
-        width=int(ratio*width)
+# Init
+
+def init_client() -> None:
+    global client
+    global local_tags_service_key
+    global downloader_tags_service_key
+    global favorites_service_key
+    global client_services
+
+    client = TypedClient(
+        HyApiSettings.hydrus_api_key,
+        HyApiSettings.hydrus_api_url
     )
-    resp.raise_for_status()
-    return Image.open(BytesIO(resp.content))
 
-@functools.cache
-def get_thumb_scaled(file_id: int, max_width: int, max_height: int) -> Image.Image:
-    resp = client.get_thumbnail(file_id=file_id)
-    resp.raise_for_status()
-    image = Image.open(BytesIO(resp.content))
-    # ratio =min(max_width/image.width, max_height/image.height)
-    image.thumbnail((max_width, max_height))
-    return image
+    client_services = client.get_services()['services']
 
+    TypeAdapter(hydrus_api.Services).validate_python(client_services)
 
-def get_hash_to_id_from_rels(file_relationships) -> dict[str, int]:
-    all_hashes = set()
-    all_hashes.update(file_relationships.keys())
-    all_hashes.update([r['king'] for r in file_relationships.values()])
-    all_hashes.update(flatList([
-        v for r in file_relationships.values()
-        for v in r.values()
-        if isinstance(v, list)
-    ]))
+    local_tags_service_key = get_service_key(
+        client_services,
+        hydrus_api.ServiceType.TAG_DOMAIN,
+        HyApiSettings.service_name_main_tags
+    )
 
-    return {
-        file["hash"]: file["file_id"]
-        for file in
-        client.get_file_metadata(
-            hashes=[*all_hashes]
-        )['metadata']
-    }
+    try:
+        downloader_tags_service_key = get_service_key(
+            client_services,
+            hydrus_api.ServiceType.TAG_DOMAIN,
+            HyApiSettings.service_name_extra_tags
+        )
+    except StopIteration:
+        logger.exception(f"Missing a {HyApiSettings.service_name_extra_tags!r} tag group. Some things may break! This tool needs to be fixed to better support this case.")
 
-def addAltsToList(image_id_list: list[int]) -> list[int]:
-    if len(image_id_list) == 0:
-        return image_id_list
-
-    file_relationships = client.get_file_relationships(
-        file_ids=image_id_list
-    )['file_relationships']
-
-    # pprint.pprint(file_relationships)
-
-    hash_to_id = get_hash_to_id_from_rels(file_relationships)
-    moved = set()
-    for image_hash, rel_data in file_relationships.items():
-        image_id = hash_to_id[image_hash]
-        if image_id in moved:
-            # logger.debug(f"{image_id} alts: Already touched self, skipping")
-            continue
-        try:
-            image_index: int = image_id_list.index(image_id)
-        except ValueError:
-            logger.warning("Somehow, %s is in the relationships list but not the search list", image_hash)
-            continue
-
-        for rel_kind in [
-            hydrus_api.DuplicateStatus.ALTERNATES,
-            hydrus_api.DuplicateStatus.DUPLICATES,
-            hydrus_api.DuplicateStatus.POTENTIAL_DUPLICATES,
-        ]:
-            rel_group = rel_data[str(rel_kind.value)]
-            for rel_hash in rel_group:
-                rel_id = hash_to_id[rel_hash]
-                if rel_id in moved:
-                    # logger.debug(f"{image_id} alts: Already touched {rel_id}, skipping")
-                    continue
-
-                # logger.debug(f"{rel_id!r}, {image_id_list!r}")
-                if rel_id in image_id_list:
-                    # Relocate
-                    # logger.debug(f"{image_id} alts: Moving {rel_id} to index {image_index+1}")
-                    image_id_list.remove(rel_id)
-                    image_id_list.insert(image_index+1, rel_id)
-                else:
-                    # Add
-                    # logger.debug(f"{image_id} alts: Adding new {rel_id} to index {image_index+1}")
-                    image_id_list.insert(image_index+1, rel_id)
-
-                # logger.debug(f"New list: {image_id_list}")
-                # logger.debug(f"{image_id} alts: adding {rel_id} to moved set {moved}")
-                moved.add(rel_id)
-    return image_id_list
-
-
-
-def has_note(notename: str, max_n: int = 4) -> querylang.OrQuery:
-    return [
-        *[f'system:has note with name "{notename}"'],
-        *[f'system:has note with name "{notename} ({n})"' for n in range(1, max_n)]
-    ]
-
+    try:
+        favorites_service_key = get_service_key(
+            client_services,
+            hydrus_api.ServiceType.LIKE_DISLIKE_RATING,
+            HyApiSettings.service_name_favorites
+        )
+    except StopIteration:
+        logger.exception(f"Missing a {HyApiSettings.service_name_favorites!r} tag group. Some things may break! This tool needs to be fixed to better support this case.")
 
 
 if __name__ == "__main__":
     init_client()
+

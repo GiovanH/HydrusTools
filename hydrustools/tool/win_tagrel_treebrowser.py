@@ -82,7 +82,7 @@ class TagRelationshipsTreeWin(ToolWindow):  # noqa: PLR0904
 
         self.setStatus(f"Getting relationships among {len(all_tags)} tags")
         unnamespaced_tags = [t for t in all_tags_set if ':' not in t]
-        sibling_resp = hydrus.get_sibling_ideal_targets(unnamespaced_tags)
+        sibling_resp = hydrus.get_relationship_info(unnamespaced_tags)
         all_relationships_list = sibling_resp
         # all_relationships_map: dict[str, logic.SiblingInfo] = {
         #     **{

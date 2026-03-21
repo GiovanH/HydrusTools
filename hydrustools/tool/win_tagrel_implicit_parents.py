@@ -144,8 +144,8 @@ Parent factor defines how much more common a parent tag needs to be than other p
 
         self.pb['value'] += 25
         self.setStatus(f"Looking up relationships for {len(all_characters)} tags")
-        sibling_resp = hydrus.get_sibling_ideal_targets([t.value for t in all_characters])
-        all_relationships: dict[str, hydrus.SiblingInfo] = {
+        sibling_resp = hydrus.get_relationship_info([t.value for t in all_characters])
+        all_relationships: dict[str, hydrus.RelationshipInfo] = {
             **{
                 s: si
                 for si in

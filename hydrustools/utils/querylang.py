@@ -2,10 +2,7 @@
 import re
 from typing import NewType, Sequence, TypeAlias
 
-# The real query object, set to hydrus api
-AndQuery: TypeAlias = list['str | OrQuery']
-OrQuery: TypeAlias = list['str']
-Query = AndQuery
+from hydrus_api.types import AndQuery, OrQuery, Query
 
 # Copy-paste format used by hydrus client
 MLQuery = NewType('MLQuery', str)

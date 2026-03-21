@@ -3,6 +3,8 @@ from collections import OrderedDict
 from tkinter import ttk
 from typing import Any, ClassVar
 
+import hydrustools.utils.util
+
 from ..component.HydrusImageTable import HydrusImageTable
 from ..component.image_picker import ImagePickerWindow
 from ..component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
@@ -118,7 +120,7 @@ class ImageTool(ToolWindow):
     def fetch_all_metadata(self):
         all_ids = map(int, self.image_list.getAllIds())
 
-        for id_chunk in pb_iter(self.pb, [*hydrus.chunk(all_ids, 200)]):
+        for id_chunk in pb_iter(self.pb, [*hydrustools.utils.util.chunk(all_ids, 200)]):
             resp = hydrus.client.get_file_metadata(file_ids=id_chunk, **self.get_file_metadata_kwargs)
 
             def commit(resp=resp):

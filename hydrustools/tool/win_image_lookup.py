@@ -8,6 +8,7 @@ from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
 from hydrustools.component.tageditorlist import TagList
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
+import hydrustools.utils.namespace
 
 from .. import lookup
 from ..utils import hydrus
@@ -76,7 +77,7 @@ Heavy work-in-progress"""
         self.checkbuttons: dict[str, ttk.Checkbutton] = {}
 
         self.tag_count_cache: dict[str, int] = {}
-        self.all_relationships: dict[str, hydrus.SiblingInfo]
+        self.all_relationships: dict[str, hydrus.RelationshipInfo]
 
         self.listbox_taglist: TagList
         self.action_table: MultiColumnListbox
@@ -290,7 +291,7 @@ Heavy work-in-progress"""
 
         self.listbox_taglist.delete(0, self.listbox_taglist.size())
 
-        for tag in hydrus.sort_tags(tag_list):
+        for tag in hydrustools.utils.namespace.sort_tags(tag_list):
             self.listbox_taglist.insert(tk.END, tag)
 
         for (id_, var) in self.plugin_enabled.items():
@@ -323,8 +324,8 @@ Heavy work-in-progress"""
         all_tags_set = {ti.value for ti in all_tags}
         self.tag_count_cache = {ti.value: ti.count for ti in all_tags}
 
-        sibling_resp = hydrus.get_sibling_ideal_targets([*all_tags_set])
-        self.all_relationships: dict[str, hydrus.SiblingInfo] = {
+        sibling_resp = hydrus.get_relationship_info([*all_tags_set])
+        self.all_relationships: dict[str, hydrus.RelationshipInfo] = {
             **{
                 s: si
                 for si in

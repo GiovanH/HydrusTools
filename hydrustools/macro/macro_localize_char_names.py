@@ -36,8 +36,8 @@ def find_localchars(tk=True):
 
     sibling_actions: list[SiblingAction] = []
 
-    sibling_resp = hydrus.get_sibling_ideal_targets([f"{m.string}" for m in matches])
-    sibling_info: dict[str, hydrus.SiblingInfo] = {
+    sibling_resp = hydrus.get_relationship_info([f"{m.string}" for m in matches])
+    sibling_info: dict[str, hydrus.RelationshipInfo] = {
         **{
             si.tag: si
             for si in
@@ -73,7 +73,7 @@ def find_localchars(tk=True):
 
             group = ""
 
-            si: hydrus.SiblingInfo | None = sibling_info.get(tag)
+            si: hydrus.RelationshipInfo | None = sibling_info.get(tag)
             if si:
                 # print(si)
                 current_sibling = sibling_options.index(si.ideal_tag)
