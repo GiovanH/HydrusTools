@@ -18,6 +18,9 @@ release: exe
 
 # IMPLEMENTATION
 
+# Get GIT_TAG from environment variable, fallback to git command if not set
+GIT_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo snapshot-$(date +'%Y-%m-%d'))
+
 VPYTHON=venv/Scripts/python.exe
 
 SRC_ROOT=.
@@ -52,7 +55,6 @@ Docs_CLI.md: venv autodoc.py launcher.py ${MODULE_SRCS}
 
 .PHONY: lint
 lint: venv
-# 	-${VPYTHON} -m mypy ${SRC_ROOT}/${module_name}
 	-${VPYTHON} -m mypy --install-types --non-interactive --check-untyped-defs --follow-untyped-imports ${SCRIPT_SRCS}
 	-vulture ${SCRIPT_SRCS} ${MODULE_SRCS}
 
@@ -100,6 +102,3 @@ dist/${project_name}.exe: ${SRC_ROOT}/launcher.py ${MODULE_SRCS} ${SCRIPT_SRCS} 
 
 # 		--icon "icon.png" \
 # 		--add-data="icon.png:." \
-
-# Get GIT_TAG from environment variable, fallback to git command if not set
-GIT_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo snapshot-$(date +'%Y-%m-%d'))

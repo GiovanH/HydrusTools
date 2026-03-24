@@ -1,4 +1,5 @@
 
+import logging
 import re
 from typing import NewType, Sequence, TypeAlias
 
@@ -10,39 +11,65 @@ MLQuery = NewType('MLQuery', str)
 # Single line format used for query lang
 SLQuery = NewType('SLQuery', str)
 
-def parse_sl_query(query: SLQuery | str) -> Query:
+logger = logging.getLogger(__name__)
+
+def parse_sl_query(
+    query: SLQuery | str,
+    tok_and='&&',
+    tok_or='||'
+) -> Query:
+    if (tok_and not in " AND ") and (" AND " in query or " OR " in query):
+        logger.debug("Switching to legacy sl parsing for %s", query)
+        return parse_sl_query(
+            query,
+            tok_and='AND',
+            tok_or='OR'
+        )
+
     # Claude artifact
     def parse_token(token: str) -> 'str | OrQuery':
         token = token.strip()
         if token.startswith('(') and token.endswith(')'):
             inner = token[1:-1]
-            return inner.split(' OR ')
+            return inner.split(f' {tok_or} ')
         return token
 
     if not query.startswith('(') and not query.endswith(')'):
-        if ' AND ' not in query and ' OR ' in query:
-            return [query.split(' OR ')]
+        if f' {tok_and} ' not in query and f' {tok_or} ' in query:
+            return [query.split(f' {tok_or} ')]
 
-    parts = re.split(r'\s+AND\s+(?![^(]*\))', query)
+    parts = re.split(fr'\s+{tok_and}\s+(?![^(]*\))', query)
     return [parse_token(p) for p in parts]
 
-def parse_ml_query(query: MLQuery | str) -> Query:
-    return [
-        line if ' OR ' not in line
-        else line.split(' OR ')
-        for line in query.split("\n")
-    ]
-
-def serialize_query_sl(query: Query) -> SLQuery:
-    return SLQuery(' AND '.join([
+def serialize_query_sl(
+    query: Query,
+    tok_and='&&',
+    tok_or='||'
+) -> SLQuery:
+    return SLQuery(f' {tok_and} '.join([
         pred if isinstance(pred, str)
-        else "(" + " OR ".join(pred) + ")"
+        else "(" + f' {tok_or} '.join(pred) + ")"
         for pred in query
     ]))
 
-def serialize_query_ml(query: Query) -> MLQuery:
+def parse_ml_query(
+    query: MLQuery | str,
+    # tok_and='AND',
+    tok_or='OR'
+) -> Query:
+    return [
+        line if f' {tok_or} ' not in line
+        else line.split(f' {tok_or} ')
+        for line in query.split("\n")
+    ]
+
+def serialize_query_ml(
+    query: Query,
+    # tok_and='AND',
+    tok_or='OR'
+) -> MLQuery:
     return MLQuery('\n'.join([
         pred if isinstance(pred, str)
-        else " OR ".join(pred)
+        else f' {tok_or} '.join(pred)
         for pred in query
     ]))

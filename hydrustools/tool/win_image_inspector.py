@@ -397,4 +397,6 @@ If tagname is attached to the image, "-tagname" will remove it.
         )
         metadata['ratings'][hydrus.favorites_service_key] = new_rating
 
+        if self.tag_editor_list.modified:
+            self.save_tag_list()
         self.refresh_current()
