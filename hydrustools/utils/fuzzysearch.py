@@ -1,42 +1,30 @@
-
-from collections import namedtuple
-from dataclasses import dataclass
 import functools
-import itertools
 import logging
 import pprint
 import re
-from typing import Any, Callable, Hashable, Optional, Sequence, TypeAlias
+from collections import namedtuple
 
 from frozendict import frozendict
 
-# TODO: Better fuzzy searching
-# TODO: Use - in entry to remove tags
-
-"""
-Goals:
-
-- Segmented search. "j e" matches "john egbert"
-- Namespace support.
-    - "c:e" matches "character:egbert" and "creator:engles"
-    - "e" also matches "character:egbert"
-- Caching. Many searches are going to be run on the same collection
-- Context: Artifically increase the score for known relevant list items
-- Synonyms
-
-Don't need anymore:
-
-- Ambiguity checking: listbox already highlights a single element
-"""
-
 logger = logging.getLogger(__name__)
 
-# logger.setLevel(logging.DEBUG)
+Score = namedtuple(
+    "Score",
+    ["accuracy", "distance", "length", "tagcount"],
+    defaults=[0, 0, 0, 0]
+)
 
-Score = namedtuple("Score", ["accuracy", "distance", "length", "tagcount"], defaults=[0, 0, 0, 0])
+_SCORE_ZERO = Score(0, 0, 0, 0)
 
 def mzs(t1: Score, t2: Score) -> Score:
-    return Score(*map(sum, zip(t1, t2)))
+    # return Score(*map(sum, zip(t1, t2)))
+    return Score(
+        t1.accuracy  + t2.accuracy,
+        t1.distance  + t2.distance,
+        t1.length    + t2.length,
+        t1.tagcount  + t2.tagcount,
+    )
+
 
 @functools.lru_cache(maxsize=80000)
 def split_to_segments(q: str, query_split) -> tuple[str, ...]:
@@ -68,46 +56,61 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
 
     qix = 0
     hix = 0
+    hlen = len(hay_segments)
+    qlen = len(query_segments)
 
-    while qix < len(query_segments) and hix < len(hay_segments):
+    # Pre-compute namespace colon index once instead of re-evaluating inside the loop
+    try:
+        colon_idx = hay_segments.index(":")
+        ns_bonus = colon_idx + 1
+        has_colon = True
+    except ValueError:
+        has_colon = False
+        ns_bonus = 0
+        colon_idx = 0
+
+    while qix < qlen and hix < hlen:
         qseg = query_segments[qix]
         hseg = hay_segments[hix]
 
         scoredelta = compare_segments(qseg, hseg, query_split=query_split)
-        # logger.debug("    %s <> %s: %s", qseg, hseg, scoredelta)
 
         if scoredelta == -1:
             hix += 1
             continue
-        else:
-            # logger.debug("    score %s += %s (delta)", accuracy, scoredelta)
-            accuracy += scoredelta
 
-            # logger.debug("    score %s -= %s (hix)", accuracy, hix)
-            pen_index -= hix
-            # Reverse distance for namespaces
-            if ":" in hay_segments:
-                pen_index += hay_segments.index(":") + 1
+        accuracy += scoredelta
+        pen_index -= hix
+        if has_colon:
+            pen_index += ns_bonus
 
-            qix += 1
-            hix += 1
-            continue
-    if qix < len(query_segments):
-        # Didn't consume query
-        return Score()
+        qix += 1
+        hix += 1
 
-    if ":" in hay_segments:
-        len_pen = len([
-            h for h in
-            hay_segments[hay_segments.index(":"):]
-            if len(h) > 1
-        ])
+    if qix < qlen:
+        return _SCORE_ZERO
+
+    if has_colon:
+        len_pen = sum(1 for h in hay_segments[colon_idx:] if len(h) > 1)
     else:
-        len_pen = len([h for h in hay_segments if len(h) > 1])
-    # logger.debug("    distance %s (length)", len_pen)
-    # distance = -len_pen
+        len_pen = sum(1 for h in hay_segments if len(h) > 1)
 
     return Score(accuracy=accuracy, distance=pen_index, length=-len_pen)
+
+
+@functools.lru_cache(maxsize=64)
+def _precompute_segments(
+    collection: tuple[str, ...],
+    query_split,
+) -> dict[str, tuple[str, ...]]:
+    """Return {hay: hay_segments} for the whole collection, computed once per
+    (collection, query_split) pair.  For a stable collection this turns
+    repeated per-item split_to_segments calls into a single dict lookup."""
+    return {
+        hay: split_to_segments(hay, query_split)
+        for hay in collection
+    }
+
 
 def merge_lists(
     *lists: list[tuple[Score, str]],
@@ -129,10 +132,6 @@ def merge_lists(
 
     results.sort(key=lambda l: l[0], reverse=True)
 
-    # logger.debug(perfect_search.cache_info())
-    # logger.debug(split_to_segments.cache_info())
-    # logger.debug(compare_segments.cache_info())
-    # logger.debug(score_segments.cache_info())
     logger.debug(pprint.pformat(results))
 
     return [val for score, val in results]
@@ -149,53 +148,37 @@ def perfect_search(
     # Each segment in the search must match a segment in the result, in some order
     results: list[tuple[Score, str]] = []
 
-    # if len(query) > 3:
-    #     collection = tuple(merge_lists(
-    #         perfect_search(
-    #             collection,
-    #             query[:-2],
-    #             query_split=query_split,
-    #             score_bonus=score_bonus,
-    #             limit=limit
-    #         )
-    #     ))
+    # if len(query) > 1:
+    #     prior = perfect_search(
+    #         collection,
+    #         query[:-1],
+    #         query_split,
+    #         score_bonus,
+    #         limit=limit
+    #     )
+    #     collection = tuple(hay for _, hay in prior)
 
     # Filter out
     query_segments: tuple[str, ...] = split_to_segments(query, query_split)
 
-    visited = set()
-    # TODO: Always process extras and context ignoring limit. Then count the limit on collection
+    query_segments = split_to_segments(query, query_split)
+    hay_seg_map = _precompute_segments(collection, query_split)
+
     for hay in collection:
         if limit and len(results) >= limit:
             break
 
-        visited.add(hay)
-
-        # logger.debug("%s <> %s", query, hay)
-        score: Score = Score(0, 0, 0)
-
-        hay_segments: tuple[str, ...] = split_to_segments(hay, query_split)
-
-        # logger.debug(f"{query_split.match(query)!r} and {query_split.match(hay)!r}")
-
         if query == hay:
-            score = mzs(score, Score(accuracy=100))
+            score = Score(accuracy=100)
         else:
-            score = mzs(score, score_segments(query_segments, hay_segments, query_split=query_split))
+            score = score_segments(query_segments, hay_seg_map[hay], query_split=query_split)
 
-        # logger.debug("  scored %s", score)
         if score.accuracy < 1:
-            # logger.debug("Reject")
             continue
 
-        # logger.debug("  score %s += %s (bonus)", score, score_bonus)
-        score = mzs(score, Score(accuracy=score_bonus))
-
-        # logger.debug("  final %s", score)
+        if score_bonus:
+            score = mzs(score, Score(accuracy=score_bonus))
 
         results.append((score, hay))
 
-    # print(query)
-    # pprint.pprint(results)
     return results
-
