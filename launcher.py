@@ -1,6 +1,5 @@
 import sys
 
-from hydrustools import gui
 from hydrustools.utils import htlogging
 
 
@@ -29,6 +28,11 @@ class SubModules():
         hydrustools.cli.lookup.main()
 
     @staticmethod
+    def convert_booru():
+        import hydrustools.utils.convert_booru
+        hydrustools.utils.convert_booru.main()
+
+    @staticmethod
     def bubblegroup():
         import hydrustools.cli.bubblegroup
         hydrustools.cli.bubblegroup.main()
@@ -52,4 +56,5 @@ if __name__ == '__main__':
         sys.exit(tryRun(cmd))
 
     else:
+        from hydrustools import gui
         sys.exit(gui.main())
