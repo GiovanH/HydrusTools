@@ -11,7 +11,7 @@ from hydrustools.component.image_canvas import ContentCanvas
 from hydrustools.component.image_picker import ImageListFrame, ImagePickerWindow
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
-from hydrustools.component.tageditorlist import TagEditorList
+from hydrustools.component.tag_list_editor import TagEditorList
 from hydrustools.settings import HTSettings, settings_section
 
 from ..utils import hydrus
@@ -186,7 +186,7 @@ If tagname is attached to the image, "-tagname" will remove it.
         entry.bind("<Control-d>", self.toggle_delete)
 
         self.tag_editor_list.bind("<<DWIM>>", self.entry_dwim)
-        self.tag_editor_list.bind("<<TagAdd>>", self.on_add)
+        self.tag_editor_list.bind("<<TagApply>>", self.on_add)
         self.tag_editor_list.pb = self.pb
 
 
@@ -214,10 +214,10 @@ If tagname is attached to the image, "-tagname" will remove it.
                 self.next_image()
 
     def on_add(self, event: tk.Event):
-        new_tag: str = self.tag_editor_list.last_tag
-        assert isinstance(new_tag, str)
+        new_entry: str = self.tag_editor_list.last_entry
+        assert isinstance(new_entry, str)
         assert self.current_image
-        self.logger.info("Got event adding new tag %s %s", event, new_tag)
+        self.logger.info("Got event adding new tag %s %s", event, new_entry)
         file_id = self.current_image['file_id']
 
         if len(self.tagstack) == 0:
@@ -227,14 +227,23 @@ If tagname is attached to the image, "-tagname" will remove it.
             self.logger.debug(f"{file_id=} != {self.tagstack_from=}, resetting stack")
             self.tagstack.clear()
             self.tagstack_from = file_id
-        self.logger.debug("Attaching %s to stack for %s", new_tag, file_id)
-        self.tagstack.append(new_tag)
+
+        self.logger.debug("Attaching %s to stack for %s", new_entry, file_id)
+
+        if new_entry.startswith("-") and new_entry[1:] in self.tagstack:
+            self.tagstack.remove(new_entry[1:])
+
+        self.tagstack.append(new_entry)
         self.textvar_tagstack.set('\n'.join(self.tagstack))
 
     def try_repeat(self, event):
         for t in self.tagstack:
             self.logger.debug("Adding tag %s", t)
-            self.tag_editor_list.addTag(t, interactive=False)
+            if t.startswith("-"):
+                # Delete command
+                self.tag_editor_list.removeTag(t[1:], interactive=False)
+            else:
+                self.tag_editor_list.addTag(t, interactive=False)
 
         # self.logger.debug("Finished repeat, clearing stack")
         # self.tagstack.clear()

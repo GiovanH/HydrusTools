@@ -10,16 +10,16 @@ import numpy as np
 
 from ..utils import hydrus
 from ..utils.gui_util import Increment, flatList, tkwrapc
-from ..component.tageditorlist import TagEditorList
+from ..component.tag_list_editor import TagEditorList
 from ..component.toolwindow import ToolWindow
 
 
 @functools.lru_cache
-def alternatesOfHash(file_hash):
+def alternatesOfHash(file_hash) -> list[str]:
     file_relationships = hydrus.client.get_file_relationships(
         hashes=[file_hash]
     )['file_relationships']
-    return file_relationships[file_hash][str(hydrus_api.DuplicateStatus.ALTERNATES.value)]
+    return file_relationships[file_hash][str(hydrus_api.DuplicateStatus.ALTERNATES.value)] # type: ignore
 
 class AlternatesSyncWin(ToolWindow):
     label = "Synchronize Alternate Meta (WIP)"

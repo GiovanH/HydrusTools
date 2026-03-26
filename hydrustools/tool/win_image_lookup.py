@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from hydrustools.component.imagetool import ImageIconSchema, ImageTool
 from hydrustools.component.multicolumnlistbox import MultiColumnListbox, TreeListItemDict, TreeviewSchema
-from hydrustools.component.tageditorlist import TagList
+from hydrustools.component.tag_list_editor import TagList
 from hydrustools.lookup.registry import LookupPlugin, MetadataActions, postprocessSuggestions
 import hydrustools.utils.namespace
 

@@ -95,7 +95,7 @@ class TagEditorList(ttk.Frame):
         self.tag_synonyms_all: dict[str, str] = {}
 
         self.last_query = ""
-        # self.last_tag: str | None = None
+        # self.last_entry: str | None = None
 
         self.aggressive = tk.BooleanVar(value=True)
 
@@ -188,21 +188,17 @@ class TagEditorList(ttk.Frame):
             self.listbox_taglist.insert(tk.END, new_tag)
             self.modified = True
             self.event_generate("<<Modified>>")
-        if interactive:
-            self.last_tag = new_tag
-            self.event_generate("<<TagAdd>>")
 
         # print(self.listbox_taglist.itemconfig(len(self.tag_list)))
 
         self.validate()
 
-    def removeTag(self, target_tag: str):
+    def removeTag(self, target_tag: str, interactive=True):
         index = self.tag_list.index(target_tag)
         self.listbox_taglist.delete(index)
         self.tag_list.pop(index)
         self.modified = True
 
-        self.event_generate("<<Modified>>")
         self.validate()
 
     def removeSelectedTags(self, event: tk.Event):
@@ -240,6 +236,10 @@ class TagEditorList(ttk.Frame):
             else:
                 self.addTag(selected_suggestion)
                 # self.last_tag = selected_suggestion
+
+            self.last_entry = selected_suggestion
+            self.event_generate("<<TagApply>>")
+
             widget.delete(0, tk.END)
             self.validate()
             return
@@ -247,7 +247,10 @@ class TagEditorList(ttk.Frame):
         entry_value = widget.get()
         if entry_value:
             self.addTag(entry_value)
-            # self.last_tag = entry_value
+
+            self.last_entry = entry_value
+            self.event_generate("<<TagApply>>")
+
             widget.delete(0, tk.END)
 
             self.add_single_tag_to_context(entry_value)
