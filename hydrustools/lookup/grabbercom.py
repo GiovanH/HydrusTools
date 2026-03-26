@@ -128,9 +128,9 @@ class grabberComMd5Plugin(registry.LookupPlugin):
         known_sources: set[str] = set(metadata['known_urls'])
         new_sources = set()
 
-        alternate_hashes = hydrus.client.get_file_relationships(
+        alternate_hashes: list[str] = hydrus.client.get_file_relationships(
             file_ids=[metadata['file_id']]
-        )['file_relationships'][metadata['hash']][str(hydrus_api.DuplicateStatus.DUPLICATES)]
+        )['file_relationships'][metadata['hash']][str(hydrus_api.DuplicateStatus.DUPLICATES)] # type: ignore
 
         resp = hydrus.client.get_file_hashes(
             hashes=[metadata['hash'], *alternate_hashes],

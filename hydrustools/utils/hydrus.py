@@ -311,6 +311,30 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
             }
         )
 
+
+def replace_tag_in_query(tag_name: str, new_tags: list[str], in_query: querylang.AndQuery):
+    resp = client.search_files(
+        tags=in_query
+    )
+    matching_files = resp['file_ids']
+
+    logger.info(f"Replacing {tag_name!r} with {new_tags!r} in {len(matching_files)} files matching {in_query}")
+    replace_tag(tag_name, new_tags, matching_files)
+
+def delete_query(reason: str, query: hydrus_api.AndQuery):
+    resp = client.search_files(
+        tags=query
+    )
+    file_ids = resp['file_ids']
+    if len(file_ids) < 1:
+        return
+    logger.info(f"Deleting {len(file_ids)} images matching {query}")
+    client.delete_files(
+        file_ids=file_ids,
+        reason=reason
+    )
+
+
 # Init
 
 def init_client() -> None:

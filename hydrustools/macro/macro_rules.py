@@ -18,20 +18,10 @@ class Settings(HTSettings):
     flatten_search_hl: list[str] = []
 
 
-def replace_tag_in_query(tag_name: str, new_tags: list[str], in_query: querylang.AndQuery):
-
-    resp = hydrus.client.search_files(
-        tags=in_query
-    )
-    matching_files = resp['file_ids']
-
-    logger.info(f"Replacing {tag_name!r} with {new_tags!r} in {len(matching_files)} files matching {in_query}")
-    hydrus.replace_tag(tag_name, new_tags, matching_files)
-
 def disambiguate_chars_in_series(series: str, characters: list[str]):
     for character in characters:
         char_tag = f'character:{character}'
-        replace_tag_in_query(
+        hydrus.replace_tag_in_query(
             char_tag,
             [f'character:{character} ({series})'],
             [char_tag, f'series:{series}']
@@ -61,6 +51,15 @@ def run(tk=True):
     disambiguate_chars_in_series(
         'totally spies',
         ['alex', 'clover', 'sam']
+    )
+
+    hydrus.delete_query(
+        "Pixiv thumbnail",
+        ['creator:breedingduties','system:height = 346','system:width = 346']
+    )
+    hydrus.delete_query(
+        "Pixiv thumbnail",
+        ['creator:breedingduties','system:height = 250','system:width = 250']
     )
 
 
