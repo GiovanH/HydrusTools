@@ -82,8 +82,6 @@ def main():
     global logger
     logger = logging.getLogger(__name__)
 
-    hydrus.init_client()
-
     plugin_repr_list = [
         f"{k} ({v.name})"
         for k, v in plugin_registry.items()
@@ -93,8 +91,6 @@ def main():
     parser = argparse.ArgumentParser(
         usage="lookup PLUGINS QUERY [FLAGS]...",
         description="""Use lookup plugins to merge discovered metadata into hydrus files. Takes a hydrus query and plugin list and merges metadata into hydrus according to passed options. Some plugins may have additional ini configuration.
-
-
 
 Example invocations:
 > lookup 'Saucenao' 'system:no urls AND system:limit=100'
@@ -131,6 +127,8 @@ Example invocations:
         help="Convert underscores to spaces in tags")
 
     args = parser.parse_args()
+
+    hydrus.init_client()
 
     selected_plugins: list[str] = args.plugins.split(',')
     always_local_namespaces: list[str] = args.always_local_namespaces.split(',')

@@ -6,9 +6,9 @@ from typing import ClassVar
 
 import hydrus_api
 
+import hydrustools.utils.util
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.component.multicolumnlistbox import TreeListItemDict, TreeviewSchema
-import hydrustools.utils.util
 
 from ..component.toolwindow import ToolWindow
 from ..settings import HTSettings, settings_section

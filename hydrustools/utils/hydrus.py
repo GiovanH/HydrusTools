@@ -1,3 +1,4 @@
+from collections import defaultdict
 import dataclasses
 import functools
 import logging
@@ -5,7 +6,7 @@ import pprint
 import re
 from collections.abc import Sequence
 from io import BytesIO
-from typing import Literal
+from typing import Literal, Mapping
 
 import hydrus_api
 from hydrus_api.types import FileHash, FileId, FileMetadata, FileRelationships, ServiceKey
@@ -13,9 +14,10 @@ from PIL import Image
 from pydantic import TypeAdapter
 
 from hydrustools.component.toolwindow import ToolWindow
-from hydrustools.utils import querylang
+from hydrustools.utils import hydrus, querylang
 from hydrustools.utils.gui_util import flatList
 from hydrustools.utils.inisettings import IniSettings
+from hydrustools.utils.namespace import get_tag_unnamespaced_value
 from hydrustools.utils.typedclient import TypedClient
 
 from ..settings import settings_section
@@ -216,7 +218,10 @@ def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] |
     if in_file_ids:
         tagged_files = in_file_ids
     else:
-        resp = client.search_files(tags=[original_tag])
+        resp = client.search_files(
+            tags=[original_tag],
+            tag_service_key=local_tags_service_key
+        )
         tagged_files = resp["file_ids"]
     # pprint.pprint(tagged_files)
 
@@ -251,7 +256,8 @@ def flatten_tag_to_parents(source_tag: str):
 
 def remove_tags_from_matches(query: querylang.AndQuery, remove_tags: list[str]):
     resp = client.search_files(
-        tags=query
+        tags=query,
+        tag_service_key=local_tags_service_key
     )
     matching_files = resp['file_ids']
 
@@ -314,7 +320,8 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
 
 def replace_tag_in_query(tag_name: str, new_tags: list[str], in_query: querylang.AndQuery):
     resp = client.search_files(
-        tags=in_query
+        tags=in_query,
+        tag_service_key=local_tags_service_key
     )
     matching_files = resp['file_ids']
 
@@ -323,7 +330,9 @@ def replace_tag_in_query(tag_name: str, new_tags: list[str], in_query: querylang
 
 def delete_query(reason: str, query: hydrus_api.AndQuery):
     resp = client.search_files(
-        tags=query
+
+        tags=query,
+        tag_service_key=local_tags_service_key
     )
     file_ids = resp['file_ids']
     if len(file_ids) < 1:
@@ -380,4 +389,36 @@ def init_client() -> None:
 
 if __name__ == "__main__":
     init_client()
+
+
+def apply_tagset_groups(
+    group_namespace: str,
+    groups: Mapping[frozenset[str], list[hydrus_api.FileMetadata]]
+):
+    all_tagsets: list[frozenset] = [*groups.keys()]
+    for i, (tagset, items) in enumerate(groups.items()):
+        # Clean up names
+        name_tagset = set()
+        for n in tagset:
+            if not all(n in set for set in all_tagsets) and not n.startswith("-"):
+                name_tagset.add(get_tag_unnamespaced_value(n))
+
+        if len(name_tagset) == 0:
+            n = next(iter(tagset))
+            name_tagset.add(get_tag_unnamespaced_value(n))
+
+        tagname = f"{group_namespace}:{', '.join(name_tagset)}"
+        if len(tagset) == 0:
+            tagname = f"{group_namespace}:emptyset"
+
+        logger.info(f"Adding tag {tagname} for group {tagset} with {len(items)} images")
+        hydrus.client.add_tags(
+            file_ids=[fm['file_id'] for fm in items],
+            service_keys_to_actions_to_tags={
+                hydrus.local_tags_service_key: {
+                    hydrus_api.TagAction.ADD: [tagname]
+                }
+            }
+        )
+    logger.info("Divided images into %s groups.", len(groups))
 

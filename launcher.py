@@ -33,6 +33,11 @@ class SubModules():
         hydrustools.utils.convert_booru.main()
 
     @staticmethod
+    def todogroup():
+        import hydrustools.cli.todogroup
+        hydrustools.cli.todogroup.main()
+
+    @staticmethod
     def bubblegroup():
         import hydrustools.cli.bubblegroup
         hydrustools.cli.bubblegroup.main()

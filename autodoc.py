@@ -72,7 +72,7 @@ if 'cli' in sys.argv:
             getattr(launcher.SubModules, launcher_module)()
         except SystemExit:
             pass
-        print("```")
+        print("```\n")
 
 
 for body, labels in duplicates.items():

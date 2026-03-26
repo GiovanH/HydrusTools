@@ -14,8 +14,8 @@ PRIOR_BY_HASH = 5
 
 @settings_section(section="Lookup", file="Lookup")
 class LookupSettings(HTSettings):
-    min_count_local: int = 20
-    min_count_download: int = 1
+    min_count_local: int | None = None
+    min_count_download: int | None = 1
     underscores_to_spaces: bool = True
     blacklist_tags_from_local: list[str] = []
     tag_namespace_whitelist: list[str] = []

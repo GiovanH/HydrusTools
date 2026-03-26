@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Iterable, TypedDict
 from urllib.parse import quote, urlparse
 
+# from hydrustools.utils.argparse_formatter import HTApFmtCls
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -170,18 +172,30 @@ def cli_dump_models(args):
     print("Write", summary, "to", file)
 
 def build_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="""Convert booru between semantic and booru-formatted URLs, with different formatters used for different booru types, which are mapped to different server types.
+
+This comes pre-supplied with a few common models but will also attempt to use existing configuration data to load booru models.
+The currently implemented metadata sources are:
+- Grabber (Known sites)
+- Grabber (XML format)
+
+This is the CLI utility. This file can also be used as a python library.""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     subparsers = parser.add_subparsers(dest="action", metavar="ACTION")
     subparsers.required = True
 
-    parser.add_argument("-m", "--load-models", help="Path to a models file")
+    parser.add_argument("-m", "--load-models", help="Path to a models file. These models will be added to the preinstalled models and any discovered models.")
 
     get_files = subparsers.add_parser(
-        "get_files", help="Get urls to files as json"
+        "get_files", help="Get urls to files as a json list of strings."
     )
-    get_files.add_argument("domain")
-    get_files.add_argument("file_ids", nargs="+")
-    get_files.add_argument("--gallerydl-hints", action="store_true")
+    get_files.add_argument("domain", help="Web domain of service")
+    get_files.add_argument("file_ids", nargs="+", help="Numerical file IDs")
+    get_files.add_argument(
+        "-g", "--gallerydl-hints", action="store_true",
+        help="Prepend output URLs with a gallerydl extractor prefix, if known.")
 
     def parser_get_files(args):
         hint_prefix = ''
@@ -202,11 +216,13 @@ def build_parser():
 
 
     get_search = subparsers.add_parser(
-        "get_search", help="Get the URL for a search"
+        "get_search", help="Get the URL for a search. Returns one URL joining all tags."
     )
-    get_search.add_argument("domain")
+    get_search.add_argument("domain", help="Web domain of service")
     get_search.add_argument("tags", nargs="+")
-    get_search.add_argument("--gallerydl-hints", action="store_true")
+    get_search.add_argument(
+        "-g", "--gallerydl-hints", action="store_true",
+        help="Prepend output URLs with a gallerydl extractor prefix, if known.")
 
     def parser_get_search(args):
         hint_prefix = ''
@@ -222,13 +238,23 @@ def build_parser():
 
     get_search.set_defaults(func=parser_get_search)
 
-    dump_models = subparsers.add_parser("dump_models", help="Write model info to models.json")
+    dump_models = subparsers.add_parser("dump_models", help="Load all available models from useru context, then write model info to models.json")
     dump_models.set_defaults(func=cli_dump_models)
+
+    if os.environ.get('htdocs'):
+        parser.print_help()
+        for sp in subparsers._name_parser_map.values():
+            print()
+            sp.print_help()
+        return
 
     return parser
 
 def main():
     parser = build_parser()
+    if not parser:
+        return
+
     args = parser.parse_args()
     if args.load_models:
         with open(args.load_models, "r") as fp:

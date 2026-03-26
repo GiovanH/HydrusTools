@@ -406,39 +406,13 @@ def bubble_group(
     # pbar.close()
     return groups
 
-def apply_groups(groups):
-    all_tagsets: list[frozenset] = [*groups.keys()]
-    for i, (tagset, items) in enumerate(groups.items()):
-        # Clean up names
-        name_tagset = set()
-        for n in tagset:
-            if not all(n in set for set in all_tagsets) and not n.startswith("-"):
-                name_tagset.add(hydrustools.utils.namespace.get_tag_unnamespaced_value(n))
-
-        tagname = f"{group_namespace}:{', '.join(name_tagset)}"
-        if len(tagset) == 0:
-            tagname = f"{group_namespace}:emptyset"
-
-        logger.info(f"Adding tag {tagname} for group {tagset} with {len(items)} images")
-        hydrus.client.add_tags(
-            file_ids=[bi.value['file_id'] for bi in items],
-            service_keys_to_actions_to_tags={
-                hydrus.local_tags_service_key: {
-                    hydrus_api.TagAction.ADD: [tagname]
-                }
-            }
-        )
-    logger.info("Divided images into %s groups.", len(groups))
-
 
 def main():
-    hydrus.init_client()
-
     parser = argparse.ArgumentParser(
         description="WIP!",
         formatter_class=HTApFmtCls
     )
-    parser.add_argument("query", help="Hydrus image query")
+    parser.add_argument("query", nargs='?', help="Hydrus image query")
     parser.add_argument("--ignore-namespaces", type=list, default=[
         'source', 'directory'
     ])
@@ -466,18 +440,23 @@ def main():
     assert args.min_size > 0
     assert args.max_size > args.min_size
 
+    hydrus.init_client()
+
     reset_groups()
+
+    if not args.query:
+        logger.info("No query, just resetting groups.")
+        return
 
     logger.info(f"Querying hydrus {args.query!r}...")
     resp = hydrus.client.search_files(
         tags=querylang.parse_sl_query(querylang.SLQuery(args.query)),
         tag_service_key=hydrus.local_tags_service_key
-
     )
     matching_files = resp['file_ids']
     logger.info(f"Got {len(matching_files)} ids, getting metadata...")
 
-    all_images: list[hydrus.FileMetadata] = hydrus.client.get_file_metadata(file_ids=matching_files, include_notes=True)['metadata']
+    all_images: list[hydrus.FileMetadata] = hydrus.client.get_file_metadata(file_ids=matching_files)['metadata']
     logger.info(f"Got {len(matching_files)} metadata sets")
 
     bubble_list: list[BubbleItem] = []
@@ -550,7 +529,10 @@ def main():
         # iterhandler.dump()
         raise
 
-    apply_groups(groups)
+    hydrus.apply_tagset_groups(group_namespace, {
+        k: [bi.value for bi in v]
+        for k, v in groups
+    })
 
 
 if __name__ == '__main__':
