@@ -11,12 +11,17 @@ from __future__ import annotations
 
 from _thread import LockType
 import configparser
+import dataclasses
 import json
 import threading
 from pathlib import Path
 from typing import Any, TypeVar, get_type_hints
 
+from typing import get_args, get_origin
+
 from pydantic import TypeAdapter
+
+from pydantic.errors import PydanticUserError
 
 from typing import TYPE_CHECKING
 
@@ -119,18 +124,37 @@ class _IniSettings:
         return json.dumps(value, indent=0)
 
     def _deserialize(self, attr: str, raw: str) -> Any:
+
+        def _deserialize_atom(raw: str, expected: type):
+            if expected in (int, float, str):
+                return expected(raw)
+
+            if expected is bool:
+                return raw.lower() in ("true", "1", "yes", "on")
+
+            if dataclasses.is_dataclass(expected):
+                return expected(raw)
+
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                print(raw)
+                raise
+
         hints = get_type_hints(self.__class__)
         expected = hints.get(attr, str)
 
-        if expected is bool:
-            return raw.lower() in ("true", "1", "yes", "on")
-        if expected in (int, float, str):
-            return expected(raw)
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            print(raw)
-            raise
+        origin = get_origin(expected)
+        if origin == list:
+            (t1,) = get_args(expected)
+            layer: list = _deserialize_atom(raw, expected)
+            return [
+                _deserialize_atom(v, t1)
+                for v in layer
+            ]
+
+        return _deserialize_atom(raw, expected)
+
 
     def _init_defaults(self) -> None:
         with self._lock:
@@ -195,6 +219,16 @@ else:
             section: str = object.__getattribute__(self, "_section")
 
             if config.has_option(section, name):
-                return self._deserialize(name, config.get(section, name))
+                ret = self._deserialize(name, config.get(section, name))
+                # Validators only exist for attributes with type hints
+                validator = self._typevalidators.get(name)
+                if validator:
+                    try:
+                        validator.rebuild()
+                        validator.validate_python(ret)
+                    except PydanticUserError:
+                        print(ret)
+                        raise
+                return ret
 
             return schema[name]
