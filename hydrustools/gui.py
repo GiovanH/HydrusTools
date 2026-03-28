@@ -206,7 +206,7 @@ class ToolsListWindow(tk.Tk):
 
 def main():
     try:
-        hydrus.init_client()
+        hydrus.init_client(tk=True)
     except hydrus_api.ConnectionError as e:
         messagebox.showerror(
             "Error connecting",

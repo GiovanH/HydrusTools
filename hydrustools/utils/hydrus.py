@@ -6,6 +6,7 @@ import pprint
 import re
 from collections.abc import Sequence
 from io import BytesIO
+from tkinter import simpledialog
 from typing import Literal, Mapping
 
 import hydrus_api
@@ -367,12 +368,30 @@ def delete_all_query_matches(reason: str, query: hydrus_api.AndQuery):
 
 # Init
 
-def init_client() -> None:
+def init_client(tk=False) -> None:
     global client
     global local_tags_service_key
     global downloader_tags_service_key
     global favorites_service_key
     global client_services
+
+    if not HyApiSettings.hydrus_api_key or HyApiSettings.hydrus_api_key == "CHANGEME":
+        resp: str | None
+
+        prompt = "Enter your Hydrus API key (found under Services > Review Services > local > client api)\nYou can change this or set a custom base url in the HTSettings.ini file."
+        if tk:
+            resp = simpledialog.askstring("API Key", prompt)
+        else:
+            print(prompt)
+            resp = input("> ")
+
+        if resp:
+            if not re.match(r'[0-9a-f]{64}', resp):
+                print(f"{resp!r} doesn't look like an API key. Things will probably not work.")
+            else:
+                print("Looks good!")
+
+            HyApiSettings.hydrus_api_key = resp
 
     client = TypedClient(
         HyApiSettings.hydrus_api_key,
