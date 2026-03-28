@@ -112,7 +112,7 @@ class _IniSettings:
         if isinstance(value, str):
             return value
         # TODO validate against pydantic
-        return json.dumps(value, indent=2)
+        return json.dumps(value, indent=0)
 
     def _deserialize(self, attr: str, raw: str) -> Any:
         hints = get_type_hints(self.__class__)

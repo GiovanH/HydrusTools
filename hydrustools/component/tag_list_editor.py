@@ -5,13 +5,12 @@ import tkinter as tk
 from collections.abc import Sequence
 from tkinter import TclError, ttk
 
-from frozendict import frozendict
+from pyrsistent import PMap, pmap
 
-from hydrustools.utils import hydrus
-from hydrustools.utils import fuzzysearch
 import hydrustools.utils.namespace
-from hydrustools.utils.util import timer
 from hydrustools.settings import HTSettings, settings_section
+from hydrustools.utils import fuzzysearch, hydrus
+from hydrustools.utils.util import timer
 
 from ..utils.gui_util import tkwrapc
 
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 @settings_section(section="fuzzysearch")
 class Settings(HTSettings):
     fuzzysearch_penalize_namespaces: list[str] = ['ship']
+    fuzzysearch_boost_namespaces: list[str] = ['rating']
     gui_test_list: list[str] = []
 
 
@@ -31,10 +31,14 @@ def penalize_namespaces(tup: tuple[fuzzysearch.Score, str]):
             fuzzysearch.mzs(score, fuzzysearch.Score(accuracy=-5)),
             tag
         )
-        # logger.debug("Downgrading %s to %s, tag ns %s in %s", tup, new_entry, ns, Settings.fuzzysearch_penalize_namespaces)
+        return new_entry
+    if ns and ns.name in Settings.fuzzysearch_boost_namespaces:
+        new_entry = (
+            fuzzysearch.mzs(score, fuzzysearch.Score(accuracy=5)),
+            tag
+        )
         return new_entry
     else:
-        # logger.debug("Match %s OK, tag ns %s not in %s", tup, ns, Settings.fuzzysearch_penalize_namespaces)
         return tup
 
 class ListboxNavigator:
@@ -90,7 +94,7 @@ class TagEditorList(ttk.Frame):
         self.modified = False
 
         self.all_tags: Sequence[str] = []
-        self.all_tag_counts: frozendict[str, int]
+        self.all_tag_counts: PMap[str, int]
         self.tag_context: tuple[str, ...] = ()
         self.tag_synonyms_all: dict[str, str] = {}
 
@@ -283,15 +287,15 @@ class TagEditorList(ttk.Frame):
             *self.tag_synonyms_all.keys()
         )
 
-        self.all_tag_counts = frozendict({
+        self.all_tag_counts = pmap({
             t.value: t.count
             for t in all_tag_counts
         })
 
         # pprint.pprint(self.all_tags)
 
-        with timer("load tag context", min_secs=0.1):
-            self.load_context_suggestions()
+    # with timer("load tag context", min_secs=0.1):
+        self.load_context_suggestions()
 
 
     def load_context_suggestions(self, event=None):
@@ -332,33 +336,33 @@ class TagEditorList(ttk.Frame):
 
         delete_commands = tuple(f"-{t}" for t in self.tag_list)
 
-        with timer(f"all {len(self.all_tags)}", min_secs=0, logger=self.logger.info):
-            match_all = fuzzysearch.perfect_search(
-                self.all_tags,
-                query,
-                limit=40
-            )
+    # with timer(f"all {len(self.all_tags)}", min_secs=0, logger=self.logger.info):
+        match_all = fuzzysearch.perfect_search(
+            self.all_tags,
+            query,
+            limit=40
+        )
 
-        with timer(f"commands {len(delete_commands)}", min_secs=0, logger=self.logger.info):
-            match_commands = fuzzysearch.perfect_search(
-                delete_commands,
-                query
-            )
+    # with timer(f"commands {len(delete_commands)}", min_secs=0, logger=self.logger.info):
+        match_commands = fuzzysearch.perfect_search(
+            delete_commands,
+            query
+        )
 
-        with timer(f"context {len(self.tag_context)}", min_secs=0, logger=self.logger.info):
-            match_context = fuzzysearch.perfect_search(
-                self.tag_context,
-                query,
-                score_bonus=10
-            )
+    # with timer(f"context {len(self.tag_context)}", min_secs=0, logger=self.logger.info):
+        match_context = fuzzysearch.perfect_search(
+            self.tag_context,
+            query,
+            score_bonus=10
+        )
 
-        # TODO: This can build on previous results recursively
-        with timer("merge", min_secs=0, logger=self.logger.info):
-            matches = fuzzysearch.merge_lists(
-                match_all, match_commands, match_context,
-                count_tiebreak=self.all_tag_counts,
-                edits=[penalize_namespaces]
-            )
+    # TODO: This can build on previous results recursively
+    # with timer("merge", min_secs=0, logger=self.logger.info):
+        matches = fuzzysearch.merge_lists(
+            match_all, match_commands, match_context,
+            count_tiebreak=self.all_tag_counts,
+            edits=[penalize_namespaces]
+        )
 
         suggestions = []
         for tag in matches:
