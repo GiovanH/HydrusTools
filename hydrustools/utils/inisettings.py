@@ -94,7 +94,11 @@ class _IniSettings:
         object.__setattr__(self, "_initialized", True)
 
     def _get_typeadapters(self) -> dict[str, TypeAdapter[Any]]:
-        return {k: TypeAdapter(t) for k, t in get_type_hints(self.__class__).items() if not k.startswith('_')}
+        return {
+            k: TypeAdapter(t)
+            for k, t in get_type_hints(self.__class__).items()
+            if not k.startswith('_')
+        }
 
     def _get_schema(self) -> dict[str, Any]:
         schema: dict[str, Any] = {}

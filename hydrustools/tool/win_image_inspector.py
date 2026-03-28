@@ -254,7 +254,10 @@ If tagname is attached to the image, "-tagname" will remove it.
             self.logger.debug("Adding tag %s", t)
             if t.startswith("-"):
                 # Delete command
-                self.tag_editor_list.removeTag(t[1:], interactive=False)
+                try:
+                    self.tag_editor_list.removeTag(t[1:], interactive=False)
+                except ValueError:
+                    self.logger.warning(f"Repeated {t}, but tag not in list")
             else:
                 self.tag_editor_list.addTag(t, interactive=False)
 

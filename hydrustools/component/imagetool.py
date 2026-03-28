@@ -3,6 +3,8 @@ from collections import OrderedDict
 from tkinter import ttk
 from typing import Any, ClassVar
 
+from hydrus_api import FileId
+
 import hydrustools.utils.util
 
 from ..component.HydrusImageTable import HydrusImageTable
@@ -56,7 +58,7 @@ class ImageTool(ToolWindow):
         self.pb: ttk.Progressbar
 
         self.current_image: None | FileMetadata = None
-        self.known_metadata: dict[int, FileMetadata] = {}
+        self.known_metadata: dict[FileId, FileMetadata] = {}
 
         self.get_file_metadata_kwargs: dict[str, Any] = {
             "include_notes": True,
@@ -112,13 +114,17 @@ class ImageTool(ToolWindow):
         self.fetch_all_metadata()
 
         first_file_id = selection[0]["file_id"]
+        print(self.known_metadata.keys())
         self.image_list.tree.selection_set(first_file_id)
         self.image_list.tree.see(first_file_id)
 
         self.image_list.load_thumbnails()
 
+        # Wait for metadata commit
+        self.after_idle(lambda: self.set_image(self.known_metadata[first_file_id]))
+
     def fetch_all_metadata(self):
-        all_ids = map(int, self.image_list.getAllIds())
+        all_ids: map[FileId] = map(int, self.image_list.getAllIds())
 
         for id_chunk in pb_iter(self.pb, [*hydrustools.utils.util.chunk(all_ids, 200)]):
             resp = hydrus.client.get_file_metadata(file_ids=id_chunk, **self.get_file_metadata_kwargs)
@@ -126,7 +132,7 @@ class ImageTool(ToolWindow):
             def commit(resp=resp):
                 for metadata in resp['metadata']:
                     # pprint.pprint(metadata)
-                    file_id: int = metadata['file_id']
+                    file_id: FileId = metadata['file_id']
                     self.known_metadata[file_id] = metadata
 
             self.after('idle', commit)
