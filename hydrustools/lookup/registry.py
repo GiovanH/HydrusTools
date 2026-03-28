@@ -115,8 +115,8 @@ def postprocessSuggestions(
 
     tag_namespace_whitelist: list[str] | None = None,
 
-    tags_min_count_local: None | int = None,
-    tags_min_count_download: None | int = None,
+    tags_min_count_local: None | int = 0,
+    tags_min_count_download: None | int = 0,
     tag_count_cache: dict[str, int] = {},
 
     always_local_namespaces: list[str] = [],
@@ -143,33 +143,35 @@ def postprocessSuggestions(
                     actions.add_tags.remove(tag_value)
                     continue
 
-            # If there's a minimum count, move tags to dltags
-            if tags_min_count_local:
-                # ...unless creator tags are always local
-                never_move = False
-                for ns in always_local_namespaces:
-                    if tag_value.startswith(f"{ns}:"):
-                        never_move = True
+            # ...unless creator tags are always local
+            never_downgrade = False
+            for ns in always_local_namespaces:
+                if tag_value.startswith(f"{ns}:"):
+                    never_downgrade = True
+            if never_downgrade:
+                continue
 
-                # Downgrade because...?
-                dg_bc_list: bool = tag_value in blacklist_tags_from_local
-                dg_bc_threshhold: bool = never_move is False and tag_count_cache.get(tag_value, 0) < tags_min_count_local
+            # Downgrade because...?
+            dg_bc_list: bool = tag_value in blacklist_tags_from_local
+            dg_bc_threshhold: bool = tag_count_cache.get(tag_value, 0) < tags_min_count_local if tags_min_count_local else False
+            dg_bc_none = (tags_min_count_local is None)
 
-                if dg_bc_threshhold or dg_bc_list:
-                    actions.add_tags.remove(tag_value)
-                    # if not actions.add_downloader_tags:
-                    #     actions.add_downloader_tags = []
-                    actions.add_downloader_tags.append(tag_value)
+            if dg_bc_threshhold or dg_bc_list or dg_bc_none:
+                actions.add_tags.remove(tag_value)
+                # if not actions.add_downloader_tags:
+                #     actions.add_downloader_tags = []
+                actions.add_downloader_tags.append(tag_value)
 
     if actions.add_downloader_tags:
 
         for tag_value in [*actions.add_downloader_tags]:
             # If there's a minimum count, move tags to dltags
-            if tags_min_count_download:
-                if tag_count_cache.get(tag_value, 0) < tags_min_count_download:
-                    actions.add_downloader_tags.remove(tag_value)
-                    # if not actions.info_only:
-                    #     actions.info_only = []
-                    actions.info_only.append(tag_value)
+            dg_bc_threshhold: bool = tag_count_cache.get(tag_value, 0) < tags_min_count_download if tags_min_count_download else False
+            dg_bc_none = (tags_min_count_download is None)
+            if dg_bc_threshhold or dg_bc_none:
+                actions.add_downloader_tags.remove(tag_value)
+                # if not actions.info_only:
+                #     actions.info_only = []
+                actions.info_only.append(tag_value)
 
     return actions

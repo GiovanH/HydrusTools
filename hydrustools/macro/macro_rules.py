@@ -16,6 +16,7 @@ class Settings(HTSettings):
     flatten_presearch_hl: list[str] = []
     flatten_search: str = ""
     flatten_search_hl: list[str] = []
+    delete_query_matches: dict[str, list] = {}
 
 
 def disambiguate_chars_in_series(series: str, characters: list[str]):
@@ -37,6 +38,11 @@ def run(tk=True):
             logger.info("Nothing to do!")
 
     hydrus.remove_tags_from_matches(
+        ['meta:bad tag'],
+        ['meta:bad tag']
+    )
+
+    hydrus.remove_tags_from_matches(
         ['creator:*', 'todo:artist'],
         ['todo:artist']
     )
@@ -53,14 +59,11 @@ def run(tk=True):
         ['alex', 'clover', 'sam']
     )
 
-    hydrus.delete_query(
-        "Pixiv thumbnail",
-        ['creator:breedingduties','system:height = 346','system:width = 346']
-    )
-    hydrus.delete_query(
-        "Pixiv thumbnail",
-        ['creator:breedingduties','system:height = 250','system:width = 250']
-    )
+    for reason, query in Settings.delete_query_matches.items():
+        logger.info(f"Deleting images matching query {query} for reason {reason}")
+        hydrus.delete_all_query_matches(
+            reason=reason, query=query
+        )
 
 
 if __name__ == "__main__":

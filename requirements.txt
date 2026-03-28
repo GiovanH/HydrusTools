@@ -7,6 +7,7 @@ opencv-python
 pywin32
 tqdm
 frozendict
+pyrsistent
 pydantic
 numpy
 # Requests weirdness

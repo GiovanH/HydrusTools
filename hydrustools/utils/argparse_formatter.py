@@ -23,7 +23,8 @@ class HTArgparseFormatterDoc(argparse.RawDescriptionHelpFormatter):
                 default = self._get_default_metavar_for_optional(action)
                 args_string = self._format_args(action, default)
                 if len(action.option_strings) > 1:
-                    parts.append(f"[{' | '.join(sorted(action.option_strings, key=len))}] {args_string}")
+                    opts = sorted(action.option_strings, key=len)
+                    parts.append(f"[{' | '.join(opts)}] {args_string}")
                 else:
                     for option_string in action.option_strings:
                         parts.append('%s %s' % (option_string, args_string))

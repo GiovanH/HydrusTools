@@ -107,10 +107,10 @@ Example invocations:
 
     parser_overrides.add_argument("--min-count-local", "--mcl",
         type=int, default=LookupSettings.min_count_local,
-        help="Number of times this tag must already exist in tag repo to be added")
+        help="Number of times this tag must already exist in tag repo to be added. 0 to allow all, -1 to deny all.")
     parser_overrides.add_argument("--min-count-download", "--mcd",
         type=int, default=LookupSettings.min_count_download,
-        help="Number of times this tag must already exist in tag repo to be added")
+        help="Number of times this tag must already exist in tag repo to be added. 0 to allow all, -1 to deny all.")
 
     parser_overrides.add_argument("--always-local-namespaces", "--aln",
         default=','.join(LookupSettings.always_local_namespaces),
@@ -127,6 +127,11 @@ Example invocations:
         help="Convert underscores to spaces in tags")
 
     args = parser.parse_args()
+
+    if args.min_count_local == -1:
+        args.min_count_local = None
+    if args.min_count_download == -1:
+        args.min_count_local = None
 
     hydrus.init_client()
 

@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import hydrus_api
 
-from hydrustools.utils import htlogging
+from hydrustools.utils import htlogging, querylang
 from hydrustools.utils.argparse_formatter import HTApFmtCls
 from hydrustools.utils.hydrus import apply_tagset_groups
 
@@ -24,22 +24,32 @@ def main():
         description="WIP!",
         formatter_class=HTApFmtCls
     )
-    parser.add_argument("tags", nargs="+")
+    parser.add_argument("-d", "--descendants", action="store_true", help="Also collect any descendants of the supplied tags")
+    parser.add_argument("tags", nargs="*", help="List of tags. You can also provide an OR query and HT will try to parse it into tags.")
 
     args = parser.parse_args()
 
     hydrus.init_client()
 
-    reset_groups()
-
-    if len(args.tags) == 0:
+    if not args.tags or len(args.tags) == 0:
         logger.info("No query, just resetting groups.")
+        reset_groups()
         return
 
-    ors: hydrus_api.OrQuery = args.tags
-    query: hydrus_api.AndQuery = [ors]
+    if len(args.tags) == 1 and " OR " in args.tags[0]:
+        query: hydrus_api.AndQuery = querylang.parse_ml_query(args.tags[0])
+        tags = list(query[0])
+    else:
+        tags = args.tags
 
-    tag_set = set(args.tags)
+    if args.descendants:
+        all_relationships = hydrus.get_relationship_info(tags)
+        for si in all_relationships:
+            tags.extend(si.descendants)
+
+    tag_set = set(tags)
+    ors: hydrus_api.OrQuery = [*tag_set]
+    query = [ors]
 
     logger.info(f"Querying hydrus {query!r}...")
     resp = hydrus.client.search_files(
@@ -59,7 +69,9 @@ def main():
 
         groups[intersection].append(file_meta)
 
-    apply_tagset_groups(group_namespace, groups)
+    # print(groups)
+
+    apply_tagset_groups(group_namespace, groups, total=True)
 
 
 if __name__ == '__main__':

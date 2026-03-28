@@ -19,6 +19,7 @@ from hydrustools.utils.gui_util import flatList
 from hydrustools.utils.inisettings import IniSettings
 from hydrustools.utils.namespace import get_tag_unnamespaced_value
 from hydrustools.utils.typedclient import TypedClient
+from hydrustools.utils.util import chunk
 
 from ..settings import settings_section
 
@@ -212,6 +213,19 @@ def addAltsToList(image_id_list: list[int]) -> list[int]:
     return image_id_list
 
 
+def add_implying_siblings(removed_tags: list[str]):
+    """Extend a list of tags with any siblings that would imply
+    any tag in the list. Used to fully delete a tag from an image."""
+    resp = client.get_siblings_and_parents(removed_tags)
+    for v in resp["tags"].values():
+        if v[local_tags_service_key]['ideal_tag'] in removed_tags:
+            for s in v[local_tags_service_key]['siblings']:
+                if s not in removed_tags:
+                    logger.warning(f"Also removing sibling tag {s}")
+                    removed_tags.append(s)
+
+
+
 # Database operations
 
 def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] | None = None) -> None:
@@ -229,13 +243,16 @@ def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] |
         logger.info("Nothing to do!")
         return
 
+    removed_tags = [original_tag]
+    add_implying_siblings(removed_tags)
+
     logger.info(f"Replacing {original_tag!r} with {new_tags!r} in {len(tagged_files)} files")
     client.add_tags(
         file_ids=tagged_files,
         service_keys_to_actions_to_tags={
             local_tags_service_key: {
-              hydrus_api.TagAction.ADD: new_tags,
-              hydrus_api.TagAction.DELETE: [original_tag]
+                hydrus_api.TagAction.ADD: new_tags,
+                hydrus_api.TagAction.DELETE: removed_tags
             }
         }
     )
@@ -261,6 +278,9 @@ def remove_tags_from_matches(query: querylang.AndQuery, remove_tags: list[str]):
     )
     matching_files = resp['file_ids']
 
+    # We also need to remove any siblings of these tags
+    add_implying_siblings(remove_tags)
+
     logger.info(f"Removing {remove_tags!r} on {len(matching_files)} files matching {query}")
     if len(matching_files) == 0:
         logger.info("Nothing to do!")
@@ -275,8 +295,17 @@ def remove_tags_from_matches(query: querylang.AndQuery, remove_tags: list[str]):
         }
     )
 
-def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list: list[FileMetadata]):
-    tool.setStatus(f"Setting {len(tag_list)} tags")
+def set_tag_list_of_images(
+    tag_list: list[str],
+    tool: ToolWindow | None,
+    metadata_list: list[FileMetadata]
+):
+    if tool:
+        logStage = tool.setStatus
+    else:
+        logStage = logger.info
+
+    logStage(f"Setting {len(tag_list)} tags")
     file_ids = [m['file_id'] for m in metadata_list]
 
     client.add_tags(
@@ -295,16 +324,10 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
 
     logger.info("%s, %s", all_tags, set(tag_list))
 
-    removed_tags = set(all_tags).difference(set(tag_list))
+    removed_tags = [*set(all_tags).difference(set(tag_list))]
 
     # We also need to remove any siblings of these tags
-    resp = client.get_siblings_and_parents(removed_tags)
-    for v in resp["tags"].values():
-        if v[local_tags_service_key]['ideal_tag'] in removed_tags:
-            for s in v[local_tags_service_key]['siblings']:
-                if s not in removed_tags:
-                    logger.warning(f"Also removing sibling tag {s}")
-                    removed_tags.add(s)
+    add_implying_siblings(removed_tags)
 
     if removed_tags:
         logger.info(f"Removing tags: {removed_tags}")
@@ -312,29 +335,27 @@ def set_tag_list_of_images(tag_list: list[str], tool: ToolWindow, metadata_list:
             file_ids=file_ids,
             service_keys_to_actions_to_tags={
                 local_tags_service_key: {
-                    hydrus_api.TagAction.DELETE: [*removed_tags]
+                    hydrus_api.TagAction.DELETE: removed_tags
                 }
             }
         )
 
 
 def replace_tag_in_query(tag_name: str, new_tags: list[str], in_query: querylang.AndQuery):
-    resp = client.search_files(
+    matching_files = client.search_files(
         tags=in_query,
         tag_service_key=local_tags_service_key
-    )
-    matching_files = resp['file_ids']
+    )['file_ids']
 
     logger.info(f"Replacing {tag_name!r} with {new_tags!r} in {len(matching_files)} files matching {in_query}")
     replace_tag(tag_name, new_tags, matching_files)
 
-def delete_query(reason: str, query: hydrus_api.AndQuery):
-    resp = client.search_files(
-
+def delete_all_query_matches(reason: str, query: hydrus_api.AndQuery):
+    file_ids = client.search_files(
         tags=query,
         tag_service_key=local_tags_service_key
-    )
-    file_ids = resp['file_ids']
+    )['file_ids']
+
     if len(file_ids) < 1:
         return
     logger.info(f"Deleting {len(file_ids)} images matching {query}")
@@ -393,30 +414,80 @@ if __name__ == "__main__":
 
 def apply_tagset_groups(
     group_namespace: str,
-    groups: Mapping[frozenset[str], list[hydrus_api.FileMetadata]]
+    groups: Mapping[frozenset[str], list[hydrus_api.FileMetadata]],
+    total=False
 ):
+    all_tags_in_namespace = [ti.value for ti in hydrus.search_tags_re(f"{group_namespace}:*", subpattern=None)]
+
     all_tagsets: list[frozenset] = [*groups.keys()]
+    group_names = {}
+
+    add_tags: defaultdict[str, list[int]] = defaultdict(list)
+
+    # Gather pending add operations
     for i, (tagset, items) in enumerate(groups.items()):
+        if len(items) == 0:
+            continue
+
         # Clean up names
         name_tagset = set()
         for n in tagset:
             if not all(n in set for set in all_tagsets) and not n.startswith("-"):
                 name_tagset.add(get_tag_unnamespaced_value(n))
 
+        if len(tagset) == 0:
+            name_tagset.add("emptyset")
         if len(name_tagset) == 0:
             n = next(iter(tagset))
             name_tagset.add(get_tag_unnamespaced_value(n))
 
-        tagname = f"{group_namespace}:{', '.join(name_tagset)}"
-        if len(tagset) == 0:
-            tagname = f"{group_namespace}:emptyset"
+        tagname = f"{group_namespace}:{', '.join(sorted(name_tagset))}"
 
-        logger.info(f"Adding tag {tagname} for group {tagset} with {len(items)} images")
+        add_tags[tagname].extend([i["file_id"] for i in items])
+
+    remove_tags: defaultdict[str, list[int]] = defaultdict(list)
+
+    if total:
+        file_ids = client.search_files(
+            tags=[f"{group_namespace}:*"]
+        )['file_ids']
+
+        for id_chunk in chunk(file_ids, 200):
+            metadata = hydrus.client.get_file_metadata(file_ids=id_chunk)['metadata']
+            for file_md in metadata:
+                file_id = file_md["file_id"]
+                my_local_tags = local_tags(file_md)
+                for ns_tag in all_tags_in_namespace:
+                    if ns_tag in my_local_tags:
+                        if file_id in add_tags[ns_tag]:
+                            add_tags[ns_tag].remove(file_id)
+                        else:
+                            # logger.debug(f"Tag {ns_tag=} in {my_local_tags=} but not {add_tags[ns_tag]=}, need to remove")
+                            remove_tags[ns_tag].append(file_id)
+
+    # Apply operations
+    for tagname, id_list in add_tags.items():
+        if len(id_list) < 1:
+            continue
+        logger.info(f"Adding tag {tagname} to {len(id_list)} images")
         hydrus.client.add_tags(
-            file_ids=[fm['file_id'] for fm in items],
+            file_ids=id_list,
             service_keys_to_actions_to_tags={
                 hydrus.local_tags_service_key: {
                     hydrus_api.TagAction.ADD: [tagname]
+                }
+            }
+        )
+
+    for tagname, id_list in remove_tags.items():
+        if len(id_list) < 1:
+            continue
+        logger.info(f"Removing tag {tagname} from {len(id_list)} images")
+        hydrus.client.add_tags(
+            file_ids=id_list,
+            service_keys_to_actions_to_tags={
+                hydrus.local_tags_service_key: {
+                    hydrus_api.TagAction.DELETE: [tagname]
                 }
             }
         )

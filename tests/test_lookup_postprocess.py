@@ -185,6 +185,29 @@ class TestPostprocessSuggestionsMinCountLocal(unittest.TestCase):
         self.assertIn("character:common", result.add_tags)
         self.assertListEqual(result.add_downloader_tags, [])
 
+
+    def test_no_local_tags_when_none(self):
+        ma = MetadataActions(file_id=1, add_tags=["character:common"])
+        result = postprocessSuggestions(
+            ma,
+            tags_min_count_local=None,
+            tags_min_count_download=10,
+            tag_count_cache={"character:rare": 1, "character:common": 50},
+        )
+        self.assertIn("character:common", result.add_downloader_tags)
+        self.assertListEqual(result.add_tags, [])
+
+    def test_no_downloader_tags_when_none(self):
+        ma = MetadataActions(file_id=1, add_tags=["character:common"])
+        result = postprocessSuggestions(
+            ma,
+            tags_min_count_local=10,
+            tags_min_count_download=None,
+            tag_count_cache={"character:rare": 1, "character:common": 50},
+        )
+        self.assertIn("character:common", result.add_tags)
+        self.assertListEqual(result.add_downloader_tags, [])
+
     def test_tag_missing_from_cache_treated_as_zero(self):
         ma = MetadataActions(file_id=1, add_tags=["character:unknown"])
         result = postprocessSuggestions(
@@ -196,14 +219,14 @@ class TestPostprocessSuggestionsMinCountLocal(unittest.TestCase):
         self.assertIn("character:unknown", result.add_downloader_tags)
 
     def test_always_local_namespace_not_moved(self):
-        ma = MetadataActions(file_id=1, add_tags=["creator:bigartist"])
+        ma = MetadataActions(file_id=1, add_tags=["creator:tinyartist"])
         result = postprocessSuggestions(
             ma,
             tags_min_count_local=100,
-            tag_count_cache={"creator:bigartist": 0},
+            tag_count_cache={"creator:tinyartist": 0},
             always_local_namespaces=["creator"],
         )
-        self.assertIn("creator:bigartist", result.add_tags)
+        self.assertIn("creator:tinyartist", result.add_tags)
         self.assertListEqual(result.add_downloader_tags, [])
 
     def test_blacklisted_tag_moved_regardless_of_count(self):

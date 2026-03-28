@@ -1,14 +1,11 @@
 import logging
 import pprint
 import unittest
-from typing import Sequence
+from collections.abc import Sequence
 
-from frozendict import frozendict
+from pyrsistent import pmap
 
-from hydrustools.utils import htlogging
-
-from hydrustools.utils import fuzzysearch
-
+from hydrustools.utils import fuzzysearch, htlogging
 
 TAGS = (
     "steven universe",
@@ -336,7 +333,7 @@ class TestFuzzySearch(unittest.TestCase):
         rawmatch = fuzzysearch.perfect_search(TAGS, "ch:s")
         matches = fuzzysearch.merge_lists(
             rawmatch,
-            count_tiebreak=frozendict({"character:sugilite": 10})
+            count_tiebreak=pmap({"character:sugilite": 10})
         )
         try:
             self.assertBefore(
@@ -351,7 +348,7 @@ class TestFuzzySearch(unittest.TestCase):
         rawmatch = fuzzysearch.perfect_search(TAGS, "ch:s")
         matches = fuzzysearch.merge_lists(
             rawmatch,
-            count_tiebreak=frozendict({"character:stevonnie": 10})
+            count_tiebreak=pmap({"character:stevonnie": 10})
         )
         try:
             self.assertBefore(
@@ -370,7 +367,7 @@ class TestFuzzySearch(unittest.TestCase):
         ), "chees")
         matches = fuzzysearch.merge_lists(
             rawmatch,
-            count_tiebreak=frozendict({"rating:cheesecake": 100})
+            count_tiebreak=pmap({"rating:cheesecake": 100})
         )
         try:
             self.assertBefore(

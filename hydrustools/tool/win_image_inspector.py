@@ -185,6 +185,9 @@ If tagname is attached to the image, "-tagname" will remove it.
         entry.bind("<Control-e>", self.toggle_keep)
         entry.bind("<Control-d>", self.toggle_delete)
 
+        entry.bind("<Control-s>", self.save_tag_list)
+
+
         self.tag_editor_list.bind("<<DWIM>>", self.entry_dwim)
         self.tag_editor_list.bind("<<TagApply>>", self.on_add)
         self.tag_editor_list.pb = self.pb
@@ -212,6 +215,16 @@ If tagname is attached to the image, "-tagname" will remove it.
         if self.pref_dwim_advance.get():
             # if not edited:
                 self.next_image()
+
+
+    def next_image(self):
+        self.save_tag_list()
+        super().next_image()
+
+    def prev_image(self):
+        self.save_tag_list()
+        super().prev_image()
+
 
     def on_add(self, event: tk.Event):
         new_entry: str = self.tag_editor_list.last_entry
@@ -249,7 +262,7 @@ If tagname is attached to the image, "-tagname" will remove it.
         # self.tagstack.clear()
         # self.textvar_tagstack.set('\n'.join(self.tagstack))
 
-    def save_tag_list(self):
+    def save_tag_list(self, event=None):
         if not self.current_image:
             self.logger.error("Can't set tags, no image selected")
             return

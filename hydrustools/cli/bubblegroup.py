@@ -448,9 +448,10 @@ def main():
         logger.info("No query, just resetting groups.")
         return
 
-    logger.info(f"Querying hydrus {args.query!r}...")
+    query = querylang.parse_sl_query(querylang.SLQuery(args.query))
+    logger.info(f"Querying hydrus {query!r}...")
     resp = hydrus.client.search_files(
-        tags=querylang.parse_sl_query(querylang.SLQuery(args.query)),
+        tags=query,
         tag_service_key=hydrus.local_tags_service_key
     )
     matching_files = resp['file_ids']
@@ -531,7 +532,7 @@ def main():
 
     hydrus.apply_tagset_groups(group_namespace, {
         k: [bi.value for bi in v]
-        for k, v in groups
+        for k, v in groups.items()
     })
 
 

@@ -13,6 +13,20 @@ SLQuery = NewType('SLQuery', str)
 
 logger = logging.getLogger(__name__)
 
+def _is_wrapped_in_parens(query: str) -> bool:
+    """Check if the entire query is wrapped in a single outer paren group."""
+    if not (query.startswith('(') and query.endswith(')')):
+        return False
+    depth = 0
+    for i, ch in enumerate(query):
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+        if depth == 0 and i < len(query) - 1:
+            return False  # outer parens closed before end
+    return True
+
 def parse_sl_query(
     query: SLQuery | str,
     tok_and='&&',
@@ -34,7 +48,7 @@ def parse_sl_query(
             return inner.split(f' {tok_or} ')
         return token
 
-    if not query.startswith('(') and not query.endswith(')'):
+    if not _is_wrapped_in_parens(query):
         if f' {tok_and} ' not in query and f' {tok_or} ' in query:
             return [query.split(f' {tok_or} ')]
 

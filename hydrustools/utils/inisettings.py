@@ -112,7 +112,7 @@ class _IniSettings:
         if isinstance(value, str):
             return value
         # TODO validate against pydantic
-        return json.dumps(value)
+        return json.dumps(value, indent=2)
 
     def _deserialize(self, attr: str, raw: str) -> Any:
         hints = get_type_hints(self.__class__)
@@ -122,7 +122,11 @@ class _IniSettings:
             return raw.lower() in ("true", "1", "yes", "on")
         if expected in (int, float, str):
             return expected(raw)
-        return json.loads(raw)
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            print(raw)
+            raise
 
     def _init_defaults(self) -> None:
         with self._lock:
@@ -150,6 +154,12 @@ class _IniSettings:
         self._ini_file.parent.mkdir(parents=True, exist_ok=True)
         with open(self._ini_file, "w") as f:
             self._config.write(f)
+
+    def _reserialize_file(self) -> None:
+        for attr in self._schema.keys():
+            self._config.set(self._section, attr, self._serialize(self.__getattribute__(attr)))
+
+        self._flush()
 
     def __setattr__(self, name: str, value: Any) -> None:
         if not object.__getattribute__(self, "_initialized"):

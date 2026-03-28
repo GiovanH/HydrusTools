@@ -3,8 +3,7 @@ import logging
 import pprint
 import re
 from collections import namedtuple
-
-from frozendict import frozendict
+from collections.abc import Mapping, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +113,8 @@ def _precompute_segments(
 
 def merge_lists(
     *lists: list[tuple[Score, str]],
-    edits: list = [],
-    count_tiebreak: None | frozendict[str, int] = None,
+    edits: Sequence = (),
+    count_tiebreak: None | Mapping[str, int] = None,
 ) -> list[str]:
 
     results = []

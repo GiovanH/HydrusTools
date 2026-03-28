@@ -39,6 +39,20 @@ class TestQueryLang(unittest.TestCase):
             [['tag2', 'tag3']]
         )
 
+    def test_parse_sl_just_ors_unbalanced_parens(self):
+        querystr = SLQuery("character:caliborn || character:calliope (homestuck)")
+        self.assertEqual(
+            querylang.parse_sl_query(querystr),
+            [['character:caliborn', 'character:calliope (homestuck)']]
+        )
+
+    def test_parse_sl_ors_unbalanced_parens(self):
+        querystr = SLQuery("(character:caliborn || character:calliope (homestuck))")
+        self.assertEqual(
+            querylang.parse_sl_query(querystr),
+            [['character:caliborn', 'character:calliope (homestuck)']]
+        )
+
     def test_parse_sl_split_or(self):
         querystr = SLQuery("tag1 && (tag2 || tag3)")
         self.assertEqual(
@@ -114,6 +128,20 @@ class TestQueryLangLegacy(unittest.TestCase):
         self.assertEqual(
             querylang.parse_sl_query(querystr),
             [['tag2', 'tag3']]
+        )
+
+    def test_parse_sl_just_ors_unbalanced_parens(self):
+        querystr = SLQuery("character:caliborn OR character:calliope (homestuck)")
+        self.assertEqual(
+            querylang.parse_sl_query(querystr),
+            [['character:caliborn', 'character:calliope (homestuck)']]
+        )
+
+    def test_parse_sl_ors_unbalanced_parens(self):
+        querystr = SLQuery("(character:caliborn OR character:calliope (homestuck))")
+        self.assertEqual(
+            querylang.parse_sl_query(querystr),
+            [['character:caliborn', 'character:calliope (homestuck)']]
         )
 
     def test_parse_sl_split_or(self):
