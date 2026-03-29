@@ -37,9 +37,15 @@ def configure_logging():
         datefmt='%H:%M:%S'
     ))
 
-    f_handler = logging.handlers.RotatingFileHandler("debug.log", encoding='utf-8')
+    f_handler = logging.handlers.RotatingFileHandler(
+        "debug.log", encoding='utf-8',
+        maxBytes=int(2.5*10**8),
+        backupCount=2
+    )
     f_handler.setLevel(logging.DEBUG)
-    f_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s %(message)s [%(filename)s:%(lineno)d in %(funcName)s]'))
+    f_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(levelname)s %(message)s [%(filename)s:%(lineno)d in %(funcName)s]'
+    ))
 
     root_logger = logging.getLogger()
     root_logger.addHandler(s_handler)

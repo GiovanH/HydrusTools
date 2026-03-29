@@ -9,21 +9,16 @@ between concurrent processes or threads.
 
 from __future__ import annotations
 
-from _thread import LockType
 import configparser
-import dataclasses
 import json
 import threading
+from _thread import LockType
 from pathlib import Path
-from typing import Any, TypeVar, get_type_hints
+from typing import TYPE_CHECKING, Any, get_type_hints
+
 import msgspec
-from typing import get_args, get_origin
-
 from pydantic import TypeAdapter
-
 from pydantic.errors import PydanticUserError
-
-from typing import TYPE_CHECKING
 
 # Registry mapping each disk ini path to a single configparser instance
 _file_registry: dict[Path, tuple[configparser.ConfigParser, LockType]] = {}

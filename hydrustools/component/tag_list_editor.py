@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 class Settings(HTSettings):
     fuzzysearch_penalize_namespaces: list[str] = ['ship']
     fuzzysearch_boost_namespaces: list[str] = ['rating']
-    gui_test_list: list[str] = []
 
 
 def penalize_namespaces(tup: tuple[fuzzysearch.Score, str]):

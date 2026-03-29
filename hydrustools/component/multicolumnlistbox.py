@@ -1,12 +1,14 @@
 
-from abc import abstractmethod
-from collections import Counter, OrderedDict
 import logging
 import pprint
 import tkinter as tk
 import tkinter.font as tkFont
+from abc import abstractmethod
+from collections import Counter, OrderedDict
+from collections.abc import Callable
 from tkinter import ttk
-from typing import Any, Callable, ClassVar, Generic, Literal, Required, TypeVar, TypedDict
+from typing import Any, ClassVar, Generic, Literal, Required, TypedDict, TypeVar
+
 from PIL import ImageTk
 
 
@@ -47,10 +49,11 @@ class TreeviewSchema(Generic[T]):
         super().__init_subclass__(**kwargs)
 
         cls.columns = tuple(cls.headers.keys())
-        cls.displaycolumns = tuple([
-            column for (column, label) in cls.headers.items()
+        cls.displaycolumns = tuple(
+            column
+            for (column, label) in cls.headers.items()
             if label is not None
-        ])
+        )
 
     @staticmethod
     @abstractmethod
@@ -69,16 +72,14 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
         vscroll: bool = True,
         hscroll: bool = False,
         nonestr: str = "None",
-        # *args,
-        # **kwargs,
     ) -> None:
-        super().__init__(parent) # , *args, **kwargs)
+        super().__init__(parent)
 
         self.schema: type[TreeviewSchema[T]] = schema
         self.sortable: bool = sortable
         self.nonestr: str = nonestr
 
-        self.root_item = ''
+        self.root_item: str = ''
 
         self.TkFont = tkFont.Font()
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
@@ -89,7 +90,6 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
         if multiselect:
             self.tree.configure(selectmode=tk.NONE)
             self.bindSelectionActionUID("<Button-1>", self.tree.selection_toggle)
-            # self.tree.bind("<Button-1>", self.handle_multiselect_click)
 
     def bindSelectionAction(
         self,
@@ -175,7 +175,6 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
         set_columns()
 
         self.tree.grid(column=0, row=0, sticky="nsew")
-
 
         if vscroll:
             vsb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
@@ -277,9 +276,9 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
     def update_tree(self, itemlist: list[TreeListItemDict], resize=True) -> None:
         self.tree.delete(*self.tree.get_children())
         # if len(itemlist) > 100:
-        #     self.root_item = self.insert_item({"values": ["<Container>"]})
+        #     self.root_item: str = self.insert_item({"values": ["<Container>"]})
         # else:
-        #     self.root_item = ''
+        #     self.root_item: str = ''
 
         self.tree.item(self.root_item, open=False)
         for item in itemlist:

@@ -28,7 +28,6 @@ GH_HOME = 'https://github.com/GiovanH/HydrusTools'
 @settings_section(section="ToolsList")
 class Settings(HTSettings):
     gui_last: int = -1
-    gui_test_list: list[str] = []
 
 
 def showDocFac(label: str, fn: Callable) -> None | Callable[..., None]:
