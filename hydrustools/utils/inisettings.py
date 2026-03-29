@@ -16,7 +16,7 @@ import json
 import threading
 from pathlib import Path
 from typing import Any, TypeVar, get_type_hints
-
+import msgspec
 from typing import get_args, get_origin
 
 from pydantic import TypeAdapter
@@ -98,6 +98,8 @@ class _IniSettings:
         self._init_defaults()
         object.__setattr__(self, "_initialized", True)
 
+        # self._reserialize_file()
+
     def _get_typeadapters(self) -> dict[str, TypeAdapter[Any]]:
         return {
             k: TypeAdapter(t)
@@ -120,40 +122,25 @@ class _IniSettings:
             return str(value)
         if isinstance(value, str):
             return value
-        # TODO validate against pydantic
-        return json.dumps(value, indent=0)
+        encoded = msgspec.json.encode(value)
+        return msgspec.json.format(encoded.decode("utf-8"), indent=2)
 
     def _deserialize(self, attr: str, raw: str) -> Any:
-
-        def _deserialize_atom(raw: str, expected: type):
-            if expected in (int, float, str):
-                return expected(raw)
-
-            if expected is bool:
-                return raw.lower() in ("true", "1", "yes", "on")
-
-            if dataclasses.is_dataclass(expected):
-                return expected(raw)
-
-            try:
-                return json.loads(raw)
-            except json.JSONDecodeError:
-                print(raw)
-                raise
-
         hints = get_type_hints(self.__class__)
         expected = hints.get(attr, str)
 
-        origin = get_origin(expected)
-        if origin == list:
-            (t1,) = get_args(expected)
-            layer: list = _deserialize_atom(raw, expected)
-            return [
-                _deserialize_atom(v, t1)
-                for v in layer
-            ]
+        if expected in (int, float, str):
+            return expected(raw)
 
-        return _deserialize_atom(raw, expected)
+        if expected is bool:
+            return raw.lower() in ("true", "1", "yes", "on")
+
+        try:
+            return msgspec.json.decode(raw, type=expected)
+        except (json.JSONDecodeError, msgspec.DecodeError):
+            print(self._ini_file, ">", self._section)
+            print(raw)
+            raise
 
 
     def _init_defaults(self) -> None:
