@@ -196,7 +196,7 @@ class sauceNaoPlugin(registry.LookupPlugin):
                 act.add_urls += entry['data']['ext_urls']
 
                 if entry['data'].get('title'):
-                    act.add_tags.append(f"title:{entry['data']['title']}")
+                    act.add_notes.append({"title": entry['data']['title']})
                 if entry['data'].get('member_name'):
                     act.add_tags.append(f"creator:{entry['data']['member_name']}")
                 if entry['data'].get('material'):

@@ -80,6 +80,12 @@ cat_to_model: dict[str, SiteModel] = {
     ),
 }
 
+map_cat_to_extractor: dict[str, str] = {
+    "Gelbooru (0.1)": 'gelbooru_v01',
+    "Shimmie": 'shimmie2',
+    # "Gelbooru (0.2)": 'gelbooru_v02'
+}
+
 def init_sites():
     # global domain_to_cat
 
@@ -105,10 +111,13 @@ def init_sites():
                 #     query_page = query_page.replace('{pagepart}')
 
                 cat_to_model[site_cat] = BooruSiteModel(
+                    # gallerydl_extractor=site_cat,
                     fmt_file_url="https://{domain}" + site.find("Urls/Html/Post").text, # type: ignore
                     fmt_query_url="https://{domain}" + query_page, # type: ignore
                     # tag_sep=site.find("TagFormat/WordSeparator").text
                 )
+                if map_cat_to_extractor.get(site_cat):
+                    cat_to_model[site_cat].gallerydl_extractor = map_cat_to_extractor.get(site_cat)
                 # print(f"Added cat_to_model: {site_cat}", file=sys.stderr)
             except TypeError:
                 raise ValueError(model_xml)
