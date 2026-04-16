@@ -225,7 +225,7 @@ Parent factor defines how much more common a parent tag needs to be than other p
                     if local_display_tags == {}:
                         continue
 
-                    file_tags = local_display_tags['0']
+                    file_tags = local_display_tags.get('0', [])
                     my_counter.update(
                         [
                             t for t in file_tags

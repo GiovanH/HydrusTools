@@ -241,7 +241,7 @@ def replace_tag(original_tag: str, new_tags: list[str], in_file_ids: list[int] |
     # pprint.pprint(tagged_files)
 
     if len(tagged_files) < 1:
-        logger.info("Nothing to do!")
+        logger.debug("Nothing to do!")
         return
 
     removed_tags = [original_tag]

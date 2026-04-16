@@ -155,6 +155,7 @@ class TagEditorList(ttk.Frame):
         self.entry_add.bind('<Up>', lambda e: self.suggestion_nav.move_up())
         self.entry_add.bind('<Down>', lambda e: self.suggestion_nav.move_down())
         self.entry_add.bind('<F5>', self.load_suggestions)
+        self.entry_add.bind('<F2>', self.debug_suggestions)
 
     #     self.entry_add.bind("<Control-period>", self.try_repeat)
 
@@ -320,6 +321,21 @@ class TagEditorList(ttk.Frame):
             *self.all_tags,
         )
 
+    def debug_suggestions(self, event=None):
+        def printlist(fslist: list):
+            for s in fslist:
+                print(s)
+
+        logger.info("match_all\n" + ("="*20))
+        printlist(self.last_match_all)
+        logger.info("match_commands\n" + ("="*20))
+        printlist(self.last_match_commands)
+        logger.info("match_context\n" + ("="*20))
+        printlist(self.last_match_context)
+
+        logger.info("merged matches\n" + ("="*20))
+        printlist(self.last_results)
+
     def show_suggestions(self, event=None):
         if len(self.all_tags) < 1:
             return
@@ -341,12 +357,14 @@ class TagEditorList(ttk.Frame):
             query,
             limit=40
         )
+        self.last_match_all = match_all
 
     # with timer(f"commands {len(delete_commands)}", min_secs=0, logger=self.logger.info):
         match_commands = fuzzysearch.perfect_search(
             delete_commands,
             query
         )
+        self.last_match_commands = match_commands
 
     # with timer(f"context {len(self.tag_context)}", min_secs=0, logger=self.logger.info):
         match_context = fuzzysearch.perfect_search(
@@ -354,14 +372,16 @@ class TagEditorList(ttk.Frame):
             query,
             score_bonus=10
         )
+        self.last_match_context = match_context
 
     # TODO: This can build on previous results recursively
     # with timer("merge", min_secs=0, logger=self.logger.info):
-        matches = fuzzysearch.merge_lists(
-            match_all, match_commands, match_context,
+        self.last_results = fuzzysearch._merge_lists(
+            self.last_match_all, self.last_match_commands, self.last_match_context,
             count_tiebreak=self.all_tag_counts,
             edits=[penalize_namespaces]
         )
+        matches = [val for score, val in self.last_results]
 
         suggestions = []
         for tag in matches:

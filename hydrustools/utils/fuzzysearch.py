@@ -94,6 +94,8 @@ def score_segments(query_segments: tuple[str, ...], hay_segments: tuple[str, ...
     else:
         len_pen = sum(1 for h in hay_segments if len(h) > 1)
 
+    len_pen = max(0, len_pen-2) # Only penalize after 2+ segments
+
     return Score(accuracy=accuracy, distance=pen_index, length=-len_pen)
 
 
@@ -111,11 +113,11 @@ def _precompute_segments(
     }
 
 
-def merge_lists(
+def _merge_lists(
     *lists: list[tuple[Score, str]],
     edits: Sequence = (),
     count_tiebreak: None | Mapping[str, int] = None,
-) -> list[str]:
+) -> list[tuple[Score, str]]:
 
     results = []
     for sublist in lists:
@@ -132,6 +134,15 @@ def merge_lists(
     results.sort(key=lambda l: l[0], reverse=True)
 
     logger.debug(pprint.pformat(results))
+
+    return results
+
+def merge_lists(
+    *lists: list[tuple[Score, str]],
+    edits: Sequence = (),
+    count_tiebreak: None | Mapping[str, int] = None,
+) -> list[str]:
+    results = _merge_lists(*lists, edits=edits, count_tiebreak=count_tiebreak)
 
     return [val for score, val in results]
 

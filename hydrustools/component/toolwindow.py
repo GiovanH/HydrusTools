@@ -87,19 +87,19 @@ class ToolWindow(tk.Toplevel):
     @contextmanager
     def lock(self) -> Generator[None, Any, None]:
         with self.locking_lock:
-            self.logger.debug("Locking; %s += 1", self._locked)
+            # self.logger.debug("Locking; %s += 1", self._locked)
             self._locked += 1
             if self._locked == 1:
-                self.logger.debug("Locked, disabling")
+                # self.logger.debug("Locked, disabling")
                 self.disable()
         try:
             yield
         finally:
             with self.locking_lock:
-                self.logger.debug("Unlocking; %s -= 1", self._locked)
+                # self.logger.debug("Unlocking; %s -= 1", self._locked)
                 self._locked -= 1
                 if self._locked == 0:
-                    self.logger.debug("Unlocked, enabling")
+                    # self.logger.debug("Unlocked, enabling")
                     self.enable()
 
     def startTask(self, callback, lock=True) -> None:

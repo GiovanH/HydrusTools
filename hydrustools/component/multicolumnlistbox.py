@@ -242,7 +242,7 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
             self.winfo_toplevel().after_idle(self.resize_cols)
 
     def resize_cols(self):
-        self.logger.debug("Resizing...")
+        # self.logger.debug("Resizing...")
 
         for col in self.schema.displaycolumns:
             label = self.schema.headers.get(col)

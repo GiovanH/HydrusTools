@@ -120,7 +120,7 @@ Example invocations:
         help="Only add tags that lookup plugins report as having these namespaces")
     parser_overrides.add_argument("--blacklist-tags-from-local", "--btl",
         default=','.join(LookupSettings.blacklist_tags_from_local),
-        help="Always apply these tags to the local tag repo regardless of count")
+        help="Never allow these tags in the local tag repo regardless of count")
     parser_overrides.add_argument("--underscores-to-spaces",
         action=argparse.BooleanOptionalAction,
         default=LookupSettings.underscores_to_spaces,
