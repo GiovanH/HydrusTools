@@ -1,5 +1,6 @@
 
 import argparse
+import functools
 import logging
 import pprint
 
@@ -45,7 +46,15 @@ def apply_actions(actions: MetadataActions, image: hydrus.FileMetadata | None = 
             image['known_urls'].extend(actions.add_urls)
 
     if actions.add_notes:
-        raise NotImplementedError()
+        all_notes = functools.reduce(lambda acc, d: {**acc, **d}, actions.add_notes)
+        logger.info(f"Adding notes {all_notes}")
+        hydrus.client.set_notes(
+            file_id=file_id,
+            notes=all_notes,
+            merge_cleverly=True,
+            extend_existing_note_if_possible=True
+        )
+        # raise NotImplementedError()
 
 
 def get_tag_cache() -> dict[str, int]:

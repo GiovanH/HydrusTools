@@ -193,10 +193,11 @@ class sauceNaoPlugin(registry.LookupPlugin):
             if float(entry['header']['similarity']) > Settings.minsim:
                 logger.debug("Good match: %s", entry)
 
-                act.add_urls += entry['data']['ext_urls']
+                if entry['data'].get('ext_urls'):
+                    act.add_urls += entry['data']['ext_urls']
 
                 if entry['data'].get('title'):
-                    act.add_notes.append({"title": entry['data']['title']})
+                    act.add_notes.append({"title": entry ['data']['title']})
                 if entry['data'].get('member_name'):
                     act.add_tags.append(f"creator:{entry['data']['member_name']}")
                 if entry['data'].get('material'):
