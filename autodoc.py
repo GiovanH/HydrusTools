@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 import textwrap
@@ -10,6 +11,37 @@ from hydrustools.component.toolwindow import ToolWindow
 problems = []
 
 duplicates = defaultdict(list)
+
+def print_full_help(parser: argparse.ArgumentParser, prefix: str = "") -> None:
+    label = prefix if prefix else parser.prog
+
+    epilog = None
+
+    print(f"### `{label}`\n")
+    # Print strings as text outside the --help invocation
+    if parser.usage:
+        print(f"`{parser.format_usage()}`" + "\n")
+        parser.usage = None
+    if parser.description:
+        print(parser.description + "\n")
+        parser.description = None
+    if parser.epilog:
+        epilog = parser.epilog
+        parser.epilog = None
+
+    print("```text")
+    parser.print_help()
+    print("```\n")
+
+    if epilog:
+        print(epilog + "\n")
+
+    for action in parser._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        for sub_name, sub_parser in action.choices.items():
+            child_prefix = f"{prefix} {sub_name}".strip() if prefix else sub_name
+            print_full_help(sub_parser, prefix=child_prefix)
 
 if 'tools' in sys.argv:
     for group, items in gui.MENU.items():
@@ -55,24 +87,12 @@ if 'tools' in sys.argv:
 
 
 if 'cli' in sys.argv:
+    sys.argv = ["launcher.py"]
+    parser = launcher.get_parser()
+
     print("CLI Utilities", file=sys.stderr)
     print("## CLI Utilities\n")
-    for launcher_module in launcher.SubModules._allModules():
-        print(f"  {launcher_module}", file=sys.stderr)
-        print(f"### `{launcher_module}`\n")
-        print(f"`./HydrusTools {launcher_module}` (compiled)  ")
-        print(f"`(venv) python3 launcher.py {launcher_module}` (dev)  ")
-        print()
-
-        sys.argv = [launcher_module, '--help']
-        os.environ['COLUMNS'] = '110'
-
-        print("```text")
-        try:
-            getattr(launcher.SubModules, launcher_module)()
-        except SystemExit:
-            pass
-        print("```\n")
+    print_full_help(parser)
 
 
 for body, labels in duplicates.items():

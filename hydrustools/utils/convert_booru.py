@@ -180,18 +180,16 @@ def cli_dump_models(args):
     summary = {k: len(v) for k, v in models.items()} # type: ignore
     print("Write", summary, "to", file)
 
-def build_parser():
-    parser = argparse.ArgumentParser(
-        description="""Convert booru between semantic and booru-formatted URLs, with different formatters used for different booru types, which are mapped to different server types.
+def define_parser(parser):
+    parser.description="""Convert booru between semantic and booru-formatted URLs, with different formatters used for different booru types, which are mapped to different server types.
 
 This comes pre-supplied with a few common models but will also attempt to use existing configuration data to load booru models.
 The currently implemented metadata sources are:
 - Grabber (Known sites)
 - Grabber (XML format)
 
-This is the CLI utility. This file can also be used as a python library.""",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+This is the CLI utility. This file can also be used as a python library."""
+
     subparsers = parser.add_subparsers(dest="action", metavar="ACTION")
     subparsers.required = True
 
@@ -250,26 +248,18 @@ This is the CLI utility. This file can also be used as a python library.""",
     dump_models = subparsers.add_parser("dump_models", help="Load all available models from useru context, then write model info to models.json")
     dump_models.set_defaults(func=cli_dump_models)
 
-    if os.environ.get('htdocs'):
-        parser.print_help()
-        for sp in subparsers._name_parser_map.values():
-            print()
-            sp.print_help()
-        return
-
     return parser
 
-def main():
-    parser = build_parser()
-    if not parser:
-        return
-
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    define_parser(parser)
     args = parser.parse_args()
+
     if args.load_models:
         with open(args.load_models, "r") as fp:
             import_models(json.load(fp))
 
     args.func(args)
 
-if __name__ == "__main__":
-    main()

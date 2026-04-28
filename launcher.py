@@ -1,64 +1,55 @@
+import argparse
+import importlib.metadata
 import sys
+from functools import partial
 
+import hydrustools.cli.bubblegroup
+import hydrustools.cli.lookup
+import hydrustools.cli.todogroup
+import hydrustools.utils.convert_booru
 from hydrustools.utils import htlogging
+from hydrustools.utils.argparse_formatter import HTApFmtCls
+
+DIST_NAME = 'hydrustools'
+
+try:
+    version = importlib.metadata.version(DIST_NAME)
+except importlib.metadata.PackageNotFoundError:
+    version = "dev"
 
 
-class SubModules():
-    # Container class so we know what methods/options exist
-    # This is all just to implement _allModules.
+def get_parser():
+    parser = argparse.ArgumentParser(
+        formatter_class=HTApFmtCls
+    )
+    parser.add_argument('--version', action='version', version=f'%(prog)s {version}')
 
-    @classmethod
-    def _allModules(cls):
-        return [c for c in dir(cls) if not c.startswith('_')]
+    # Submodules
+    subparsers = parser.add_subparsers(dest="tool", metavar="TOOL")
+    subparsers.required = True
+    subparsers.help = "Main tool. Options: {%(choices)s}"
 
-    @classmethod
-    def help(cls):
-        print("HydrusTools launcher.")
-        print("With no arguments, launches the GUI.")
-        print("Other available scripts:")
-        print(cls._allModules())
+    # Alternate subparsers.add_parser factory
+    compact_parser = partial(subparsers.add_parser, formatter_class=HTApFmtCls)
 
-    # @staticmethod
-    # def gui():
-    #     gui.main()
+    hydrustools.cli.bubblegroup.define_parser(compact_parser("bubblegroup"))
+    hydrustools.utils.convert_booru.define_parser(compact_parser("convert_booru"))
+    hydrustools.cli.lookup.define_parser(compact_parser("lookup"))
+    hydrustools.cli.todogroup.define_parser(compact_parser("todogroup"))
 
-    @staticmethod
-    def lookup():
-        import hydrustools.cli.lookup
-        hydrustools.cli.lookup.main()
+    # Usage. argparse does this for `choices` but not subparsers!
+    subparsers_fmt = "{" + ', '.join(subparsers._name_parser_map.keys()) + "}"
+    parser.usage = f"{parser.prog} {subparsers_fmt}"
 
-    @staticmethod
-    def convert_booru():
-        import hydrustools.utils.convert_booru
-        hydrustools.utils.convert_booru.main()
-
-    @staticmethod
-    def todogroup():
-        import hydrustools.cli.todogroup
-        hydrustools.cli.todogroup.main()
-
-    @staticmethod
-    def bubblegroup():
-        import hydrustools.cli.bubblegroup
-        hydrustools.cli.bubblegroup.main()
-
-
-def tryRun(cmd):
-    if cmd in SubModules._allModules():
-        getattr(SubModules, cmd)()
-    else:
-        print(f"Command {cmd!r} not supported. Options are: {SubModules._allModules()}")
-        print("Invoke with (venv) ./HydrusTools [module] or")
-        print("Invoke with (venv) python3 launcher.py [module] (dev)")
+    return parser
 
 if __name__ == '__main__':
     htlogging.configure_logging()
 
     if len(sys.argv) > 1:
-        cmd = sys.argv[1]
-        sys.argv.pop(0)
-
-        sys.exit(tryRun(cmd))
+        parser = get_parser()
+        args = parser.parse_args()
+        args.func(args)
 
     else:
         from hydrustools import gui

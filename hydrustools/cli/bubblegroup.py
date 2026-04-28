@@ -1,19 +1,19 @@
 import argparse
 import logging
-from collections import Counter, defaultdict
-from dataclasses import dataclass
 import pprint
 import statistics
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 from typing import Any, Literal, Protocol, TypeAlias
 
 import hydrus_api
 
-from hydrustools.utils import htlogging, querylang
-from hydrustools.utils.argparse_formatter import HTApFmtCls
 import hydrustools.utils.namespace
 import hydrustools.utils.util
-# from hydrustools.utils.htlogging import IterationLogHandler
+from hydrustools.utils import htlogging, querylang
+from hydrustools.utils.argparse_formatter import HTApFmtCls
 
+# from hydrustools.utils.htlogging import IterationLogHandler
 from ..utils import hydrus
 
 # When adding new tags to a group, expand the key to include all contained tags:
@@ -406,12 +406,7 @@ def bubble_group(
     # pbar.close()
     return groups
 
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="WIP!",
-        formatter_class=HTApFmtCls
-    )
+def define_parser(parser):
     parser.add_argument("query", nargs='?', help="Hydrus image query")
     parser.add_argument("--ignore-namespaces", type=list, default=[
         'source', 'directory'
@@ -435,8 +430,11 @@ def main():
         help="Force groups to work even if there is no logical division by dividing along arbitrary lines.")
     parser.add_argument("--debug", action="store_true")
 
-    args = parser.parse_args()
+    parser.set_defaults(func=main)
 
+    return parser
+
+def main(args):
     assert args.min_size > 0
     assert args.max_size > args.min_size
 
@@ -513,8 +511,6 @@ def main():
             ])
 
 
-
-
     logger.info("Grouping %s items...", len(bubble_list))
     try:
         groups = bubble_group(
@@ -538,4 +534,10 @@ def main():
 
 if __name__ == '__main__':
     htlogging.configure_logging()
-    main()
+
+    parser = argparse.ArgumentParser(
+        formatter_class=HTApFmtCls
+    )
+    define_parser(parser)
+    args = parser.parse_args()
+    args.func(args)

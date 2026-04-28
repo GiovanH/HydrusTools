@@ -4,7 +4,7 @@ import functools
 import logging
 import pprint
 
-from hydrustools.utils.argparse_formatter import HTApFmtClsVerb
+from hydrustools.utils.argparse_formatter import HTApFmtCls, HTApFmtClsVerb
 
 from ..lookup.registry import LookupSettings, MetadataActions, get_plugins, postprocessSuggestions
 from ..utils import htlogging, hydrus, querylang
@@ -87,28 +87,23 @@ def get_tag_cache() -> dict[str, int]:
 
     return tag_count_cache
 
-def main():
-    global logger
-    logger = logging.getLogger(__name__)
-
+def define_parser(parser):
     plugin_repr_list = [
         f"{k} ({v.name})"
         for k, v in plugin_registry.items()
     ]
 
     nl = "\n"
-    parser = argparse.ArgumentParser(
-        usage="lookup PLUGINS QUERY [FLAGS]...",
-        description="""Use lookup plugins to merge discovered metadata into hydrus files. Takes a hydrus query and plugin list and merges metadata into hydrus according to passed options. Some plugins may have additional ini configuration.
+    parser.description = """Use lookup plugins to merge discovered metadata into hydrus files. Takes a hydrus query and plugin list and merges metadata into hydrus according to passed options. Some plugins may have additional ini configuration.
 
 Example invocations:
 > lookup 'Saucenao' 'system:no urls AND system:limit=100'
 > lookup 'grabberComMd5Plugin,grabberComPlugin' 'system:no urls AND system:limit=100'
 > lookup 'all' '-character:* AND -series:* AND system:no urls'
-""",
-        epilog=f"Available plugins: \n{nl.join(plugin_repr_list)}",
-        formatter_class=HTApFmtClsVerb
-    )
+"""
+    parser.epilog=f"Available plugins: \n{nl.join(plugin_repr_list)}"
+    parser.formatter_class = HTApFmtClsVerb
+
     parser.add_argument("plugins", help="Comma-separated unordered set of plugins to use, or 'all'.")
     parser.add_argument("query", help="Hydrus image query")
 
@@ -135,7 +130,12 @@ Example invocations:
         default=LookupSettings.underscores_to_spaces,
         help="Convert underscores to spaces in tags")
 
-    args = parser.parse_args()
+    parser.set_defaults(func=main)
+    return parser
+
+def main(args):
+    global logger
+    logger = logging.getLogger(__name__)
 
     if args.min_count_local == -1:
         args.min_count_local = None
@@ -232,4 +232,10 @@ Example invocations:
 
 if __name__ == '__main__':
     htlogging.configure_logging()
-    main()
+
+    parser = argparse.ArgumentParser(
+        formatter_class=HTApFmtCls
+    )
+    define_parser(parser)
+    args = parser.parse_args()
+    args.func(args)

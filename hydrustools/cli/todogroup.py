@@ -19,16 +19,15 @@ def reset_groups():
         hydrus.replace_tag(tag.value, new_tags=[])
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="WIP!",
-        formatter_class=HTApFmtCls
-    )
+def define_parser(parser):
     parser.add_argument("-d", "--descendants", action="store_true", help="Also collect any descendants of the supplied tags")
     parser.add_argument("tags", nargs="*", help="List of tags. You can also provide an OR query and HT will try to parse it into tags.")
 
-    args = parser.parse_args()
+    parser.set_defaults(func=main)
+    return parser
 
+
+def main(args):
     hydrus.init_client()
 
     if not args.tags or len(args.tags) == 0:
@@ -76,4 +75,10 @@ def main():
 
 if __name__ == '__main__':
     htlogging.configure_logging()
-    main()
+
+    parser = argparse.ArgumentParser(
+        formatter_class=HTApFmtCls
+    )
+    define_parser(parser)
+    args = parser.parse_args()
+    args.func(args)
