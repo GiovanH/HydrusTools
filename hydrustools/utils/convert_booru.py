@@ -78,6 +78,17 @@ cat_to_model: dict[str, SiteModel] = {
         fmt_file_url="https://{domain}/index.php?r=posts/view&id={id}",
         fmt_query_url="https://{domain}/index.php?r=posts/index&q={tags}"
     ),
+    # Strip out &limit={limit}&pid={pid} for gallery-dl
+    "Gelbooru (0.1)": BooruSiteModel(
+      gallerydl_extractor= "gelbooru_v01",
+      fmt_file_url= "https://{domain}/index.php?page=post&s=view&id={id}",
+      fmt_query_url= "https://{domain}/index.php?page=post&s=list&tags={tags}",
+    ),
+    "Gelbooru (0.2)": BooruSiteModel(
+      gallerydl_extractor = "gelbooru_v02",
+      fmt_file_url = "https://{domain}/index.php?page=post&s=view&id={id}",
+      fmt_query_url = "https://{domain}/index.php?page=post&s=list&tags={tags}",
+    )
 }
 
 map_cat_to_extractor: dict[str, str] = {
