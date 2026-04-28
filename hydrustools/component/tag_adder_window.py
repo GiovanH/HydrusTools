@@ -5,7 +5,8 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import partial
 from tkinter import messagebox, ttk
-from typing import ClassVar
+from typing import ClassVar, Iterator
+import itertools
 
 from hydrustools.component.HydrusImageTable import HydrusImageTable
 from hydrustools.utils import hydrus
@@ -20,6 +21,23 @@ class TagAction():
     file_id: int
     identifier: str
     new_tags: list[str]
+
+@dataclass
+class TagActionGrouped():
+    file_ids: list[int]
+    new_tags: list[str]
+    tag_actions: list[TagAction]
+
+def group_tag_actions(actions: list[TagAction]) -> Iterator[TagActionGrouped]:
+    key = lambda a: a.new_tags
+    sorted_actions = sorted(actions, key=key)
+    for tags, group in itertools.groupby(sorted_actions, key=key):
+        group_list = list(group)
+        yield TagActionGrouped(
+            file_ids=[a.file_id for a in group_list],
+            new_tags=tags,
+            tag_actions=group_list,
+        )
 
 class TagActionSchema(TreeviewSchema[TagAction]):
     headers: ClassVar[OrderedDict[str, str | None]] = OrderedDict([
@@ -131,23 +149,26 @@ class TagAdderFrame(ttk.Frame):
     def applyAll(self, event=None):
         self.applyActions(self.tag_actions)
 
-    def applyActions(self, actions):
+    def applyActions(self, actions: list[TagAction]):
 
-        explaination = '\n'.join(f'{a}' for a in actions[:60])
+        grouped_actions = [*group_tag_actions(actions)]
+
+        explaination = '\n'.join(f'{a}' for a in grouped_actions[:60])
         user_confirmed = messagebox.askyesno(
             title="Confirm",
             message=f"{explaination}\n\nAdd tags to files?"
         )
         if user_confirmed:
-            for ta in pb_iter(self.pb or getattr(self.toolmaster, 'pb', None) or {}, actions):
+            for ga in pb_iter(self.pb or getattr(self.toolmaster, 'pb', None) or {}, grouped_actions):
                 hydrus.client.add_tags(
-                    file_ids=[ta.file_id],
+                    file_ids=ga.file_ids,
                     service_keys_to_tags={
-                        hydrus.local_tags_service_key: ta.new_tags,
+                        hydrus.local_tags_service_key: ga.new_tags,
                     }
                 )
-                self.toolmaster.setStatus(f"Added tags {ta.new_tags!r} to {ta.file_id}")
-                self.tree_tags.tree.delete(self.tag_actions.index(ta))
+                self.toolmaster.setStatus(f"Added tags {ga.new_tags!r} to {ga.file_ids}")
+                for ta in ga.tag_actions:
+                    self.tree_tags.tree.delete(self.tag_actions.index(ta))
 
     def openPage(self, event=None):
         selection = self.tree_tags.getSelectionIDs()
@@ -162,6 +183,9 @@ class TagAdderFrame(ttk.Frame):
 
     def deleteSelected(self, event=None):
         self.tree_tags.tree.delete(*self.tree_tags.tree.selection())
+
+    def load_thumbnails(self):
+        self.tree_tags.load_thumbnails()
 
 class TagAdderWindow(ToolWindow):
     helpstr = """"""
@@ -181,7 +205,9 @@ class TagAdderWindow(ToolWindow):
         self.bind("<Delete>", frame_ta.deleteSelected)
 
         for ta in tag_actions:
-            frame_ta.add_item(ta)
+            frame_ta.add_item(ta, thumb=False)
+
+        frame_ta.load_thumbnails()
 
         self.focus()
         self.mainloop()
