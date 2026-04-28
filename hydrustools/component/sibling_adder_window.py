@@ -4,8 +4,10 @@ import tkinter as tk
 from dataclasses import dataclass
 from tkinter import ttk
 
+from hydrustools.utils import hydrus
 
-from ..utils.gui_util import Increment, ScrollableFrame, TextCopyWindow, tkwrap, tkwrapc
+
+from ..utils.gui_util import Increment, ScrollableFrame, TextCopyWindow, flatList, tkwrap, tkwrapc
 from .toolwindow import ToolWindow
 
 
@@ -14,8 +16,9 @@ from .toolwindow import ToolWindow
 class SiblingAction():
     tag: str
     sibling_options: list[str]
-    current_sibling: None | int
     group: str
+
+    _current_sibling: None | int = None
 
 
 class SiblingAdderWindow(ToolWindow):

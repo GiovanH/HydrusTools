@@ -89,10 +89,12 @@ MENU: dict[str, list[MenuEntry]] = {
         MenuEntry.f(TagManagerWin),
         MenuEntry.f(ImageInspectorWin),
         MenuEntry.f("Tree Visualizer", None),
-        MenuEntry.f(
-            "Localize (Swapped) Character Names",
-            macro_localize_char_names.find_localchars
-        ),
+        MenuEntry.f("Localize (Swapped) Character Names", None),
+        # Broken
+        # MenuEntry.f(
+        #     "Localize (Swapped) Character Names",
+        #     macro_localize_char_names.find_localchars
+        # ),
     ],
     "Tag Relationships": [
         MenuEntry.f(SiblingFlattenWin),

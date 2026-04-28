@@ -128,6 +128,7 @@ def get_relationship_info(
 ) -> list[RelationshipInfo]:
     resp = client.get_siblings_and_parents(target_tags)
     service_key = service_key or local_tags_service_key
+
     return [
         RelationshipInfo(
             tag=tag_name,

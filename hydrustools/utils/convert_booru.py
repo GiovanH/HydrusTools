@@ -66,6 +66,11 @@ cat_to_model: dict[str, SiteModel] = {
         fmt_query_url="https://{domain}/posts/query={tags}",
         gallerydl_extractor='szurubooru'
     ),
+    "Shimmie2": BooruSiteModel(
+      gallerydl_extractor="shimmie2",
+      fmt_file_url="https://{domain}/post/view/{id}",
+      fmt_query_url="https://{domain}/post/list/{tags}/{page}",
+    ),
     "E621": BooruSiteModel(
         fmt_file_url="https://{domain}/posts/{id}",
         fmt_query_url="https://{domain}/posts?tags={tags}",
@@ -78,11 +83,23 @@ cat_to_model: dict[str, SiteModel] = {
         fmt_file_url="https://{domain}/index.php?r=posts/view&id={id}",
         fmt_query_url="https://{domain}/index.php?r=posts/index&q={tags}"
     ),
+    # Strip out &limit={limit}&pid={pid} for gallery-dl
+    "Gelbooru (0.1)": BooruSiteModel(
+      gallerydl_extractor= "gelbooru_v01",
+      fmt_file_url= "https://{domain}/index.php?page=post&s=view&id={id}",
+      fmt_query_url= "https://{domain}/index.php?page=post&s=list&tags={tags}",
+    ),
+    "Gelbooru (0.2)": BooruSiteModel(
+      gallerydl_extractor = "gelbooru_v02",
+      fmt_file_url = "https://{domain}/index.php?page=post&s=view&id={id}",
+      fmt_query_url = "https://{domain}/index.php?page=post&s=list&tags={tags}",
+    )
 }
 
 map_cat_to_extractor: dict[str, str] = {
     "Gelbooru (0.1)": 'gelbooru_v01',
     "Shimmie": 'shimmie2',
+    "Shimmie2": 'shimmie2',
     # "Gelbooru (0.2)": 'gelbooru_v02'
 }
 

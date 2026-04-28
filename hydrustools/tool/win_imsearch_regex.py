@@ -110,6 +110,7 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
             frame_status.columnconfigure(index=0, weight=1)
 
     def startSearch(self, event=None):
+        self.abort_threads = False
         threading.Thread(target=self.doSearch, daemon=True).start()
 
     def doSearch(self, event=None):
@@ -131,13 +132,13 @@ Once the search is complete, results are sent to Hydrus in a notification. Click
 
             tag_query: querylang.Query = []
 
-            tag_query.extend(self.entry_search.get_query())
 
             # TODO: Option to configure " (n)" suffix
             tag_query.append(hydrus.has_note(notename))
 
             if self.textvar_prequery.get():
-                tag_query.append(self.textvar_prequery.get())
+                tag_query.extend(self.entry_search.get_query())
+            #     tag_query.append(self.textvar_prequery.get())
 
             self.setStatus(f"Searching for query {tag_query!r}")
             try:

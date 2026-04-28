@@ -228,9 +228,9 @@ class MultiColumnListbox(ttk.Frame, Generic[T]):
         self.tree.delete(*self.tree.get_children())
 
     def insert_item(self, item: TreeListItemDict) -> str:
-        # Sanitize value strings
-        if item.get("values"):
-            item["values"] = [xstr(s, nonestr=self.nonestr) for s in item["values"]]
+        # Don't sanitize value strings??
+        # if item.get("values"):
+        #     item["values"] = [xstr(s, nonestr=self.nonestr) for s in item["values"]]
 
         return self.tree.insert(self.root_item, tk.END, **item)
 

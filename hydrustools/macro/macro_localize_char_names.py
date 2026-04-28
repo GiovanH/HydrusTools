@@ -69,19 +69,20 @@ def find_localchars(tk=True):
                 f"character:{n['first']} {n['last']}{n['suffix'] or ''}",
                 f"character:{n['last']} {n['first']}{n['suffix'] or ''}"
             ]
-            current_sibling = None
+            # current_sibling = None
 
             group = ""
 
             si: hydrus.RelationshipInfo | None = sibling_info.get(tag)
             if si:
                 # print(si)
-                current_sibling = sibling_options.index(si.ideal_tag)
+                # current_sibling = sibling_options.index(si.ideal_tag)
                 # tag = si.ideal_tag
+                logger.info(si)
 
                 group = ' '.join(si.ancestors)
 
-            action = SiblingAction(tag, sibling_options, current_sibling, group)
+            action = SiblingAction(tag, sibling_options, group)
 
             logger.info(action)
 
@@ -105,4 +106,5 @@ def start():
 
 if __name__ == "__main__":
     hydrus.init_client()
+    htlogging.configure_logging()
     find_localchars(tk=False)
