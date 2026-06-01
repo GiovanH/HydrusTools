@@ -35,18 +35,52 @@ class SiblingAdderWindow(ToolWindow):
             self.siblings += [*group]
 
         self.values = [
-            tk.StringVar(value=(
-                sa.sibling_options[sa.current_sibling]
-                if sa.current_sibling
-                else ""
-            ))
+            tk.StringVar(value='')
             for i, sa in enumerate(self.siblings)
         ]
+
+        self.load_sibling_state()
 
         self.initwindow()
         self.focus()
 
         self.mainloop()
+
+    def load_sibling_state(self):
+        self.logger.info("Loading sibling state")
+        all_tags = set()
+        for sa in self.siblings:
+            all_tags.add(sa.tag)
+            all_tags.update(sa.sibling_options)
+        sibling_resp = hydrus.get_relationship_info(list(all_tags))
+
+        self.sibling_info: dict[str, hydrus.RelationshipInfo] = {
+            **{
+                si.tag: si
+                for si in
+                sibling_resp
+            },
+            **{
+                s: si
+                for si in
+                sibling_resp
+                for s in si.siblings
+            }
+        }
+
+        for i, sa in enumerate(self.siblings):
+            if sa.tag in self.sibling_info:
+                ideal_tag = self.sibling_info[sa.tag].ideal_tag
+                if self.sibling_info[sa.tag].tag == ideal_tag:
+                    continue
+
+                idx = sa.sibling_options.index(ideal_tag)
+                sa._current_sibling = idx
+                self.logger.info(f"Ideal {ideal_tag} is in options {sa.sibling_options} at {idx}")
+                self.values[i].set(ideal_tag)
+            else:
+                self.logger.info(f"{sa.tag} not in sibling_info")
+
 
     def initwindow(self) -> None:
         self.title("Configure Siblings")
@@ -70,7 +104,7 @@ class SiblingAdderWindow(ToolWindow):
             frame.columnconfigure(1, weight=1)
 
             for i, sa in enumerate(self.siblings):
-                label = ttk.Label(frame, text=sa.tag)
+                label = ttk.Label(frame, text=f"{sa.tag} (&...)")
                 label.grid(row=cy.inc(), column=0, sticky="e")
 
                 label = ttk.Label(frame, text=sa.group)
@@ -105,7 +139,7 @@ class SiblingAdderWindow(ToolWindow):
             for candidate in sa.sibling_options:
                 if candidate == selection:
                     continue
-                if sa.current_sibling and sa.sibling_options[sa.current_sibling] == selection:
+                if sa._current_sibling and sa.sibling_options[sa._current_sibling] == selection:
                     continue
                 clip_import += f"{candidate}\n{selection}\n"
 
