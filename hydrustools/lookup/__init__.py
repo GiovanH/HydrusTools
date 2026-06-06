@@ -4,3 +4,4 @@ from . import registry
 from . import e621
 from . import grabbercom
 from . import saucenao
+from . import downloadertags

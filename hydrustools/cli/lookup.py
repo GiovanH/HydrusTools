@@ -1,10 +1,12 @@
 
 import argparse
+from collections import Counter
 import functools
 import logging
 import pprint
 
 from hydrustools.utils.argparse_formatter import HTApFmtCls, HTApFmtClsVerb
+from hydrustools.utils.gui_util import flatList
 
 from ..lookup.registry import LookupSettings, MetadataActions, get_plugins, postprocessSuggestions
 from ..utils import htlogging, hydrus, querylang
@@ -14,32 +16,41 @@ plugin_registry = get_plugins()
 
 logger: logging.Logger
 
-def apply_actions(actions: MetadataActions, image: hydrus.FileMetadata | None = None):
+def apply_actions(actions: MetadataActions, image: hydrus.FileMetadata | None = None, dry_run: bool = False):
     file_id = actions.file_id
 
     # TODO: If image passed, apply the actions there also
 
     if actions.add_downloader_tags and len(actions.add_downloader_tags) > 0:
         logger.info(f"Adding {len(actions.add_downloader_tags)} tags")
-        hydrus.client.add_tags(
-            file_ids=[file_id],
-            service_keys_to_tags={
-                hydrus.downloader_tags_service_key: actions.add_downloader_tags
-            }
-        )
+        if dry_run:
+            logger.info("(Dry run)")
+        else:
+            hydrus.client.add_tags(
+                file_ids=[file_id],
+                service_keys_to_tags={
+                    hydrus.downloader_tags_service_key: actions.add_downloader_tags
+                }
+            )
 
     if actions.add_tags and len(actions.add_tags) > 0:
         logger.info(f"Adding {len(actions.add_tags)} tags")
-        hydrus.client.add_tags(
-            file_ids=[file_id],
-            service_keys_to_tags={
-                hydrus.local_tags_service_key: actions.add_tags
-            }
-        )
+        if dry_run:
+            logger.info("(Dry run)")
+        else:
+            hydrus.client.add_tags(
+                file_ids=[file_id],
+                service_keys_to_tags={
+                    hydrus.local_tags_service_key: actions.add_tags
+                }
+            )
 
     if actions.add_urls and len(actions.add_urls or []) > 0:
         logger.info(f"Adding {len(actions.add_urls)} source urls")
-        hydrus.client.associate_url(file_ids=[file_id], urls_to_add=actions.add_urls)
+        if dry_run:
+            logger.info("(Dry run)")
+        else:
+            hydrus.client.associate_url(file_ids=[file_id], urls_to_add=actions.add_urls)
 
         if image:
             # TODO: This doesn't apply url transformations like hydrus does
@@ -48,12 +59,15 @@ def apply_actions(actions: MetadataActions, image: hydrus.FileMetadata | None = 
     if actions.add_notes:
         all_notes = functools.reduce(lambda acc, d: {**acc, **d}, actions.add_notes)
         logger.info(f"Adding notes {all_notes}")
-        hydrus.client.set_notes(
-            file_id=file_id,
-            notes=all_notes,
-            merge_cleverly=True,
-            extend_existing_note_if_possible=True
-        )
+        if dry_run:
+            logger.info("(Dry run)")
+        else:
+            hydrus.client.set_notes(
+                file_id=file_id,
+                notes=all_notes,
+                merge_cleverly=True,
+                extend_existing_note_if_possible=True
+            )
         # raise NotImplementedError()
 
 
@@ -109,6 +123,11 @@ Example invocations:
 
     parser_overrides = parser.add_argument_group('Config Overrides', 'Overrides for specific postprocessing parameters. Default values come from your INI configuration under "[Lookup]".')
 
+    parser_overrides.add_argument("--dry-run",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Log decisions but don't apply changes")
+
     parser_overrides.add_argument("--min-count-local", "--mcl",
         type=int, default=LookupSettings.min_count_local,
         help="Number of times this tag must already exist in tag repo to be added. 0 to allow all, -1 to deny all.")
@@ -147,8 +166,7 @@ def main(args):
     selected_plugins: list[str] = args.plugins.split(',')
     always_local_namespaces: list[str] = args.always_local_namespaces.split(',')
     tag_namespace_whitelist: list[str] | None = [f for f in args.tag_namespace_whitelist.split(',') if f] or None
-    blacklist_tags_from_local: list[str] = args.always_local_namespaces.split(',')
-
+    blacklist_tags_from_local: list[str] = args.blacklist_tags_from_local.split(',')
 
     logger.info(f"Querying hydrus {args.query!r}...")
     resp = hydrus.client.search_files(
@@ -164,7 +182,7 @@ def main(args):
 
     plugin_list = []
     for plugin_key, plugin in sorted(plugin_registry.items(), key=lambda t: t[1].priority):
-        if selected_plugins == ['all']:
+        if selected_plugins == ['all'] and plugin.default_enabled:
             plugin_list.append(plugin)
         elif any(plugin.name == s for s in selected_plugins) or any(plugin_key.endswith(suffix) for suffix in selected_plugins):
             logger.debug("%s has suffix in %s", plugin_key, selected_plugins)
@@ -173,6 +191,8 @@ def main(args):
     logger.info("Plugin list: %s from %s", plugin_list, selected_plugins)
 
     tag_cache: dict | None = None # get_tag_cache()
+
+    actions_taken = []
 
     for image_id in matching_files:
         metadata: list[hydrus.FileMetadata] = hydrus.client.get_file_metadata(file_ids=[image_id], include_notes=True)['metadata']
@@ -223,11 +243,18 @@ def main(args):
 
                     logger.info(pprint.pformat(remaining))
 
-                    apply_actions(remaining, image)
+                    apply_actions(remaining, image, dry_run=args.dry_run)
+                    actions_taken.append(remaining)
 
             if not matched:
                 logger.info(f"No plugin matches for {image['file_id']}")
 
+    # todo report
+    logger.info(pprint.pformat({
+        "tags_added": Counter(flatList([a.add_tags or [] for a in actions_taken])),
+        "dltags_added": Counter(flatList([a.add_downloader_tags or [] for a in actions_taken])),
+        "info": Counter(flatList([a.info_only or [] for a in actions_taken])),
+    }))
 
 
 if __name__ == '__main__':

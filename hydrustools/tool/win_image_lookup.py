@@ -71,8 +71,8 @@ Heavy work-in-progress"""
         }
 
         self.plugin_enabled = {
-            name: tk.BooleanVar(self, value=True)
-            for name in plugin_registry.keys()
+            name: tk.BooleanVar(self, value=plugin.default_enabled)
+            for name, plugin in plugin_registry.items()
         }
         self.checkbuttons: dict[str, ttk.Checkbutton] = {}
 

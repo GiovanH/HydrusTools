@@ -83,7 +83,8 @@ class MetadataActions:
 
 class LookupPlugin():
     name: str
-    priority: int = 10
+    priority: int = 10  # Lower numbers go first
+    default_enabled: bool = True
 
     @abstractmethod
     def match(self, metadata: FileMetadata) -> bool:
