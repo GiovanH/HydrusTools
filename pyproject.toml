@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydrustools"
+version = "0.0.5"
+description = "Toolkit for interfacing with for a Hydrus client over the local API."
+requires-python = ">=3.11"
+dependencies = [
+    "hydrus-api",
+    "pillow",
+    "joblib",
+    # "pick",
+    "numpy<2",
+    "opencv-python",
+    "pywin32",
+    "tqdm",
+    "frozendict",
+    "pyrsistent",
+    "pydantic",
+    "msgspec",
+    "requests>=2.32.5",
+    "charset-normalizer>2.0.0,<=4.0.0",
+    "chardet>=3.0.2,<6.0.0",
+    "urllib3>=1.21.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.0",
+    "vulture>=2.0",
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+hydrustools = "launcher:main"
+
+[tool.setuptools]
+packages = ["hydrustools"]
+py-modules = ["launcher"]
+
+[tool.uv.sources]
+hydrus-api = { path = "libs/hydrus-api", editable = true }

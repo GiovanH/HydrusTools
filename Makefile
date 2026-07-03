@@ -3,28 +3,31 @@ project_name=hydrustools
 module_name=${project_name}
 
 .PHONY: dev
-dev: venv
-# 	(cd src && ../${VPYTHON} gui.py)
-	${VPYTHON} ${SRC_ROOT}/launcher.py
+dev:
+	uv run python ${SRC_ROOT}/launcher.py
 
 .PHONY: devdebug
-devdebug: venv
-# 	(cd src && ../${VPYTHON} gui.py)
-	LOGLEVEL=DEBUG ${VPYTHON} ${SRC_ROOT}/launcher.py
+devdebug:
+	LOGLEVEL=DEBUG uv run python ${SRC_ROOT}/launcher.py
 
 .PHONY: release
 release: exe
-	mv -v "dist/hydrustools.exe" "dist/hydrustools-$(GIT_TAG).exe"
+	mv -v "dist/${project_name}.exe" "dist/${project_name}-$(GIT_TAG).exe"
+
+.PHONY: git_tag
+git_tag:
+	git tag $(PYP_VER)
 
 # IMPLEMENTATION
 
 # Get GIT_TAG from environment variable, fallback to git command if not set
 GIT_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo snapshot-$(date +'%Y-%m-%d'))
 
-VPYTHON=venv/Scripts/python.exe
+# Get expected version/tag from pyproject
+PYP_VER = $(shell sed -n 's/^version = "\([^"]*\)".*/\1/p' pyproject.toml)
 
 SRC_ROOT=.
-MODULE_SRCS=$(shell /bin/find ${project_name} -type f -name '*.py')
+MODULE_SRCS=$(wildcard ${project_name}/**/*.py ${project_name}/*.py)
 SCRIPT_SRCS=$(wildcard ${SRC_ROOT}/*.py)
 HOOK_SRCS=$(wildcard ${SRC_ROOT}/hooks/*)
 # SCRIPT_SRCS=${SRC_ROOT}/gui.py
@@ -42,53 +45,44 @@ watch:
 
 # Check
 .PHONY: check
-check: venv lint test
+check: lint test
 
 .PHONY: docs
 docs: Docs_Tools.md Docs_CLI.md
 
-Docs_Tools.md: venv autodoc.py launcher.py ${MODULE_SRCS}
-	HTDOCS=true ${VPYTHON} autodoc.py tools > $@
+Docs_Tools.md: autodoc.py launcher.py ${MODULE_SRCS}
+	HTDOCS=true uv run python autodoc.py tools > $@
 
-Docs_CLI.md: venv autodoc.py launcher.py ${MODULE_SRCS}
-	HTDOCS=true ${VPYTHON} autodoc.py cli > $@
+Docs_CLI.md: autodoc.py launcher.py ${MODULE_SRCS}
+	HTDOCS=true uv run python autodoc.py cli > $@
 
 .PHONY: lint
-lint: venv
-	-${VPYTHON} -m mypy --install-types --non-interactive --check-untyped-defs --follow-untyped-imports ${SCRIPT_SRCS}
-	-vulture ${SCRIPT_SRCS} ${MODULE_SRCS}
+lint:
+	-uv run --with python -m mypy --install-types --non-interactive --check-untyped-defs --follow-untyped-imports ${SCRIPT_SRCS}
+	-uv run --with vulture ${SCRIPT_SRCS} ${MODULE_SRCS}
 
 .PHONY: test
-test: venv
-	${VPYTHON} -m doctest ${SRC_ROOT}/*.py
-	${VPYTHON} -c "import ${module_name}; import doctest; doctest.testmod(${module_name})"
-	${VPYTHON} -m unittest
+test:
+	uv run python -m doctest ${SRC_ROOT}/*.py
+	uv run python -c "import ${module_name}; import doctest; doctest.testmod(${module_name})"
+	uv run python -m unittest
 
 .PHONY: clean
 clean:
-	$(RM) -r venv/ \
+	$(RM) -r .venv/ \
 		build/ \
 		dist/ \
 		.mypy_cache/ \
 		${SRC_ROOT}/__pycache__ ${SRC_ROOT}/*/__pycache__
 
-# Env
-venv: venv/pyvenv.cfg
-venv/pyvenv.cfg: requirements.txt
-	python3 -m venv ./venv
-	${VPYTHON} -m pip install -r requirements.txt
-	${VPYTHON} -m pip install pyinstaller vulture mypy
-# 	-${VPYTHON} -m mypy --install-types --non-interactive
-# 	-${VPYTHON} -m mypy --install-types
-
 # Build
 .PHONY: exe
-exe: venv ${TARGET_EXES}
+exe: ${TARGET_EXES}
 
 dist/${project_name}.exe: ${SRC_ROOT}/launcher.py ${MODULE_SRCS} ${SCRIPT_SRCS} ${HOOK_SRCS} Makefile
 	mkdir -p dist build
 # 	cp icon.png build/
-	${VPYTHON} -m PyInstaller \
+	uv run --with pyinstaller python -m PyInstaller \
 		--name $(basename $(notdir $@)) \
 		--paths src \
 		--onefile \

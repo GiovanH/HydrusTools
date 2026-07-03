@@ -8,10 +8,10 @@ import cv2
 import hydrus_api
 import numpy as np
 
-from ..utils import hydrus
-from ..utils.gui_util import Increment, flatList, tkwrapc
 from ..component.tag_list_editor import TagEditorList
 from ..component.toolwindow import ToolWindow
+from ..utils import hydrus
+from ..utils.gui_util import Increment, flatList, tkwrapc
 
 
 @functools.lru_cache

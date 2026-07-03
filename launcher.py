@@ -43,7 +43,7 @@ def get_parser():
 
     return parser
 
-if __name__ == '__main__':
+def main():
     htlogging.configure_logging()
 
     if len(sys.argv) > 1:
@@ -54,3 +54,6 @@ if __name__ == '__main__':
     else:
         from hydrustools import gui
         sys.exit(gui.main())
+
+if __name__ == '__main__':
+    main()
